@@ -131,6 +131,6 @@ const Register = ({ onLogin }) => {
       </div>
     </div>
   );
-}
+};
 
 export default Register;
