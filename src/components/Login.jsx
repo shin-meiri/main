@@ -161,10 +161,8 @@ const Login = ({ onLogin }) => {
         </form>
 
         <div style={styles.footer}>
-          Belum punya akun?{' '}
-          <a href="#register" onClick={() => onLogin(null, 'register')} style={styles.link}>
-            Daftar di sini
-          </a>
+          Silahkan Login dulu
+          
         </div>
       </div>
     </div>
