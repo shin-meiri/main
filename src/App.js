@@ -11,7 +11,7 @@ function App() {
     <div className="App">
       {/* Navbar */}
       <nav style={styles.nav}>
-        <div style={styles.navTitle}>🔧 My Admin</div>
+        <div style={styles.navTitle}>🔧 Bos</div>
         <div style={styles.navLinks}>
           <button
             onClick={() => setActivePage('home')}
