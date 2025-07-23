@@ -49,7 +49,7 @@ function App() {
           <button onClick={() => setPage('home')} style={getNavStyle(page === 'home')}>🏠 HOME</button>
           <button onClick={() => setPage('db')} style={getNavStyle(page === 'db')}>🗄️ DATABASE</button>
           <button onClick={() => setPage('tabel')} style={getNavStyle(page === 'tabel')}>📊 TABEL</button>
-          <button onClick={() => setPage('edit')} style={getNavStyle(page === 'edit')}>📝 EDIT</button>
+          <button onClick={() => setPage('edit')}>📝 EDIT</button>
           <button onClick={handleLogout} style={styles.navBtnLogout}>🚪 Logout</button>
         </div>
       </nav>
