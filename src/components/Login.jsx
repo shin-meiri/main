@@ -1,66 +1,56 @@
+// src/components/Login.jsx
 import React, { useState } from 'react';
 
 const Login = ({ onLogin }) => {
-  const [isLogin, setIsLogin] = useState(true); // true = login, false = register
-  const [form, setForm] = useState({ username: '', password: '' });
-  const [message, setMessage] = useState('');
+  const [form, setForm] = useState({ nama: '', password: '' });
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('');
+    setError('');
 
-    try {
-      const response = await fetch('/auth.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, action: isLogin ? 'login' : 'register' })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setMessage({ type: 'success', text: data.message });
-        if (isLogin) {
-          // Simpan login state
-          localStorage.setItem('user', data.username);
-          onLogin(data.username);
+    fetch('/user.json')
+      .then(res => res.json())
+      .then(users => {
+        const user = users.find(u => u.nama === form.nama && u.password === form.password);
+        if (user) {
+          localStorage.setItem('user', JSON.stringify(user));
+          onLogin(user);
         } else {
-          setIsLogin(true); // auto pindah ke login setelah daftar
+          setError('Nama atau password salah!');
         }
-      } else {
-        setMessage({ type: 'error', text: data.message });
-      }
-    } catch (err) {
-      setMessage({ type: 'error', text: 'Gagal terhubung ke server' });
-    } finally {
-      setLoading(false);
-    }
+      })
+      .catch(() => {
+        setError('Gagal memuat data pengguna. Cek user.json!');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        {/* Header */}
-        <div style={styles.header}>
-          {isLogin ? '🔐 Masuk' : '📝 Daftar'}
-        </div>
+        <h2 style={styles.title}>🔐 Masuk ke Akun</h2>
+        <p style={styles.subtitle}>Silakan login untuk melanjutkan</p>
 
-        {/* Form */}
+        {error && <div style={styles.error}>{error}</div>}
+
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.field}>
-            <label style={styles.label}>👤 Username</label>
+            <label style={styles.label}>👤 Nama</label>
             <input
               type="text"
-              name="username"
-              value={form.username}
+              name="nama"
+              value={form.nama}
               onChange={handleChange}
-              placeholder="Masukkan username"
+              placeholder="Masukkan nama kamu"
               required
               style={styles.input}
             />
@@ -79,138 +69,20 @@ const Login = ({ onLogin }) => {
             />
           </div>
 
-          {message && (
-            <div style={
-              message.type === 'success' ? styles.alertSuccess : styles.alertError
-            }>
-              {message.text}
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            style={styles.button}
-          >
-            {loading ? 'Sedang proses...' : isLogin ? 'Masuk' : 'Daftar'}
+          <button type="submit" disabled={loading} style={styles.button}>
+            {loading ? 'Sedang masuk...' : 'Masuk 🚀'}
           </button>
         </form>
 
-        {/* Switch Mode */}
         <div style={styles.footer}>
-          {isLogin ? (
-            <p>
-              Belum punya akun?{' '}
-              <span onClick={() => setIsLogin(false)} style={styles.link}>
-                Daftar di sini
-              </span>
-            </p>
-          ) : (
-            <p>
-              Sudah punya akun?{' '}
-              <span onClick={() => setIsLogin(true)} style={styles.link}>
-                Masuk di sini
-              </span>
-            </p>
-          )}
+          Belum punya akun?{' '}
+          <a href="#register" onClick={() => onLogin(null, 'register')} style={styles.link}>
+            Daftar di sini
+          </a>
         </div>
       </div>
     </div>
   );
 };
-
-// === STYLES ===
-const styles = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '100vh',
-    backgroundColor: '#f0f2f5',
-    padding: '20px'
-  },
-  card: {
-    width: '100%',
-    maxWidth: '400px',
-    backgroundColor: 'white',
-    borderRadius: '12px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-    overflow: 'hidden'
-  },
-  header: {
-    backgroundColor: '#4a6fa5',
-    color: 'white',
-    fontSize: '1.5em',
-    fontWeight: 'bold',
-    textAlign: 'center',
-    padding: '20px',
-  },
-  form: {
-    padding: '25px'
-  },
-  field: {
-    marginBottom: '20px'
-  },
-  label: {
-    display: 'block',
-    marginBottom: '8px',
-    fontWeight: '600',
-    color: '#2c3e50'
-  },
-  input: {
-    width: '100%',
-    padding: '12px',
-    fontSize: '16px',
-    border: '1px solid #ddd',
-    borderRadius: '8px',
-    boxSizing: 'border-box',
-    outline: 'none',
-    transition: 'border 0.3s'
-  },
-  button: {
-    width: '100%',
-    padding: '12px',
-    backgroundColor: '#27ae60',
-    color: 'white',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    transition: 'background 0.3s'
-  },
-  alertSuccess: {
-    padding: '12px',
-    backgroundColor: '#d4edda',
-    color: '#155724',
-    borderRadius: '6px',
-    fontSize: '14px',
-    textAlign: 'center',
-    marginBottom: '15px'
-  },
-  alertError: {
-    padding: '12px',
-    backgroundColor: '#f8d7da',
-    color: '#721c24',
-    borderRadius: '6px',
-    fontSize: '14px',
-    textAlign: 'center',
-    marginBottom: '15px'
-  },
-  footer: {
-    padding: '20px',
-    textAlign: 'center',
-    backgroundColor: '#f8f9fa',
-    borderTop: '1px solid #eee',
-    fontSize: '14px',
-    color: '#555'
-  },
-  link: {
-    color: '#3498db',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    textDecoration: 'underline'
-  }
-}
 
 export default Login;
