@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import Home from './components/Home';
 import DbForm from './components/DbForm'; // Ganti sesuai nama komponen kamu
+import Tabel from './components/Tabel';
 import './App.css';
 
 function App() {
   const [activePage, setActivePage] = useState('home'); // default: home
-
+  
   return (
     <div className="App">
       {/* Navbar */}
@@ -25,14 +26,22 @@ function App() {
             DATABASE
           </button>
         </div>
+        <button
+  onClick={() => setActivePage('tabel')}
+  style={activePage === 'tabel' ? styles.navBtnActive : styles.navBtn}
+>
+  📅 TABEL
+</button>
       </nav>
 
       {/* Konten */}
       <main style={styles.main}>
         {activePage === 'home' && <Home />}
         {activePage === 'database' && <DbForm />}
+        {activePage === 'tabel' && <Tabel />}
       </main>
     </div>
+    
   );
 }
 
