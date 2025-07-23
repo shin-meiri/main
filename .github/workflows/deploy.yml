@@ -2,14 +2,14 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]  # Ganti 'main' jika kamu pakai 'master'
+    branches: [ main ]  # Ganti jadi 'master' jika kamu pakai master
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout kode
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -29,4 +29,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./build
-          publish_branch: build  # Branch tujuan: build (bukan gh-pages)
+          publish_branch: build
+          force_orphan: false
