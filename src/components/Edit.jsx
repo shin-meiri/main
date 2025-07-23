@@ -2,35 +2,60 @@
 import React, { useState, useEffect } from 'react';
 
 const Edit = () => {
+  const [tables, setTables] = useState([]);
+  const [selectedTable, setSelectedTable] = useState('');
   const [form, setForm] = useState({ id: '', nama: '' });
   const [allData, setAllData] = useState([]);
-  const [loading, setLoading] = useState(false); // Tetap dipakai di UI
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // 1. Ambil daftar tabel saat load
+  useEffect(() => {
+    fetch('/crudb.php?tables=true')
+      .then(res => res.json())
+      .then(data => {
+        if (data.tables) {
+          setTables(data.tables);
+          if (data.tables.length > 0) {
+            setSelectedTable(data.tables[0]);
+          }
+        } else {
+          setError('Gagal muat daftar tabel');
+        }
+      })
+      .catch(() => setError('Koneksi gagal ke crudb.php'));
+  }, []);
+
+  // 2. Ambil data tabel saat tabel dipilih
+  useEffect(() => {
+    if (!selectedTable) return;
+    loadData();
+  }, [selectedTable]);
 
   const loadData = () => {
     setLoading(true);
-    fetch('/crud.php')
+    setError('');
+    fetch(`/crudb.php?tabel=${selectedTable}`)
       .then(res => res.json())
       .then(data => {
         if (data.data) {
           setAllData(data.data);
           if (data.data.length > 0) {
-            setForm(data.data[0]);
+            setForm(data.data[0]); // isi form dengan data pertama
           }
+        } else {
+          setAllData([]);
+          setForm({ id: '', nama: '' });
         }
       })
-      .catch(() => setError('Gagal muat data'))
+      .catch(() => setError('Gagal muat data tabel'))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const handleSearch = (id) => {
-    if (!id) return;
+    if (!id || !selectedTable) return;
     setLoading(true);
-    fetch(`/crud.php?id=${id}`)
+    fetch(`/crudb.php?tabel=${selectedTable}&id=${id}`)
       .then(res => res.json())
       .then(data => {
         if (data) {
@@ -45,17 +70,13 @@ const Edit = () => {
       .finally(() => setLoading(false));
   };
 
-  const handleInputChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
   const goToPrev = () => {
-    const index = allData.findIndex(d => d.id === form.id); // ✅ Ganti == → ===
+    const index = allData.findIndex(d => d.id === form.id);
     if (index > 0) setForm(allData[index - 1]);
   };
 
   const goToNext = () => {
-    const index = allData.findIndex(d => d.id === form.id); // ✅ Ganti == → ===
+    const index = allData.findIndex(d => d.id === form.id);
     if (index < allData.length - 1) setForm(allData[index + 1]);
   };
 
@@ -64,12 +85,17 @@ const Edit = () => {
   };
 
   const saveData = () => {
-    if (!form.nama) {
-      setError('Nama harus diisi!');
+    if (!selectedTable) {
+      setError('Pilih tabel dulu!');
       return;
     }
+    if (!form.nama) {
+      setError('Field nama harus diisi!');
+      return;
+    }
+
     setLoading(true);
-    fetch('/crud.php', {
+    fetch(`/crudb.php?tabel=${selectedTable}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
@@ -78,7 +104,7 @@ const Edit = () => {
       .then(data => {
         if (data.success) {
           setForm({ ...form, id: data.id });
-          loadData();
+          loadData(); // refresh list
           setError('');
         } else {
           setError('Simpan gagal: ' + (data.error || ''));
@@ -90,7 +116,7 @@ const Edit = () => {
 
   const deleteData = (id) => {
     if (!window.confirm('Hapus data ini?')) return;
-    fetch('/crud.php', {
+    fetch(`/crudb.php?tabel=${selectedTable}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id })
@@ -99,7 +125,7 @@ const Edit = () => {
       .then(data => {
         if (data.success) {
           loadData();
-          if (form.id === id) clearForm(); // ✅ Ganti == → ===
+          if (form.id == id) clearForm();
         } else {
           setError('Hapus gagal');
         }
@@ -110,9 +136,22 @@ const Edit = () => {
     <div style={styles.container}>
       <h2 style={styles.title}>📝 Edit Data</h2>
 
-      {/* Tampilkan loading jika perlu */}
-      {loading && <div style={styles.loading}>🔄 Sedang memuat...</div>}
       {error && <div style={styles.error}>{error}</div>}
+      {loading && <div style={styles.loading}>🔄 Memuat...</div>}
+
+      {/* Pilih Tabel */}
+      <div style={styles.selector}>
+        <label style={styles.label}>📊 Pilih Tabel:</label>
+        <select
+          value={selectedTable}
+          onChange={(e) => setSelectedTable(e.target.value)}
+          style={styles.select}
+        >
+          {tables.map(t => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      </div>
 
       {/* Pencarian */}
       <div style={styles.searchBox}>
@@ -142,7 +181,7 @@ const Edit = () => {
             type="text"
             name="nama"
             value={form.nama}
-            onChange={handleInputChange}
+            onChange={(e) => setForm({ ...form, nama: e.target.value })}
             placeholder="Masukkan nama"
             style={styles.input}
           />
@@ -162,7 +201,7 @@ const Edit = () => {
         </div>
       </div>
 
-      {/* Tabel Hasil */}
+      {/* Tabel Data */}
       <div style={styles.tableWrapper}>
         <table style={styles.table}>
           <thead>
@@ -176,7 +215,7 @@ const Edit = () => {
             {allData.length === 0 ? (
               <tr>
                 <td colSpan="3" style={styles.empty}>
-                  📭 Tidak ada data
+                  📭 Tidak ada data di tabel "{selectedTable}"
                 </td>
               </tr>
             ) : (
@@ -221,12 +260,6 @@ const styles = {
     fontSize: '1.8em',
     marginBottom: '20px'
   },
-  loading: {
-    textAlign: 'center',
-    color: '#27ae60',
-    fontWeight: 'bold',
-    marginBottom: '15px'
-  },
   error: {
     backgroundColor: '#f8d7da',
     color: '#721c24',
@@ -234,6 +267,29 @@ const styles = {
     borderRadius: '6px',
     marginBottom: '15px',
     textAlign: 'center'
+  },
+  loading: {
+    textAlign: 'center',
+    padding: '10px',
+    color: '#27ae60'
+  },
+  selector: {
+    marginBottom: '15px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px'
+  },
+  label: {
+    fontWeight: 'bold',
+    fontSize: '16px',
+    color: '#2c3e50'
+  },
+  select: {
+    padding: '10px',
+    fontSize: '16px',
+    border: '1px solid #3498db',
+    borderRadius: '6px',
+    flex: 1
   },
   searchBox: {
     marginBottom: '20px',
