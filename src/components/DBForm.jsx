@@ -1,99 +1,152 @@
-// src/components/DBForm.jsx
 import React, { useState } from 'react';
 
-function DBForm() {
-  const [form, setForm] = useState({ host: '', user: '', pass: '' });
+const DbTestForm = () => {
+  const [form, setForm] = useState({
+    host: '',
+    user: '',
+    pass: ''
+  });
   const [result, setResult] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = (e) => {
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setResult('Testing...');
+    setLoading(true);
+    setResult('Sedang menguji koneksi...');
 
     try {
-      const response = await fetch('/api/test-db.php', {
+      const response = await fetch('/tes-db.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams(form).toString()
       });
 
-      const data = await response.json();
-      setResult(data.success ? `✅ ${data.message}` : `❌ ${data.message}`);
-    } catch (err) {
-      setResult(`❌ Gagal: ${err.message}`);
+      const text = await response.text();
+      setResult(text); // HTML dari tes-db.php
+    } catch (error) {
+      setResult(`<p style="color: red;">❌ Error: ${error.message}</p>`);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-      <h2>🔧 Test Koneksi Database</h2>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '10px' }}>
-          <label>Host:</label>
+    <div style={styles.container}>
+      <h2>🔧 Uji Koneksi Database</h2>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <div style={styles.field}>
+          <label style={styles.label} htmlFor="host">Host:</label>
           <input
             type="text"
+            id="host"
             name="host"
             value={form.host}
-            onChange={(e) => setForm({ ...form, host: e.target.value })}
-            placeholder="Contoh: sql123.infinityfree.com"
+            onChange={handleChange}
+            placeholder="localhost atau sql123.epizy.com"
             required
-            style={{ width: '100%', padding: '8px' }}
+            style={styles.input}
           />
         </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label>Username:</label>
+        <div style={styles.field}>
+          <label style={styles.label} htmlFor="user">Username:</label>
           <input
             type="text"
+            id="user"
             name="user"
             value={form.user}
-            onChange={(e) => setForm({ ...form, user: e.target.value })}
-            placeholder="Contoh: if0_12345678"
+            onChange={handleChange}
+            placeholder="Username database"
             required
-            style={{ width: '100%', padding: '8px' }}
+            style={styles.input}
           />
         </div>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label>Password:</label>
+        <div style={styles.field}>
+          <label style={styles.label} htmlFor="pass">Password:</label>
           <input
             type="password"
+            id="pass"
             name="pass"
             value={form.pass}
-            onChange={(e) => setForm({ ...form, pass: e.target.value })}
-            placeholder="Password MySQL"
-            style={{ width: '100%', padding: '8px' }}
+            onChange={handleChange}
+            placeholder="Password database"
+            required
+            style={styles.input}
           />
         </div>
 
-        <button
-          type="submit"
-          style={{
-            backgroundColor: '#007bff',
-            color: 'white',
-            padding: '10px 20px',
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          Test Connection
+        <button type="submit" disabled={loading} style={styles.button}>
+          {loading ? 'Mengujicoba...' : 'Tes Koneksi'}
         </button>
       </form>
 
       {result && (
-        <div
-          style={{
-            marginTop: '20px',
-            padding: '10px',
-            backgroundColor: result.includes('✅') ? '#d4edda' : '#f8d7da',
-            color: result.includes('✅') ? '#155724' : '#721c24',
-            borderRadius: '4px',
-          }}
-        >
-          <strong>Hasil:</strong> {result}
-        </div>
+        <div style={styles.result} dangerouslySetInnerHTML={{ __html: result }} />
       )}
     </div>
   );
-}
+};
 
-export default DBForm;
+// Gaya sederhana (bisa dipindah ke CSS nanti)
+const styles = {
+  container: {
+    fontFamily: 'Arial, sans-serif',
+    maxWidth: '500px',
+    margin: '20px auto',
+    padding: '20px',
+    backgroundColor: '#fff',
+    borderRadius: '8px',
+    boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+  },
+  form: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  field: {
+    marginBottom: '15px',
+  },
+  label: {
+    display: 'block',
+    marginBottom: '5px',
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  input: {
+    padding: '8px',
+    fontSize: '16px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  button: {
+    backgroundColor: '#007cba',
+    color: 'white',
+    padding: '10px',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    marginTop: '10px',
+  },
+  result: {
+    marginTop: '20px',
+    padding: '15px',
+    backgroundColor: '#f9f9f9',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '14px',
+  },
+};
+
+export default DbTestForm;
