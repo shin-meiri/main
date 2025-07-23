@@ -1,401 +1,254 @@
 // src/components/Edit.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const Edit = () => {
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState('');
-  const [form, setForm] = useState({ id: '', nama: '' });
-  const [allData, setAllData] = useState([]);
+  const [search, setSearch] = useState('');
+  const [rows, setRows] = useState([]);
+  const [form, setForm] = useState({});
+  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [columns, setColumns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showId, setShowId] = useState(false);
 
-  // 🔁 Gunakan useCallback agar fungsi tidak dibuat ulang
-  const loadData = useCallback(() => {
-    if (!selectedTable) return;
-    setLoading(true);
-    setError('');
-    fetch(`/crudb.php?tabel=${selectedTable}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.data) {
-          setAllData(data.data);
-          if (data.data.length > 0) {
-            setForm(data.data[0]);
-          } else {
-            setForm({ id: '', nama: '' });
-          }
-        } else {
-          setAllData([]);
-          setForm({ id: '', nama: '' });
-        }
-      })
-      .catch(() => setError('Gagal muat data tabel'))
-      .finally(() => setLoading(false));
-  }, [selectedTable]);
-
-  // Ambil daftar tabel (hanya sekali)
+  // Ambil daftar tabel
   useEffect(() => {
     fetch('/crudb.php?tables=true')
       .then(res => res.json())
       .then(data => {
         if (data.tables) {
           setTables(data.tables);
-          if (data.tables.length > 0 && !selectedTable) {
+          if (data.tables.length > 0) {
             setSelectedTable(data.tables[0]);
           }
-        } else {
-          setError('Gagal muat daftar tabel');
         }
       })
-      .catch(() => setError('Koneksi gagal ke crudb.php'));
-  }, [selectedTable]); // 👈 Tambahkan jika ingin reload saat tabel berubah
+      .catch(() => setError('Gagal muat daftar tabel'));
+  }, []);
 
-  // Muat data saat tabel berubah
+  // Cari data
   useEffect(() => {
-    loadData();
-  }, [selectedTable, loadData]); // ✅ loadData dari useCallback → stabil
+    if (!selectedTable) return;
+    if (search.trim() === '') {
+      setRows([]);
+      setForm({});
+      setCurrentIndex(-1);
+      return;
+    }
 
-  const handleSearch = (id) => {
-    if (!id || !selectedTable) return;
     setLoading(true);
-    fetch(`/crudb.php?tabel=${selectedTable}&id=${id}`)
+    fetch(`/crudb.php?tabel=${selectedTable}&search=${encodeURIComponent(search)}`)
       .then(res => res.json())
       .then(data => {
-        if (data) {
-          setForm(data);
+        if (data.data && data.data.length > 0) {
+          setRows(data.data);
+          setColumns(Object.keys(data.data[0]));
+          setForm(data.data[0]);
+          setCurrentIndex(0);
+          setShowId(true);
         } else {
-          setForm({ id, nama: '' });
-          setError('Data tidak ditemukan');
-          setTimeout(() => setError(''), 3000);
+          setRows([]);
+          setForm({});
+          setCurrentIndex(-1);
+          setShowId(false);
         }
       })
       .catch(() => setError('Gagal cari data'))
       .finally(() => setLoading(false));
+  }, [selectedTable, search]);
+
+  const handleRowClick = (row, index) => {
+    setForm(row);
+    setCurrentIndex(index);
+    setShowId(true);
   };
 
-  const goToPrev = () => {
-    const index = allData.findIndex(d => d.id === form.id);
-    if (index > 0) setForm(allData[index - 1]);
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const goToNext = () => {
-    const index = allData.findIndex(d => d.id === form.id);
-    if (index < allData.length - 1) setForm(allData[index + 1]);
-  };
-
-  const clearForm = () => {
-    setForm({ id: '', nama: '' });
-  };
-
-  const saveData = () => {
-    if (!selectedTable) {
-      setError('Pilih tabel dulu!');
-      return;
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      const prev = currentIndex - 1;
+      setForm(rows[prev]);
+      setCurrentIndex(prev);
     }
-    if (!form.nama) {
-      setError('Field nama harus diisi!');
-      return;
-    }
+  };
 
-    setLoading(true);
-    fetch(`/crudb.php?tabel=${selectedTable}`, {
+  const handleNext = () => {
+    if (currentIndex < rows.length - 1) {
+      const next = currentIndex + 1;
+      setForm(rows[next]);
+      setCurrentIndex(next);
+    }
+  };
+
+  const handleClear = () => {
+    setForm({});
+    setCurrentIndex(-1);
+    setShowId(false);
+    setSearch('');
+  };
+
+  const handleSave = () => {
+    const payload = {
+      tabel: selectedTable,
+      data: form,
+      mode: form.id ? 'update' : 'insert'
+    };
+
+    fetch('/crudb.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
+      body: JSON.stringify(payload)
     })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          setForm({ ...form, id: data.id });
-          loadData();
-          setError('');
+          alert(`Data berhasil disimpan! ID: ${data.id}`);
+          if (!form.id) {
+            setForm({ ...form, id: data.id });
+            setShowId(true);
+          }
         } else {
-          setError('Simpan gagal: ' + (data.error || ''));
+          alert('Gagal: ' + data.error);
         }
       })
-      .catch(() => setError('Koneksi gagal'))
-      .finally(() => setLoading(false));
+      .catch(() => alert('Gagal terhubung ke server'));
   };
 
-  const deleteData = (id) => {
-    if (!window.confirm('Hapus data ini?')) return;
-    fetch(`/crudb.php?tabel=${selectedTable}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          loadData();
-          if (form.id === id) clearForm();
-        } else {
-          setError('Hapus gagal');
-        }
-      });
-  };
+  const sortedFields = columns
+    .filter(k => k !== 'id')
+    .sort((a, b) => a.localeCompare(b));
 
   return (
     <div style={styles.container}>
-      <h2 style={styles.title}>📝 Edit Data</h2>
+      <h2 style={styles.title}>✏️ Edit Data</h2>
 
-      {error && <div style={styles.error}>{error}</div>}
-      {loading && <div style={styles.loading}>🔄 Memuat...</div>}
-
-      {/* Pilih Tabel */}
-      <div style={styles.selector}>
-        <label style={styles.label}>📊 Pilih Tabel:</label>
+      <div style={styles.searchSection}>
         <select
           value={selectedTable}
-          onChange={(e) => setSelectedTable(e.target.value)}
+          onChange={(e) => {
+            setSelectedTable(e.target.value);
+            setSearch('');
+            setRows([]);
+            setForm({});
+            setCurrentIndex(-1);
+          }}
           style={styles.select}
         >
-          {tables.map(t => (
-            <option key={t} value={t}>{t}</option>
-          ))}
+          {tables.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
-      </div>
 
-      {/* Pencarian */}
-      <div style={styles.searchBox}>
-        <input
-          type="number"
-          placeholder="🔍 Cari by ID"
-          onChange={(e) => handleSearch(e.target.value)}
-          style={styles.searchInput}
-        />
-      </div>
-
-      {/* Form Input */}
-      <div style={styles.formCard}>
-        <div style={styles.field}>
-          <label>ID</label>
-          <input
-            type="number"
-            name="id"
-            value={form.id}
-            readOnly
-            style={styles.input}
-          />
-        </div>
-        <div style={styles.field}>
-          <label>Nama</label>
+        <div style={styles.searchBox}>
+          <span>🔍</span>
           <input
             type="text"
-            name="nama"
-            value={form.nama}
-            onChange={(e) => setForm({ ...form, nama: e.target.value })}
-            placeholder="Masukkan nama"
-            style={styles.input}
+            placeholder="Cari..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={styles.searchInput}
           />
         </div>
+      </div>
+
+      {error && <div style={styles.error}>{error}</div>}
+      {loading && <div style={styles.loading}>🔍 Mencari...</div>}
+
+      {/* Form Input */}
+      <div style={styles.form}>
+        {sortedFields.map(field => (
+          <div key={field} style={styles.field}>
+            <label style={styles.label}>{field}</label>
+            <input
+              type="text"
+              name={field}
+              value={form[field] || ''}
+              onChange={handleChange}
+              style={styles.input}
+            />
+          </div>
+        ))}
+
+        {showId && (
+          <div style={styles.field}>
+            <label style={styles.label}>id 🔑</label>
+            <input
+              type="text"
+              name="id"
+              value={form.id || ''}
+              disabled
+              style={{ ...styles.input, backgroundColor: '#f0f0f0' }}
+            />
+          </div>
+        )}
 
         <div style={styles.navButtons}>
-          <button onClick={goToPrev} disabled={!form.id} style={styles.navBtn}>
-            ⬅️ Prev
+          <button onClick={handlePrev} disabled={currentIndex <= 0} style={styles.navBtn}>
+            ⬅️
           </button>
-          <button onClick={goToNext} disabled={!form.id} style={styles.navBtn}>
-            Next ➡️
+          <button onClick={handleNext} disabled={currentIndex >= rows.length - 1} style={styles.navBtn}>
+            ➡️
           </button>
-          <button onClick={clearForm} style={styles.clearBtn}>❌ Clear</button>
-          <button onClick={saveData} style={styles.saveBtn}>
-            💾 {form.id ? 'Update' : 'Simpan'}
+          <button onClick={handleClear} style={{ ...styles.navBtn, backgroundColor: '#e74c3c' }}>
+            ❌
+          </button>
+          <button onClick={handleSave} style={{ ...styles.navBtn, backgroundColor: '#27ae60' }}>
+            💾
           </button>
         </div>
       </div>
 
-      {/* Tabel Data */}
-      <div style={styles.tableWrapper}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nama</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {allData.length === 0 ? (
+      {/* Tabel Hasil Pencarian */}
+      {rows.length > 0 && (
+        <div style={styles.resultTable}>
+          <table style={styles.table}>
+            <thead>
               <tr>
-                <td colSpan="3" style={styles.empty}>
-                  📭 Tidak ada data di tabel "{selectedTable}"
-                </td>
+                {['id', ...sortedFields].map(col => (
+                  <th key={col} style={styles.th}>{col}</th>
+                ))}
               </tr>
-            ) : (
-              allData.map((item) => (
-                <tr key={item.id}>
-                  <td style={styles.idCol}>{item.id}</td>
-                  <td>{item.nama}</td>
-                  <td style={styles.actionCol}>
-                    <button
-                      onClick={() => setForm(item)}
-                      style={styles.editBtn}
-                    >
-                      📝
-                    </button>
-                    <button
-                      onClick={() => deleteData(item.id)}
-                      style={styles.deleteBtn}
-                    >
-                      ❌
-                    </button>
-                  </td>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i} onClick={() => handleRowClick(row, i)} style={styles.tr}>
+                  {['id', ...sortedFields].map(col => (
+                    <td key={col} style={styles.td}>{row[col]}</td>
+                  ))}
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };
 
-// === STYLES === (tetap sama)
 const styles = {
-  container: {
-    padding: '20px',
-    fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-    color: '#2c3e50'
-  },
-  title: {
-    textAlign: 'center',
-    color: '#2980b9',
-    fontSize: '1.8em',
-    marginBottom: '20px'
-  },
-  error: {
-    backgroundColor: '#f8d7da',
-    color: '#721c24',
-    padding: '10px',
-    borderRadius: '6px',
-    marginBottom: '15px',
-    textAlign: 'center'
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '10px',
-    color: '#27ae60'
-  },
-  selector: {
-    marginBottom: '15px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px'
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: '16px',
-    color: '#2c3e50'
-  },
-  select: {
-    padding: '10px',
-    fontSize: '16px',
-    border: '1px solid #3498db',
-    borderRadius: '6px',
-    flex: 1
-  },
-  searchBox: {
-    marginBottom: '20px',
-    textAlign: 'center'
-  },
-  searchInput: {
-    padding: '12px',
-    fontSize: '16px',
-    width: '80%',
-    maxWidth: '400px',
-    border: '2px solid #3498db',
-    borderRadius: '8px',
-    outline: 'none'
-  },
-  formCard: {
-    backgroundColor: '#f8f9fa',
-    padding: '20px',
-    borderRadius: '10px',
-    marginBottom: '20px',
-    border: '1px solid #dee2e6'
-  },
-  field: {
-    marginBottom: '15px'
-  },
-  input: {
-    width: '100%',
-    padding: '10px',
-    fontSize: '16px',
-    border: '1px solid #bdc3c7',
-    borderRadius: '6px',
-    boxSizing: 'border-box'
-  },
-  navButtons: {
-    display: 'flex',
-    gap: '10px',
-    marginTop: '10px',
-    flexWrap: 'wrap'
-  },
-  navBtn: {
-    flex: 1,
-    padding: '10px',
-    backgroundColor: '#95a5a6',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer'
-  },
-  clearBtn: {
-    padding: '10px',
-    backgroundColor: '#e74c3c',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer'
-  },
-  saveBtn: {
-    padding: '10px',
-    backgroundColor: '#27ae60',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontWeight: 'bold'
-  },
-  tableWrapper: {
-    overflowX: 'auto'
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    marginTop: '10px'
-  },
-  idCol: {
-    width: '80px',
-    textAlign: 'center'
-  },
-  actionCol: {
-    width: '120px',
-    textAlign: 'center'
-  },
-  editBtn: {
-    background: '#3498db',
-    color: 'white',
-    border: 'none',
-    padding: '6px 10px',
-    borderRadius: '4px',
-    marginRight: '5px',
-    cursor: 'pointer'
-  },
-  deleteBtn: {
-    background: '#e74c3c',
-    color: 'white',
-    border: 'none',
-    padding: '6px 10px',
-    borderRadius: '4px',
-    cursor: 'pointer'
-  },
-  empty: {
-    textAlign: 'center',
-    padding: '20px',
-    color: '#95a5a6',
-    fontStyle: 'italic'
-  }
+  container: { padding: '20px', fontFamily: 'Arial, sans-serif' },
+  title: { textAlign: 'center', color: '#2c3e50' },
+  searchSection: { display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center' },
+  select: { padding: '10px', borderRadius: '6px', border: '1px solid #ccc', flex: 1 },
+  searchBox: { display: 'flex', alignItems: 'center', border: '1px solid #ccc', borderRadius: '6px', overflow: 'hidden', flex: 1 },
+  searchInput: { border: 'none', outline: 'none', padding: '8px', fontSize: '16px', flex: 1 },
+  error: { color: 'red', textAlign: 'center' },
+  loading: { textAlign: 'center', color: '#777' },
+  form: { marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' },
+  field: { display: 'flex', flexDirection: 'column' },
+  label: { fontSize: '14px', fontWeight: 'bold', color: '#555' },
+  input: { padding: '10px', fontSize: '16px', border: '1px solid #ddd', borderRadius: '4px' },
+  navButtons: { display: 'flex', gap: '10px', marginTop: '10px' },
+  navBtn: { padding: '10px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', color: 'white' },
+  resultTable: { overflowX: 'auto' },
+  table: { width: '100%', borderCollapse: 'collapse', marginTop: '10px' },
+  th: { backgroundColor: '#3498db', color: 'white', padding: '10px', textAlign: 'left' },
+  tr: { cursor: 'pointer' },
+  trHover: { backgroundColor: '#f0f0f0' },
+  td: { padding: '8px', border: '1px solid #eee' }
 };
 
 export default Edit;
