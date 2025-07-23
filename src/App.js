@@ -15,7 +15,7 @@ function App() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Bos Url Link
+          Bos Link
         </a>
       </header>
     </div>
