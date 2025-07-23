@@ -34,6 +34,92 @@ const Login = ({ onLogin }) => {
       });
   };
 
+  // === STYLES ===
+  const styles = {
+    container: {
+      minHeight: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#f0f2f5',
+      padding: '20px'
+    },
+    card: {
+      backgroundColor: 'white',
+      padding: '30px',
+      borderRadius: '12px',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+      width: '100%',
+      maxWidth: '400px'
+    },
+    title: {
+      textAlign: 'center',
+      color: '#2c3e50',
+      fontSize: '1.8em',
+      marginBottom: '10px'
+    },
+    subtitle: {
+      textAlign: 'center',
+      color: '#7f8c8d',
+      marginBottom: '20px',
+      fontSize: '14px'
+    },
+    error: {
+      backgroundColor: '#f8d7da',
+      color: '#721c24',
+      padding: '10px',
+      borderRadius: '6px',
+      marginBottom: '15px',
+      fontSize: '14px',
+      textAlign: 'center'
+    },
+    form: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '15px'
+    },
+    field: {
+      display: 'flex',
+      flexDirection: 'column'
+    },
+    label: {
+      fontSize: '14px',
+      fontWeight: '600',
+      color: '#2c3e50',
+      marginBottom: '6px'
+    },
+    input: {
+      padding: '12px',
+      fontSize: '16px',
+      border: '1px solid #bdc3c7',
+      borderRadius: '6px',
+      outline: 'none'
+    },
+    button: {
+      padding: '12px',
+      backgroundColor: '#3498db',
+      color: 'white',
+      border: 'none',
+      borderRadius: '6px',
+      fontSize: '16px',
+      fontWeight: 'bold',
+      cursor: 'pointer',
+      marginTop: '10px'
+    },
+    footer: {
+      textAlign: 'center',
+      marginTop: '20px',
+      fontSize: '14px',
+      color: '#7f8c8d'
+    },
+    link: {
+      color: '#3498db',
+      textDecoration: 'none',
+      fontWeight: 'bold',
+      cursor: 'pointer'
+    }
+  };
+
   return (
     <div style={styles.container}>
       <div style={styles.card}>
