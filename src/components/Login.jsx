@@ -83,6 +83,6 @@ const Login = ({ onLogin }) => {
       </div>
     </div>
   );
-}
+};
 
 export default Login;
