@@ -87,7 +87,7 @@ const Edit = () => {
 
     const payload = {
       tabel: selectedTable,
-      data: form,
+      data: form,           // ✅ DIPERBAIKI: "data: form"
       mode: form.id ? 'update' : 'insert'
     };
 
@@ -115,7 +115,7 @@ const Edit = () => {
 
     const payload = {
       tabel: selectedTable,
-       { id: form.id },
+      data: { id: form.id },  // ✅ DIPERBAIKI: "data: { id: ... }"
       mode: 'delete'
     };
 
