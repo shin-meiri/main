@@ -1,5 +1,5 @@
 // src/components/Edit.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const Edit = () => {
   const [tables, setTables] = useState([]);
@@ -9,8 +9,8 @@ const Edit = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Fungsi untuk muat data tabel
-  const loadData = () => {
+  // 🔁 Gunakan useCallback agar fungsi tidak dibuat ulang
+  const loadData = useCallback(() => {
     if (!selectedTable) return;
     setLoading(true);
     setError('');
@@ -31,16 +31,16 @@ const Edit = () => {
       })
       .catch(() => setError('Gagal muat data tabel'))
       .finally(() => setLoading(false));
-  };
+  }, [selectedTable]);
 
-  // Ambil daftar tabel
+  // Ambil daftar tabel (hanya sekali)
   useEffect(() => {
     fetch('/crudb.php?tables=true')
       .then(res => res.json())
       .then(data => {
         if (data.tables) {
           setTables(data.tables);
-          if (data.tables.length > 0) {
+          if (data.tables.length > 0 && !selectedTable) {
             setSelectedTable(data.tables[0]);
           }
         } else {
@@ -48,12 +48,12 @@ const Edit = () => {
         }
       })
       .catch(() => setError('Koneksi gagal ke crudb.php'));
-  }, []); // ✅ Cuma jalan sekali saat mount
+  }, [selectedTable]); // 👈 Tambahkan jika ingin reload saat tabel berubah
 
   // Muat data saat tabel berubah
   useEffect(() => {
     loadData();
-  }, [selectedTable, loadData]); // ✅ Tambahkan `loadData` sebagai dependency
+  }, [selectedTable, loadData]); // ✅ loadData dari useCallback → stabil
 
   const handleSearch = (id) => {
     if (!id || !selectedTable) return;
@@ -128,7 +128,7 @@ const Edit = () => {
       .then(data => {
         if (data.success) {
           loadData();
-          if (form.id === id) clearForm(); // ✅ Ganti == → ===
+          if (form.id === id) clearForm();
         } else {
           setError('Hapus gagal');
         }
@@ -250,7 +250,7 @@ const Edit = () => {
   );
 };
 
-// === STYLES ===
+// === STYLES === (tetap sama)
 const styles = {
   container: {
     padding: '20px',
