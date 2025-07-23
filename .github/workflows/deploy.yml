@@ -1,46 +1,28 @@
-name: Build and Deploy to Multiple Targets
+name: Deploy to GitHub Pages & InfinityFree FTP
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  # --- 1. Build Sekali ---
-  build:
+  deploy:
     runs-on: ubuntu-latest
-    outputs:
-      commit_sha: ${{ steps.gitid.outputs.sha }}
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install
         run: npm install
 
-      - name: Build project
+      - name: Build
         run: npm run build
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-artifact
-          path: build/
-
-  # --- 2. Deploy ke GitHub Pages ---
-  deploy_gh_pages:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download build
-        uses: actions/download-artifact@v3
-        with:
-          name: build-artifact
-          path: build/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -48,24 +30,27 @@ jobs:
           github_token: ${{ secrets.TOKEN }}
           publish_dir: ./build
           publish_branch: build
-
-  # --- 3. Deploy ke FTP InfinityFree ---
-  deploy_ftp:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download build
-        uses: actions/download-artifact@v3
-        with:
-          name: build-artifact
-          path: build/
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
 
       - name: Deploy to InfinityFree via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4
         with:
-          ftp-server: ${{ secrets.OMAH }}
-          ftp-username: ${{ secrets.AKU }}
-          ftp-password: ${{ secrets.KUNCI }}
-          local-dir: build/
+          server: ${{ secrets.OMAH }}
+          username: ${{ secrets.AKU }}
+          password: ${{ secrets.KUNCI }}
+          local-dir: ./build/
           server-dir: /htdocs/
+          protocol: ftp
           port: ${{ secrets.PORT }}
+          exclude: |
+            **/.gitignore
+            .git/
+            .github/
+            node_modules/
+            package.json
+            package-lock.json
+            src/
+            public/
+            .git*
+            !.nojekyll
