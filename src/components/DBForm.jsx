@@ -19,7 +19,7 @@ function DBForm() {
     setResult('Testing connection...');
 
     try {
-      const res = await fetch('https://bos.free.nf/test-db.php', {
+      const res = await fetch('test-db.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
