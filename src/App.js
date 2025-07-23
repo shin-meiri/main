@@ -1,58 +1,62 @@
+// src/App.js
 import React, { useState, useEffect } from 'react';
 import Home from './components/Home';
 import DbForm from './components/DbForm';
 import Tabel from './components/Tabel';
 import Login from './components/Login';
-import './App.css';
+import Register from './components/Register';
 
 function App() {
-  const [activePage, setActivePage] = useState('home');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState('');
+  const [user, setUser] = useState(null);
+  const [page, setPage] = useState('login'); // login, register, home
 
   // Cek login saat load
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setIsAuthenticated(true);
-      setUser(savedUser);
+    const saved = localStorage.getItem('user');
+    if (saved) {
+      setUser(JSON.parse(saved));
+      setPage('home');
     }
   }, []);
 
-  const handleLogin = (username) => {
-    setIsAuthenticated(true);
-    setUser(username);
+  const handleLogin = (userData, next = 'home') => {
+    setUser(userData);
+    setPage(next);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('user');
-    setIsAuthenticated(false);
-    setUser('');
-    setActivePage('home');
+    setUser(null);
+    setPage('login');
   };
 
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
+  if (!user) {
+    return (
+      <div style={styles.authContainer}>
+        {page === 'login' && <Login onLogin={handleLogin} />}
+        //{page === 'register' && <Register onLogin={handleLogin} />}
+      </div>
+    );
   }
 
   return (
     <div className="App">
       {/* Navbar */}
       <nav style={styles.nav}>
-        <div style={styles.navTitle}>🔧 My Admin</div>
+        <div style={styles.navTitle}>🔧 My Bos</div>
         <div style={styles.navLinks}>
-          <button onClick={() => setActivePage('home')} style={activePage === 'home' ? styles.navBtnActive : styles.navBtn}>🏠 HOME</button>
-          <button onClick={() => setActivePage('database')} style={activePage === 'database' ? styles.navBtnActive : styles.navBtn}>🗄️ DATABASE</button>
-          <button onClick={() => setActivePage('tabel')} style={activePage === 'tabel' ? styles.navBtnActive : styles.navBtn}>📊 TABEL</button>
+          <button onClick={() => setPage('home')} style={getNavStyle(page === 'home')}>🏠 HOME</button>
+          <button onClick={() => setPage('db')} style={getNavStyle(page === 'db')}>🗄️ DATABASE</button>
+          <button onClick={() => setPage('tabel')} style={getNavStyle(page === 'tabel')}>📊 TABEL</button>
           <button onClick={handleLogout} style={styles.navBtnLogout}>🚪 Logout</button>
         </div>
       </nav>
 
       {/* Konten */}
       <main style={styles.main}>
-        {activePage === 'home' && <Home />}
-        {activePage === 'database' && <DbForm />}
-        {activePage === 'tabel' && <Tabel />}
+        {page === 'home' && <Home />}
+        {page === 'db' && <DbForm />}
+        {page === 'tabel' && <Tabel />}
       </main>
     </div>
   );
@@ -60,6 +64,14 @@ function App() {
 
 // === STYLES ===
 const styles = {
+  authContainer: {
+    minHeight: '100vh',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f2f5',
+    padding: '20px'
+  },
   nav: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -75,35 +87,32 @@ const styles = {
   },
   navLinks: {
     display: 'flex',
-    gap: '15px'
-  },
-  navBtn: {
-    background: 'transparent',
-    color: 'white',
-    border: '2px solid transparent',
-    padding: '8px 16px',
-    fontSize: '1em',
-    cursor: 'pointer',
-    borderRadius: '6px',
-    transition: 'all 0.3s'
-  },
-  navBtnActive: {
-    background: '#3498db',
-    color: 'white',
-    border: '2px solid #2980b9',
-    padding: '8px 16px',
-    fontSize: '1em',
-    cursor: 'pointer',
-    borderRadius: '6px',
-    fontWeight: 'bold'
+    gap: '10px'
   },
   main: {
     minHeight: 'calc(100vh - 80px)',
     backgroundColor: '#f5f7fa',
-    padding: '30px 20px',
-    display: 'flex',
-    justifyContent: 'center'
+    padding: '30px 20px'
+  },
+  navBtnLogout: {
+    background: '#e74c3c',
+    color: 'white',
+    border: 'none',
+    padding: '8px 16px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: 'bold'
   }
-}
+};
+
+const getNavStyle = (active) => ({
+  background: active ? '#3498db' : 'transparent',
+  color: 'white',
+  border: '2px solid #3498db',
+  padding: '8px 16px',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  fontWeight: active ? 'bold' : 'normal'
+});
 
 export default App;
