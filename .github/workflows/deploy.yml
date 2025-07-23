@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-      branches: [ main ]  # Auto-trigger saat push ke main
+      branches: [ build ]  # Auto-trigger saat push ke main
 
       jobs:
         deploy:
