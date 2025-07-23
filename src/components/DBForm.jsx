@@ -6,11 +6,10 @@ function DBForm() {
     host: '',
     user: '',
     pass: '',
-    endpoint: 'https://your-site.rf.gd/api/test-db.php', // 👈 Input URL
+    phpUrl: 'https://your-site.rf.gd/api/test-db.php', // 👈 tambah input URL
   });
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
-  const [debug, setDebug] = useState(''); // Info tambahan
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -18,56 +17,32 @@ function DBForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setResult('');
-    setDebug('');
-
-    // Validasi URL
-    if (!form.endpoint.startsWith('http')) {
-      setResult('❌ URL endpoint harus dimulai dengan http:// atau https://');
-      setLoading(false);
-      return;
-    }
+    setLoading(true);
 
     try {
-      setDebug('🔍 Mengirim request ke: ' + form.endpoint);
-
-      const res = await fetch(form.endpoint, {
+      const res = await fetch(form.phpUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           host: form.host,
           user: form.user,
           pass: form.pass,
         }),
-        mode: 'cors', // 👈 Penting untuk CORS
       });
-
-      setDebug(prev => prev + '\n📡 Status HTTP: ' + res.status);
 
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
 
       const data = await res.json();
-      setDebug(prev => prev + '\n📥 Data dari server: ' + JSON.stringify(data));
-
-      if (data.success) {
-        setResult('✅ Connected! ' + (data.server_info ? `MySQL ${data.server_info}` : ''));
-      } else {
-        setResult('❌ Gagal: ' + (data.message || data.error || 'Unknown error'));
-      }
+      setResult(
+        data.success
+          ? `✅ Connected! MySQL: ${data.server_info}`
+          : `❌ Failed: ${data.message}`
+      );
     } catch (err) {
-      console.error('Fetch error:', err);
       setResult(`❌ Error: ${err.message}`);
-      setDebug(prev => prev + '\n🔥 Error: ' + err.message);
-
-      // Detail tambahan
-      if (err.message.includes('Failed to fetch')) {
-        setDebug(prev => prev + '\n💡 Kemungkinan: URL salah, CORS, atau server mati');
-      }
     } finally {
       setLoading(false);
     }
@@ -76,18 +51,15 @@ function DBForm() {
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial', maxWidth: '600px', margin: '0 auto' }}>
       <h2>🔧 Test MySQL Connection</h2>
-      <p style={{ fontSize: '0.9em', color: '#666' }}>
-        Isi form dan uji koneksi ke database MySQL via PHP di server.
-      </p>
 
       <form onSubmit={handleSubmit}>
-        {/* Input Endpoint */}
+        {/* PHP URL Input */}
         <div style={{ marginBottom: '15px' }}>
-          <label>🌐 PHP Endpoint URL:</label>
+          <label>🌐 PHP API URL:</label>
           <input
             type="url"
-            name="endpoint"
-            value={form.endpoint}
+            name="phpUrl"
+            value={form.phpUrl}
             onChange={handleChange}
             placeholder="https://yoursite.rf.gd/api/test-db.php"
             required
@@ -103,7 +75,7 @@ function DBForm() {
             name="host"
             value={form.host}
             onChange={handleChange}
-            placeholder="Contoh: sql123.infinityfree.com"
+            placeholder="e.g. sql123.infinityfree.com"
             required
             style={{ width: '100%', padding: '8px', marginTop: '5px' }}
           />
@@ -117,7 +89,7 @@ function DBForm() {
             name="user"
             value={form.user}
             onChange={handleChange}
-            placeholder="Contoh: if0_xxxxxx"
+            placeholder="if0_xxxxxx"
             required
             style={{ width: '100%', padding: '8px', marginTop: '5px' }}
           />
@@ -131,7 +103,7 @@ function DBForm() {
             name="pass"
             value={form.pass}
             onChange={handleChange}
-            placeholder="Masukkan password"
+            placeholder="Your MySQL password"
             style={{ width: '100%', padding: '8px', marginTop: '5px' }}
           />
         </div>
@@ -143,14 +115,15 @@ function DBForm() {
           style={{
             backgroundColor: '#28a745',
             color: 'white',
-            padding: '12px 20px',
+            padding: '12px 24px',
             border: 'none',
             borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer',
             fontSize: '16px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            width: '100%',
           }}
         >
-          {loading ? '📡 Testing...' : '✅ Test Connection'}
+          {loading ? '🔍 Testing Connection...' : '✅ Test Connection'}
         </button>
       </form>
 
@@ -163,33 +136,24 @@ function DBForm() {
             borderRadius: '4px',
             backgroundColor: result.includes('Connected') ? '#d4edda' : '#f8d7da',
             color: result.includes('Connected') ? '#155724' : '#721c24',
-            border: '1px solid',
-            borderColor: result.includes('Connected') ? '#c3e6cb' : '#f5c6cb',
+            border: '1px solid #c3e6cb',
+            whiteSpace: 'pre-wrap',
           }}
         >
-          <strong>📌 Hasil:</strong> {result}
+          <strong>📌 Result:</strong> {result}
         </div>
       )}
 
-      {/* Debug Info */}
-      {debug && (
-        <div
-          style={{
-            marginTop: '20px',
-            padding: '15px',
-            fontSize: '0.9em',
-            backgroundColor: '#f8f9fa',
-            border: '1px solid #dee2e6',
-            borderRadius: '4px',
-            whiteSpace: 'pre-wrap',
-            color: '#495057',
-          }}
-        >
-          <strong>🔧 Debug Info:</strong>
-          <br />
-          {debug}
-        </div>
-      )}
+      {/* Instructions */}
+      <div style={{ marginTop: '20px', fontSize: '14px', color: '#666', lineHeight: '1.5' }}>
+        <h3>📝 Troubleshooting:</h3>
+        <ul>
+          <li>1. Pastikan <code>test-db.php</code> ada di server dan bisa diakses.</li>
+          <li>2. Cek URL PHP: buka di tab baru, harus muncul JSON.</li>
+          <li>3. Jika 404: file salah path. Jika CORS: lihat console.</li>
+          <li>4. InfinityFree kadang "tidur" — buka dulu situs utama agar server aktif.</li>
+        </ul>
+      </div>
     </div>
   );
 }
