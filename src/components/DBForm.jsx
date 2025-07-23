@@ -28,7 +28,8 @@ function DBForm() {
       const data = await res.json();
       setResult(data.success ? '✅ Connected!' : '❌ Failed: ' + data.message);
     } catch (err) {
-      setResult('❌ Error: ' + err.message);
+      console.error("Fetch error:", err);
+      setResult('❌ Error: ' + err.message + ' (' + typeof err.message + ')');
     } finally {
       setLoading(false);
     }
