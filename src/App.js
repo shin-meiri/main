@@ -1,4 +1,3 @@
-// src/App.js
 import React, { useState } from 'react';
 import Home from './components/Home';
 import DbForm from './components/DbForm'; // Ganti sesuai nama komponen kamu
