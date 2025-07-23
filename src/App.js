@@ -25,13 +25,15 @@ function App() {
           >
             DATABASE
           </button>
-        </div>
+        
         <button
   onClick={() => setActivePage('tabel')}
   style={activePage === 'tabel' ? styles.navBtnActive : styles.navBtn}
 >
   📅 TABEL
 </button>
+
+    </div>
       </nav>
 
       {/* Konten */}
