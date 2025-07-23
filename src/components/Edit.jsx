@@ -4,10 +4,9 @@ import React, { useState, useEffect } from 'react';
 const Edit = () => {
   const [form, setForm] = useState({ id: '', nama: '' });
   const [allData, setAllData] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // Tetap dipakai di UI
   const [error, setError] = useState('');
 
-  // Ambil semua data untuk navigasi & tabel
   const loadData = () => {
     setLoading(true);
     fetch('/crud.php')
@@ -16,7 +15,7 @@ const Edit = () => {
         if (data.data) {
           setAllData(data.data);
           if (data.data.length > 0) {
-            setForm(data.data[0]); // default ke data pertama
+            setForm(data.data[0]);
           }
         }
       })
@@ -51,12 +50,12 @@ const Edit = () => {
   };
 
   const goToPrev = () => {
-    const index = allData.findIndex(d => d.id == form.id);
+    const index = allData.findIndex(d => d.id === form.id); // ✅ Ganti == → ===
     if (index > 0) setForm(allData[index - 1]);
   };
 
   const goToNext = () => {
-    const index = allData.findIndex(d => d.id == form.id);
+    const index = allData.findIndex(d => d.id === form.id); // ✅ Ganti == → ===
     if (index < allData.length - 1) setForm(allData[index + 1]);
   };
 
@@ -79,7 +78,7 @@ const Edit = () => {
       .then(data => {
         if (data.success) {
           setForm({ ...form, id: data.id });
-          loadData(); // refresh list
+          loadData();
           setError('');
         } else {
           setError('Simpan gagal: ' + (data.error || ''));
@@ -100,7 +99,7 @@ const Edit = () => {
       .then(data => {
         if (data.success) {
           loadData();
-          if (form.id == id) clearForm();
+          if (form.id === id) clearForm(); // ✅ Ganti == → ===
         } else {
           setError('Hapus gagal');
         }
@@ -111,6 +110,8 @@ const Edit = () => {
     <div style={styles.container}>
       <h2 style={styles.title}>📝 Edit Data</h2>
 
+      {/* Tampilkan loading jika perlu */}
+      {loading && <div style={styles.loading}>🔄 Sedang memuat...</div>}
       {error && <div style={styles.error}>{error}</div>}
 
       {/* Pencarian */}
@@ -219,6 +220,12 @@ const styles = {
     color: '#2980b9',
     fontSize: '1.8em',
     marginBottom: '20px'
+  },
+  loading: {
+    textAlign: 'center',
+    color: '#27ae60',
+    fontWeight: 'bold',
+    marginBottom: '15px'
   },
   error: {
     backgroundColor: '#f8d7da',
