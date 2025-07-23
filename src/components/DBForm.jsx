@@ -1,89 +1,197 @@
 // src/components/DBForm.jsx
 import React, { useState } from 'react';
 
-export default function DBForm() {
+function DBForm() {
   const [form, setForm] = useState({
-    host: 'sql210.infinityfree.com',
+    host: '',
     user: '',
     pass: '',
+    endpoint: 'https://your-site.rf.gd/api/test-db.php', // 👈 Input URL
   });
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setResult('Testing connection...');
-
-    try {
-      const res = await fetch('test-db.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-
-      const data = await res.json();
-      setResult(
-        data.success
-          ? `✅ Connected! MySQL ${data.server_info}`
-          : `❌ Failed: ${data.message}`
-      );
-    } catch (err) {
-      setResult(`❌ Network error: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [debug, setDebug] = useState(''); // Info tambahan
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  return (
-    <div style={styles.container}>
-      <h2>🔧 Test MySQL Connection</h2>
-      <form onSubmit={handleSubmit}>
-        <Input label="Host" name="host" value={form.host} onChange={handleChange} />
-        <Input label="Username" name="user" value={form.user} onChange={handleChange} required />
-        <Input label="Password" name="pass" type="password" value={form.pass} onChange={handleChange} />
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setResult('');
+    setDebug('');
 
-        <button type="submit" disabled={loading} style={styles.button}>
-          {loading ? 'Testing...' : 'Test Connection'}
+    // Validasi URL
+    if (!form.endpoint.startsWith('http')) {
+      setResult('❌ URL endpoint harus dimulai dengan http:// atau https://');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setDebug('🔍 Mengirim request ke: ' + form.endpoint);
+
+      const res = await fetch(form.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host: form.host,
+          user: form.user,
+          pass: form.pass,
+        }),
+        mode: 'cors', // 👈 Penting untuk CORS
+      });
+
+      setDebug(prev => prev + '\n📡 Status HTTP: ' + res.status);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      setDebug(prev => prev + '\n📥 Data dari server: ' + JSON.stringify(data));
+
+      if (data.success) {
+        setResult('✅ Connected! ' + (data.server_info ? `MySQL ${data.server_info}` : ''));
+      } else {
+        setResult('❌ Gagal: ' + (data.message || data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Fetch error:', err);
+      setResult(`❌ Error: ${err.message}`);
+      setDebug(prev => prev + '\n🔥 Error: ' + err.message);
+
+      // Detail tambahan
+      if (err.message.includes('Failed to fetch')) {
+        setDebug(prev => prev + '\n💡 Kemungkinan: URL salah, CORS, atau server mati');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ padding: '20px', fontFamily: 'Arial', maxWidth: '600px', margin: '0 auto' }}>
+      <h2>🔧 Test MySQL Connection</h2>
+      <p style={{ fontSize: '0.9em', color: '#666' }}>
+        Isi form dan uji koneksi ke database MySQL via PHP di server.
+      </p>
+
+      <form onSubmit={handleSubmit}>
+        {/* Input Endpoint */}
+        <div style={{ marginBottom: '15px' }}>
+          <label>🌐 PHP Endpoint URL:</label>
+          <input
+            type="url"
+            name="endpoint"
+            value={form.endpoint}
+            onChange={handleChange}
+            placeholder="https://yoursite.rf.gd/api/test-db.php"
+            required
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+        </div>
+
+        {/* Host */}
+        <div style={{ marginBottom: '15px' }}>
+          <label>🖥️ Host:</label>
+          <input
+            type="text"
+            name="host"
+            value={form.host}
+            onChange={handleChange}
+            placeholder="Contoh: sql123.infinityfree.com"
+            required
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+        </div>
+
+        {/* User */}
+        <div style={{ marginBottom: '15px' }}>
+          <label>👤 Username:</label>
+          <input
+            type="text"
+            name="user"
+            value={form.user}
+            onChange={handleChange}
+            placeholder="Contoh: if0_xxxxxx"
+            required
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+        </div>
+
+        {/* Password */}
+        <div style={{ marginBottom: '15px' }}>
+          <label>🔑 Password:</label>
+          <input
+            type="password"
+            name="pass"
+            value={form.pass}
+            onChange={handleChange}
+            placeholder="Masukkan password"
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+        </div>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            backgroundColor: '#28a745',
+            color: 'white',
+            padding: '12px 20px',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            fontSize: '16px',
+          }}
+        >
+          {loading ? '📡 Testing...' : '✅ Test Connection'}
         </button>
       </form>
 
+      {/* Result */}
       {result && (
-        <div style={result.includes('✅') ? styles.success : styles.error}>
-          <strong>Result:</strong> {result}
+        <div
+          style={{
+            marginTop: '20px',
+            padding: '15px',
+            borderRadius: '4px',
+            backgroundColor: result.includes('Connected') ? '#d4edda' : '#f8d7da',
+            color: result.includes('Connected') ? '#155724' : '#721c24',
+            border: '1px solid',
+            borderColor: result.includes('Connected') ? '#c3e6cb' : '#f5c6cb',
+          }}
+        >
+          <strong>📌 Hasil:</strong> {result}
+        </div>
+      )}
+
+      {/* Debug Info */}
+      {debug && (
+        <div
+          style={{
+            marginTop: '20px',
+            padding: '15px',
+            fontSize: '0.9em',
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #dee2e6',
+            borderRadius: '4px',
+            whiteSpace: 'pre-wrap',
+            color: '#495057',
+          }}
+        >
+          <strong>🔧 Debug Info:</strong>
+          <br />
+          {debug}
         </div>
       )}
     </div>
   );
 }
 
-// Komponen Input
-function Input({ label, ...props }) {
-  return (
-    <div style={styles.field}>
-      <label>{label}:</label>
-      <input style={styles.input} {...props} />
-    </div>
-  );
-}
-
-// Styling sederhana
-const styles = {
-  container: { padding: '20px', fontFamily: 'Arial, sans-serif' },
-  field: { marginBottom: '15px' },
-  input: { width: '100%', padding: '8px', boxSizing: 'border-box' },
-  button: {
-    padding: '10px 20px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '16px',
-  },
-  success: { marginTop: '20px', padding: '10px', backgroundColor: '#d4edda', color: '#155724', borderRadius: '4px' },
-  error: { marginTop: '20px', padding: '10px', backgroundColor: '#f8d7da', color: '#721c24', borderRadius: '4px' },
-};
+export default DBForm;
