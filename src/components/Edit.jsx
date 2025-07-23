@@ -9,7 +9,31 @@ const Edit = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 1. Ambil daftar tabel saat load
+  // Fungsi untuk muat data tabel
+  const loadData = () => {
+    if (!selectedTable) return;
+    setLoading(true);
+    setError('');
+    fetch(`/crudb.php?tabel=${selectedTable}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.data) {
+          setAllData(data.data);
+          if (data.data.length > 0) {
+            setForm(data.data[0]);
+          } else {
+            setForm({ id: '', nama: '' });
+          }
+        } else {
+          setAllData([]);
+          setForm({ id: '', nama: '' });
+        }
+      })
+      .catch(() => setError('Gagal muat data tabel'))
+      .finally(() => setLoading(false));
+  };
+
+  // Ambil daftar tabel
   useEffect(() => {
     fetch('/crudb.php?tables=true')
       .then(res => res.json())
@@ -24,33 +48,12 @@ const Edit = () => {
         }
       })
       .catch(() => setError('Koneksi gagal ke crudb.php'));
-  }, []);
+  }, []); // ✅ Cuma jalan sekali saat mount
 
-  // 2. Ambil data tabel saat tabel dipilih
+  // Muat data saat tabel berubah
   useEffect(() => {
-    if (!selectedTable) return;
     loadData();
-  }, [selectedTable]);
-
-  const loadData = () => {
-    setLoading(true);
-    setError('');
-    fetch(`/crudb.php?tabel=${selectedTable}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.data) {
-          setAllData(data.data);
-          if (data.data.length > 0) {
-            setForm(data.data[0]); // isi form dengan data pertama
-          }
-        } else {
-          setAllData([]);
-          setForm({ id: '', nama: '' });
-        }
-      })
-      .catch(() => setError('Gagal muat data tabel'))
-      .finally(() => setLoading(false));
-  };
+  }, [selectedTable, loadData]); // ✅ Tambahkan `loadData` sebagai dependency
 
   const handleSearch = (id) => {
     if (!id || !selectedTable) return;
@@ -104,7 +107,7 @@ const Edit = () => {
       .then(data => {
         if (data.success) {
           setForm({ ...form, id: data.id });
-          loadData(); // refresh list
+          loadData();
           setError('');
         } else {
           setError('Simpan gagal: ' + (data.error || ''));
@@ -125,7 +128,7 @@ const Edit = () => {
       .then(data => {
         if (data.success) {
           loadData();
-          if (form.id == id) clearForm();
+          if (form.id === id) clearForm(); // ✅ Ganti == → ===
         } else {
           setError('Hapus gagal');
         }
