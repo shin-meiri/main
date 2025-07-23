@@ -4,7 +4,7 @@ import Home from './components/Home';
 import DbForm from './components/DbForm';
 import Tabel from './components/Tabel';
 import Login from './components/Login';
-import Register from './components/Register';
+//import Register from './components/Register';
 
 function App() {
   const [user, setUser] = useState(null);
