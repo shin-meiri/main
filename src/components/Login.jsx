@@ -211,6 +211,6 @@ const styles = {
     cursor: 'pointer',
     textDecoration: 'underline'
   }
-};
+}
 
 export default Login;
