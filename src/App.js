@@ -34,7 +34,7 @@ function App() {
     return (
       <div style={styles.authContainer}>
         {page === 'login' && <Login onLogin={handleLogin} />}
-    /*    {page === 'register' && <Register onLogin={handleLogin} />} */
+ 
       </div>
     );
   }
