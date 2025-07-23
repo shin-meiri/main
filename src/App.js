@@ -5,6 +5,7 @@ import DbForm from './components/DbForm';
 import Tabel from './components/Tabel';
 import Login from './components/Login';
 //import Register from './components/Register';
+import Edit from './components/Edit';
 
 function App() {
   const [user, setUser] = useState(null);
