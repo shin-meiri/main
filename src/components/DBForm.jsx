@@ -1,17 +1,14 @@
+// src/components/DBForm.jsx
 import React, { useState } from 'react';
 
-function DBForm() {
+export default function DBForm() {
   const [form, setForm] = useState({
-    host: '',
+    host: 'sql210.infinityfree.com',
     user: '',
     pass: '',
   });
   const [result, setResult] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,89 +16,44 @@ function DBForm() {
     setResult('Testing connection...');
 
     try {
-      const res = await fetch('https://bos.free.nf/test-db.php', {
+      const res = await fetch('test-db.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
 
       const data = await res.json();
-      setResult(data.success ? '✅ Connected!' : '❌ Failed: ' + data.message);
+      setResult(
+        data.success
+          ? `✅ Connected! MySQL ${data.server_info}`
+          : `❌ Failed: ${data.message}`
+      );
     } catch (err) {
-      console.error("Fetch error:", err);
-      setResult('❌ Error: ' + err.message + ' (' + typeof err.message + ')');
+      setResult(`❌ Network error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-      <h2>Test MySQL Connection</h2>
+    <div style={styles.container}>
+      <h2>🔧 Test MySQL Connection</h2>
       <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '10px' }}>
-          <label>Host:</label>
-          <input
-            type="text"
-            name="host"
-            value={form.host}
-            onChange={handleChange}
-            placeholder="localhost or host from InfinityFree"
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
+        <Input label="Host" name="host" value={form.host} onChange={handleChange} />
+        <Input label="Username" name="user" value={form.user} onChange={handleChange} required />
+        <Input label="Password" name="pass" type="password" value={form.pass} onChange={handleChange} />
 
-        <div style={{ marginBottom: '10px' }}>
-          <label>Username:</label>
-          <input
-            type="text"
-            name="user"
-            value={form.user}
-            onChange={handleChange}
-            placeholder="Your MySQL username"
-            required
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '10px' }}>
-          <label>Password:</label>
-          <input
-            type="password"
-            name="pass"
-            value={form.pass}
-            onChange={handleChange}
-            placeholder="Your MySQL password"
-            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            backgroundColor: '#007bff',
-            color: 'white',
-            padding: '10px 20px',
-            border: 'none',
-            cursor: loading ? 'not-allowed' : 'pointer',
-          }}
-        >
+        <button type="submit" disabled={loading} style={styles.button}>
           {loading ? 'Testing...' : 'Test Connection'}
         </button>
       </form>
 
       {result && (
-        <div
-          style={{
-            marginTop: '20px',
-            padding: '10px',
-            backgroundColor: result.includes('Failed') ? '#f8d7da' : '#d4edda',
-            color: result.includes('Failed') ? '#721c24' : '#155724',
-            borderRadius: '4px',
-          }}
-        >
+        <div style={result.includes('✅') ? styles.success : styles.error}>
           <strong>Result:</strong> {result}
         </div>
       )}
@@ -109,4 +61,29 @@ function DBForm() {
   );
 }
 
-export default DBForm;
+// Komponen Input
+function Input({ label, ...props }) {
+  return (
+    <div style={styles.field}>
+      <label>{label}:</label>
+      <input style={styles.input} {...props} />
+    </div>
+  );
+}
+
+// Styling sederhana
+const styles = {
+  container: { padding: '20px', fontFamily: 'Arial, sans-serif' },
+  field: { marginBottom: '15px' },
+  input: { width: '100%', padding: '8px', boxSizing: 'border-box' },
+  button: {
+    padding: '10px 20px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '16px',
+  },
+  success: { marginTop: '20px', padding: '10px', backgroundColor: '#d4edda', color: '#155724', borderRadius: '4px' },
+  error: { marginTop: '20px', padding: '10px', backgroundColor: '#f8d7da', color: '#721c24', borderRadius: '4px' },
+};
