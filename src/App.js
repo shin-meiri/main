@@ -1,29 +1,34 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import Home from './pages/Home';           // ✅ Sekarang kita gunakan
-import Login from './admin/pages/Login';
-import Dashboard from './admin/pages/Dashboard';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import './App.css';
+
+// HOC untuk proteksi route
+const ProtectedRoute = ({ children }) => {
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  return isAuthenticated ? children : window.location.replace('/login');
+};
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showLogin, setShowLogin] = useState(false); // kontrol tampilkan login
-
-  // Tampilkan halaman sesuai state
-  let content;
-
-  if (showLogin && !isAuthenticated) {
-    content = <Login onLogin={() => setIsAuthenticated(true)} />;
-  } else if (isAuthenticated) {
-    content = <Dashboard />;
-  } else {
-    content = <Home onGoToLogin={() => setShowLogin(true)} />;
-  }
-
   return (
-    <div>
+    <div className="app">
       <Header />
-      <main>{content}</main>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/admin/*"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
       <Footer />
     </div>
   );
