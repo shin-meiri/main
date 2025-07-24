@@ -43,7 +43,7 @@ const Login = ({ onLogin }) => {
       </form>
 
 // Di dalam form Login.jsx, tambahkan tombol "Kembali"
-<button type="button" onClick={() => (window.location.href = '/')} style={backButtonStyle}>
+<button type="button" onClick={() => (window.location.href = '/')} className="backButtonStyle">
   Kembali
 </button>
 
