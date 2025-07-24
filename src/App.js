@@ -7,7 +7,8 @@ import Post from './pages/Post';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import Admin from './pages/Admin';
-import Dashboard from './pages/Admin/Dashboard'; // Tambahkan ini
+import Dashboard from './pages/Admin/Dashboard'; 
+import SettingsForm from './pages/Admin/SettingsForm'; 
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/admin/dashboard" element={<Dashboard />} />
+            <Route path="/admin/SettingsForm" element={<SettingsForm />} />
           </Routes>
         </main>
         <Footer />
