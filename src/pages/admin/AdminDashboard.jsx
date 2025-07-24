@@ -1,23 +1,26 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Outlet } from 'react-router-dom'; // untuk render halaman anak: settings, profile
+import AdminSidebar from '../../components/AdminSidebar';
 
-export default function AdminDashboard() {
-  const isLoggedIn = localStorage.getItem('admin_logged_in');
-  if (!isLoggedIn) {
-    window.location.href = '/admin';
-    return null;
-  }
-
+const Dashboard = () => {
   return (
-    <div className="admin-dashboard">
-      <h2>Admin Dashboard</h2>
-      <nav>
-        <Link to="/admin/settings">Pengaturan Website</Link> | 
-        <Link to="/admin/logout" onClick={() => {
-          localStorage.removeItem('admin_logged_in');
-          window.location.href = '/';
-        }}>Logout</Link>
-      </nav>
+    <div style={{ display: 'flex' }}>
+      {/* Sidebar */}
+      <AdminSidebar />
+
+      {/* Main Content */}
+      <main style={{
+        marginLeft: '220px',
+        padding: '20px',
+        width: `calc(100% - 220px)`,
+        minHeight: 'calc(100vh - 60px)',
+        backgroundColor: '#ecf0f1'
+      }}>
+        <h2>Dashboard Admin</h2>
+        <Outlet /> {/* Render child route: Settings, Profile */}
+      </main>
     </div>
   );
-}
+};
+
+export default Dashboard;
