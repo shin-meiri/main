@@ -7,13 +7,17 @@ const Header = () => {
       backgroundColor: '#2c3e50',
       color: 'white',
       padding: '1rem',
-      textAlign: 'center'
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center'
     }}>
-      <h1>
-        <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>
-          My Professional Site
-        </Link>
-      </h1>
+      <div>
+        <h1 style={{ margin: 0 }}>
+          <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>
+            My Professional Site
+          </Link>
+        </h1>
+      </div>
       <nav>
         <Link to="/" style={linkStyle}>Home</Link> | 
         <Link to="/post" style={linkStyle}>Posts</Link> | 
