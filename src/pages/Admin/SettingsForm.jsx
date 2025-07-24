@@ -1,21 +1,17 @@
 import React, { useState, useEffect } from 'react';
 
-const SettingsForm = () => {
+const Settings = () => {
   const [settings, setSettings] = useState({
     siteTitle: 'My Professional Site',
     bgColor: '#f8f9fa',
     textColor: '#212529',
-    favicon: '/favicon.ico',
+    favicon: '/favicon.ico'
   });
 
   useEffect(() => {
     const saved = localStorage.getItem('siteSettings');
     if (saved) {
       setSettings(JSON.parse(saved));
-    } else {
-      fetch('/settings.json')
-        .then(res => res.json())
-        .then(data => setSettings(data));
     }
   }, []);
 
@@ -33,45 +29,45 @@ const SettingsForm = () => {
 
   const saveSettings = () => {
     localStorage.setItem('siteSettings', JSON.stringify(settings));
-    alert('✅ Setting berhasil disimpan!');
+    alert('Setting berhasil disimpan!');
   };
 
   return (
     <div>
-      <h2>Pengaturan Situs</h2>
+      <h2>⚙️ Pengaturan Situs</h2>
       <form>
-        <div style={formStyle.field}>
-          <label>Site Title</label>
-          <input type="text" name="siteTitle" value={settings.siteTitle} onChange={handleChange} style={formStyle.input} />
-        </div>
+        <label>Site Title:<br/>
+          <input type="text" name="siteTitle" value={settings.siteTitle} onChange={handleChange} style={inputStyle} />
+        </label><br/><br/>
 
-        <div style={formStyle.field}>
-          <label>Background Color</label>
+        <label>Background Color:<br/>
           <input type="color" name="bgColor" value={settings.bgColor} onChange={handleChange} />
-        </div>
+        </label><br/><br/>
 
-        <div style={formStyle.field}>
-          <label>Text Color</label>
+        <label>Text Color:<br/>
           <input type="color" name="textColor" value={settings.textColor} onChange={handleChange} />
-        </div>
+        </label><br/><br/>
 
-        <div style={formStyle.field}>
-          <label>Favicon URL</label>
-          <input type="text" name="favicon" value={settings.favicon} onChange={handleChange} style={formStyle.input} />
-        </div>
+        <label>Favicon URL:<br/>
+          <input type="text" name="favicon" value={settings.favicon} onChange={handleChange} style={inputStyle} />
+        </label><br/><br/>
 
-        <button type="button" onClick={saveSettings} style={formStyle.button}>
-          Simpan Pengaturan
+        <button type="button" onClick={saveSettings} style={btnStyle}>
+          Simpan Perubahan
         </button>
       </form>
     </div>
   );
 };
 
-const formStyle = {
-  field: { marginBottom: '20px' },
-  input: { width: '100%', padding: '8px' },
-  button: { padding: '10px 20px', backgroundColor: '#2c3e50', color: 'white', border: 'none', cursor: 'pointer' },
+const inputStyle = { width: '100%', padding: '8px', margin: '5px 0', fontSize: '14px' };
+const btnStyle = {
+  backgroundColor: '#2c3e50',
+  color: 'white',
+  padding: '10px 20px',
+  border: 'none',
+  borderRadius: '4px',
+  cursor: 'pointer'
 };
 
-export default SettingsForm;
+export default Settings;
