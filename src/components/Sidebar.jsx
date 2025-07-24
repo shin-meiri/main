@@ -1,18 +1,28 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { logout } from '../utils/auth';
 
-const Sidebar = () => {
+const Sidebar = ({ onLogout }) => {
+  const handleLogout = () => {
+    logout();
+    onLogout();
+  };
+
   return (
-    <div style={sidebarStyle}>
+    <aside style={sidebarStyle}>
       <div style={logoStyle}>Admin Panel</div>
       <nav>
         <ul style={navStyle}>
-          <li><Link to="/admin/dashboard" style={linkStyle}>📊 Dashboard</Link></li>
-          <li><Link to="/admin/posts" style={linkStyle}>📝 Posts</Link></li>
-          <li><Link to="/admin/settings" style={linkStyle}>⚙️ Settings</Link></li>
+          <li><a href="/admin/dashboard" style={linkStyle}>📊 Dashboard</a></li>
+          <li><a href="/admin/posts" style={linkStyle}>📝 Posts</a></li>
+          <li><a href="/admin/settings" style={linkStyle}>⚙️ Settings</a></li>
+          <li>
+            <button onClick={handleLogout} style={{ ...linkStyle, background: '#dc3545' }}>
+              🔐 Logout
+            </button>
+          </li>
         </ul>
       </nav>
-    </div>
+    </aside>
   );
 };
 
@@ -21,22 +31,24 @@ const sidebarStyle = {
   backgroundColor: '#2c3e50',
   color: 'white',
   height: '100vh',
+  padding: '1rem 0',
   position: 'fixed',
   top: 0,
   left: 0,
-  padding: '2rem 0',
 };
 
 const logoStyle = {
   textAlign: 'center',
-  fontSize: '1.5rem',
+  padding: '1rem',
+  fontSize: '1.2rem',
   fontWeight: 'bold',
-  marginBottom: '2rem',
+  borderBottom: '1px solid #34495e',
 };
 
 const navStyle = {
   listStyle: 'none',
   padding: 0,
+  marginTop: '1rem',
 };
 
 const linkStyle = {
@@ -44,11 +56,8 @@ const linkStyle = {
   padding: '1rem 1.5rem',
   color: 'white',
   textDecoration: 'none',
+  fontSize: '0.95rem',
   transition: 'background 0.3s',
-};
-
-linkStyle[':hover'] = {
-  backgroundColor: '#34495e',
 };
 
 export default Sidebar;
