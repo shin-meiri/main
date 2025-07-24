@@ -48,7 +48,7 @@ button {
   cursor: pointer;
 }
 
-backButtonStyle = {
+.backButtonStyle = {
   backgroundColor: #6c757d;
   marginRight: 10px;
 }
