@@ -1,11 +1,10 @@
-import React from 'react';
-
-export default function Home() {
+const Home = () => {
   return (
-    <div className="page home">
-      <h1>Selamat Datang di Website Saya</h1>
-      <p>Website profesional dibuat dengan React. Modern, cepat, dan responsif.</p>
-      <button onClick={() => window.location.href = '/post'}>Lihat Postingan</button>
+    <div>
+      <h1>Welcome to Home</h1>
+      <p>This is a professional React template ready for deployment.</p>
     </div>
   );
-}
+};
+
+export default Home;
