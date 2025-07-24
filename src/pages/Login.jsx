@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import userData from '../data/user.json';
 import { useNavigate } from 'react-router-dom';
-import './Login.css';
+import { login } from '../services/api';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -9,43 +8,89 @@ const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (username === userData.username && password === userData.password) {
-      localStorage.setItem('isAuthenticated', 'true');
-      navigate('/admin/dashboard');
-    } else {
-      setError('Username atau password salah!');
+    try {
+      const data = await login(username, password);
+      // Simpan token atau status login di localStorage/sessionStorage
+      localStorage.setItem('adminToken', data.token || 'logged_in');
+      localStorage.setItem('user', JSON.stringify(data.user));
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message);
     }
   };
 
   return (
-    <div className="login-container">
-      <form onSubmit={handleSubmit} className="login-form">
+    <div style={loginStyle.container}>
+      <form onSubmit={handleSubmit} style={loginStyle.form}>
         <h2>Admin Login</h2>
-        {error && <p className="error">{error}</p>}
-        <div>
+        {error && <p style={loginStyle.error}>{error}</p>}
+        <div style={loginStyle.inputGroup}>
           <label>Username</label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
+            style={loginStyle.input}
           />
         </div>
-        <div>
+        <div style={loginStyle.inputGroup}>
           <label>Password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            style={loginStyle.input}
           />
         </div>
-        <button type="submit">Login</button>
+        <button type="submit" style={loginStyle.button}>
+          Login
+        </button>
       </form>
     </div>
   );
+};
+
+// Styling sederhana
+const loginStyle = {
+  container: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: '80vh',
+  },
+  form: {
+    backgroundColor: '#fff',
+    padding: '2rem',
+    borderRadius: '8px',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    width: '300px',
+  },
+  inputGroup: {
+    marginBottom: '1rem',
+  },
+  input: {
+    width: '100%',
+    padding: '0.5rem',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+  },
+  button: {
+    width: '100%',
+    padding: '0.5rem',
+    backgroundColor: '#007bff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+  },
+  error: {
+    color: 'red',
+    fontSize: '0.875rem',
+  },
 };
 
 export default Login;
