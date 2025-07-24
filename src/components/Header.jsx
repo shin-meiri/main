@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom'; // ← Tambahkan ini
 
 const Header = () => {
   const [data, setData] = useState({});
@@ -12,19 +13,22 @@ const Header = () => {
   return (
     <header style={styles.header}>
       <div style={styles.left}>
-        <img src={data.logo} alt="Logo" style={styles.logo} />
+        <Link to="/" style={styles.logoLink}>
+          <img src={data.logo} alt="Logo" style={styles.logo} />
+        </Link>
       </div>
       <div style={styles.right}>
         {data.header?.links?.map((link, index) => (
-          <a key={index} href={link.url} style={styles.link}>
+          <Link key={index} to={link.url} style={styles.link}>
             {link.name}
-          </a>
+          </Link>
         ))}
       </div>
     </header>
   );
 };
 
+// ... styles tetap sama
 const styles = {
   header: {
     display: 'flex',
@@ -37,6 +41,7 @@ const styles = {
   left: { display: 'flex', alignItems: 'center' },
   right: { display: 'flex', gap: '1.5rem' },
   logo: { height: '40px' },
+  logoLink: { textDecoration: 'none' },
   link: {
     textDecoration: 'none',
     color: '#333',
