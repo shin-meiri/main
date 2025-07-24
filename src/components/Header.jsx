@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // ← Tambahkan ini
+import { Link } from 'react-router-dom'; 
 
 const Header = () => {
   const [data, setData] = useState({});
@@ -28,7 +28,7 @@ const Header = () => {
   );
 };
 
-// ... styles tetap sama
+
 const styles = {
   header: {
     display: 'flex',
