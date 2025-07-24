@@ -8,6 +8,15 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import './App.css';
 
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+<BrowserRouter>
+<App />
+</BrowserRouter>
+ </React.StrictMode>
+);
+
 // HOC untuk proteksi route
 const ProtectedRoute = ({ children }) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
