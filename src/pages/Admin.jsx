@@ -1,12 +1,10 @@
-// src/pages/Admin.js
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const Admin = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -15,7 +13,7 @@ const Admin = () => {
       .then(data => {
         if (username === data.username && password === data.password) {
           localStorage.setItem('adminLoggedIn', 'true');
-          navigate('/admin/dashboard/settings'); // Redirect ke dashboard
+          window.location.href = '/admin/dashboard'; // Redirect ke dashboard
         } else {
           setError('Username atau password salah!');
         }
@@ -46,14 +44,26 @@ const Admin = () => {
         />
         <button type="submit" style={btnStyle}>Login</button>
       </form>
+      <p style={{ marginTop: '20px' }}>
+        <Link to="/" style={{ color: '#3498db' }}>← Kembali ke situs</Link>
+      </p>
     </div>
   );
 };
 
-// Styles (sama seperti sebelumnya)
-const loginContainer = { maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f9f9f9' };
+// Styling
+const loginContainer = {
+  maxWidth: '400px',
+  margin: '100px auto',
+  padding: '30px',
+  border: '1px solid #ddd',
+  borderRadius: '10px',
+  backgroundColor: '#f9f9f9',
+  boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+};
+
 const formStyle = { display: 'flex', flexDirection: 'column' };
-const inputStyle = { padding: '10px', margin: '10px 0', fontSize: '16px' };
-const btnStyle = { backgroundColor: '#2c3e50', color: 'white', padding: '12px', border: 'none', borderRadius: '4px', cursor: 'pointer' };
+const inputStyle = { padding: '12px', margin: '10px 0', fontSize: '16px', border: '1px solid #ccc', borderRadius: '4px' };
+const btnStyle = { backgroundColor: '#2c3e50', color: 'white', padding: '12px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '16px' };
 
 export default Admin;
