@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom'; // ← Tambahkan Link
 
 const AdminLayout = () => {
   const [data, setData] = useState({});
@@ -31,15 +31,18 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <aside style={styles.sidebar}>
         <div style={styles.logo}>
-          <img src={data.logo} alt="Logo" style={{ height: '40px' }} />
+          <Link to="/" style={styles.logoLink}>
+            <img src={data.logo} alt="Logo" style={{ height: '40px' }} />
+          </Link>
         </div>
         <nav>
           <ul style={styles.navList}>
             {menu.map((item, index) => (
               <li key={index}>
-                <a href={item.url} style={styles.navLink}>
+                {/* 🔥 Ganti a jadi Link */}
+                <Link to={item.url} style={styles.navLink}>
                   <span>{item.icon}</span> {item.name}
-                </a>
+                </Link>
               </li>
             ))}
           </ul>
@@ -51,16 +54,17 @@ const AdminLayout = () => {
 
       {/* Main Content */}
       <main style={styles.adminMain}>
-        <Outlet /> {/* Tempat Dashboard dan halaman lain muncul */}
+        <Outlet /> {/* Dashboard atau Settings muncul di sini */}
       </main>
     </div>
   );
 };
 
+
 const styles = {
   adminContainer: {
     display: 'flex',
-    minHeight: 'calc(100vh - 60px)', // kurangi header
+    minHeight: 'calc(100vh - 60px)',
   },
   sidebar: {
     width: '250px',
@@ -73,6 +77,9 @@ const styles = {
   logo: {
     marginBottom: '2rem',
     textAlign: 'center',
+  },
+  logoLink: {
+    textDecoration: 'none',
   },
   navList: {
     listStyle: 'none',
@@ -87,10 +94,6 @@ const styles = {
     borderRadius: '4px',
     marginBottom: '0.5rem',
     fontSize: '0.95rem',
-  },
-  navLinkHover: {
-    backgroundColor: '#007BFF',
-    color: 'white',
   },
   logoutButton: {
     marginTop: 'auto',
