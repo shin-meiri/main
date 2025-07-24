@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Home from './pages/Home';
 import AdminLogin from './pages/AdminLogin';
 import Dashboard from './pages/Dashboard';
 import Sidebar from './components/Sidebar';
-import { isAuthenticated } from './utils/auth';
+import { isAuthenticated, login } from './utils/auth'; // Tambahkan login jika diperlukan
 
 function App() {
   const [admin, setAdmin] = useState(null);
@@ -30,15 +30,14 @@ function App() {
     <Router>
       <div style={appStyle}>
         <Header />
-        
+
         <Routes>
-          {/* Public Routes */}
           <Route path="/" element={<Home />} />
+
           <Route path="/admin/login" element={
             admin ? <Navigate to="/admin/dashboard" /> : <AdminLogin onLogin={handleLogin} />
           } />
 
-          {/* Protected Routes */}
           <Route path="/admin/dashboard" element={
             admin ? (
               <>
