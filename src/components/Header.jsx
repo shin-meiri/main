@@ -1,15 +1,19 @@
 import React from 'react';
-import './Header.css'; // kita buat CSS terpisah agar rapi
+import './Header.css'; // Kita buat CSS-nya di bawah
 
 const Header = () => {
   return (
     <header className="header">
-      <div className="logo">Logo</div>
-      <nav className="nav-menu">
-        <a href="/">Home</a>
-        <a href="/about">About</a>
-        <a href="/contact">Contact</a>
-      </nav>
+      <div className="container">
+        <div className="logo">Logo</div>
+        <nav className="nav">
+          <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/about">About</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </nav>
+      </div>
     </header>
   );
 };
