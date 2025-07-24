@@ -1,0 +1,6 @@
+{
+  "siteTitle": "My Professional Site",
+  "bgColor": "#f8f9fa",
+  "textColor": "#212529",
+  "favicon": "/favicon.ico"
+}
