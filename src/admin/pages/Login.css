@@ -48,6 +48,11 @@ button {
   cursor: pointer;
 }
 
+backButtonStyle = {
+  backgroundColor: '#6c757d',
+  marginRight: '10px'
+};
+
 button:hover {
   background-color: #0056b3;
 }
