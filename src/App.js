@@ -19,6 +19,10 @@ const App = () => {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} /> {/* /admin -> dashboard */}
             </Route>
+<Route path="/admin" element={<AdminLayout />}>
+  <Route index element={<Dashboard />} />
+  <Route path="settings" element={<Settings />} />
+</Route>
           </Routes>
         </main>
         <Footer />
