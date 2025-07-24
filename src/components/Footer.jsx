@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 const Footer = () => {
   return (
     <div>
-      <p>Amy</p1>
+      <a>Amy</a1>
 
     </div>
   );
