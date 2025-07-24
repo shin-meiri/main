@@ -1,10 +1,16 @@
 .header {
+  background-color: #333;
+  color: white;
+  padding: 1rem 0;
+}
+
+.container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: #333;
-  color: white;
-  padding: 1rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .logo {
@@ -12,12 +18,18 @@
   font-weight: bold;
 }
 
-.nav-menu a {
-  color: white;
-  margin-left: 1.5rem;
-  text-decoration: none;
+.nav ul {
+  list-style: none;
+  display: flex;
+  gap: 1.5rem;
 }
 
-.nav-menu a:hover {
-  text-decoration: underline;
+.nav a {
+  color: white;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.nav a:hover {
+  color: #00d1b2;
 }
