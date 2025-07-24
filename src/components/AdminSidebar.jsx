@@ -5,18 +5,19 @@ const AdminSidebar = () => {
   return (
     <div style={sidebarStyle}>
       <h3>Admin Panel</h3>
-      <ul style={listStyle}>
-        <li><Link to="/admin/settings" style={linkStyle}>⚙️ Settings</Link></li>
-        <li><Link to="/admin/profile" style={linkStyle}>👤 Profile</Link></li>
-        <li><Link to="/" style={linkStyle}>🏠 View Site</Link></li>
-      </ul>
+      <nav>
+        <ul style={navList}>
+          <li><Link to="/admin" style={linkStyle}>📊 Dashboard</Link></li>
+          <li><Link to="/admin/settings" style={linkStyle}>⚙️ Settings</Link></li>
+          <li><Link to="/" style={linkStyle}>⬅️ Kembali ke Situs</Link></li>
+        </ul>
+      </nav>
     </div>
   );
 };
 
-// Styles
 const sidebarStyle = {
-  width: '220px',
+  width: '250px',
   backgroundColor: '#34495e',
   color: 'white',
   height: 'calc(100vh - 60px)',
@@ -24,10 +25,10 @@ const sidebarStyle = {
   top: '60px',
   left: 0,
   padding: '20px',
-  boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+  borderRight: '1px solid #bdc3c7'
 };
 
-const listStyle = {
+const navList = {
   listStyle: 'none',
   padding: 0,
   marginTop: '20px'
