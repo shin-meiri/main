@@ -47,6 +47,12 @@ const Login = ({ onLogin }) => {
   Kembali
 </button>
 
+// Tambahkan di styles:
+const backButtonStyle = {
+  backgroundColor: '#6c757d',
+  marginRight: '10px'
+};
+
     </div>
   );
 };
