@@ -1,40 +1,57 @@
 // src/AdminPanel.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+
+const API_URL = 'https://bos.free.nf/api/crud.php';
 
 export default function AdminPanel() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('Loading...');
 
-  const testAPI = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('https://bos.free.nf/api/crud.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'getAdminData' })
-      });
-      const json = await res.json();
-      setData(json);
-    } catch (err) {
-      setData({ error: err.message });
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    // Coba kirim request ke crud.php
+    fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'getAdminData' })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        setMessage(`Error: ${data.error}`);
+      } else {
+        setMessage('OK - Admin Panel Jalan! 🎉');
+      }
+    })
+    .catch(err => {
+      setMessage(`Gagal koneksi: ${err.message}`);
+    });
+  }, []);
 
   return (
-    <div style={{ padding: '40px', textAlign: 'center' }}>
-      <h1>🔧 Test API</h1>
-      <p>Tekan tombol di bawah untuk cek koneksi ke crud.php</p>
-      <button onClick={testAPI} disabled={loading}>
-        {loading ? 'Cek...' : 'Test API'}
+    <div style={styles.container}>
+      <h1>🧪 TEST ADMIN PANEL</h1>
+      <p><strong>Status:</strong> {message}</p>
+      <button onClick={() => window.location.reload()} style={styles.button}>
+        Refresh
       </button>
-
-      {data && (
-        <pre style={{ textAlign: 'left', margin: '20px', padding: '10px', backgroundColor: '#f0f0f0' }}>
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      )}
     </div>
   );
 }
+
+const styles = {
+  container: {
+    padding: '40px',
+    fontFamily: 'Arial, sans-serif',
+    textAlign: 'center',
+    backgroundColor: '#f0f8ff',
+    minHeight: '100vh'
+  },
+  button: {
+    padding: '10px 20px',
+    fontSize: '16px',
+    backgroundColor: '#007BFF',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer'
+  }
+};
