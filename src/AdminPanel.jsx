@@ -16,7 +16,7 @@ export default function AdminPanel() {
   const handleLogin = (e) => {
     e.preventDefault();
     // 🔑 GANTI PASSWORD DI SINI!
-    if (loginForm.password === 'admin123') {
+    if (loginForm.password === 'amymeiri') {
       localStorage.setItem('admin_token', 'logged_in');
       setToken('logged_in');
     } else {
