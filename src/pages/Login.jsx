@@ -12,7 +12,7 @@ const Login = () => {
     e.preventDefault();
     if (username === 'amy' && password === 'amymeiri') {
       localStorage.setItem('isLoggedIn', 'true');
-      navigate('/admin');
+      navigate('/admin', { replace: true });
     } else {
       setError('Username atau password salah');
     }
