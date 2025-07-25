@@ -7,7 +7,8 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import AdminLayout from './pages/Admin/AdminLayout';
 import Dashboard from './pages/Admin/Dashboard';
-import Settings from './pages/Admin/Settings'; // ✅ Import Settings
+import Settings from './pages/Admin/Settings';
+import MySQL from './pages/Admin/MySQL'; 
 
 const App = () => {
   return (
@@ -18,9 +19,11 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="settings" element={<Settings />} /> {/* ✅ Sudah terdefinisi */}
+<Route path="/admin" element={<AdminLayout />}>
+  <Route index element={<Dashboard />} />
+  <Route path="settings" element={<Settings />} />
+  <Route path="mysql" element={<MySQL />} />
+</Route>
             </Route>
           </Routes>
         </main>
