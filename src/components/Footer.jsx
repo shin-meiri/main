@@ -5,13 +5,14 @@ const Footer = () => {
 
   useEffect(() => {
     fetch('/api/data.php')
-      .then(res => res.json())
-      .then(json => setData(json));
+      .then((res) => res.json())
+      .then((json) => setData(json))
+      .catch((err) => console.error(err));
   }, []);
 
   return (
     <footer style={styles.footer}>
-      <p>{data.footer?.text}</p>
+      <p>{data.footer?.text || '© Website'}</p>
     </footer>
   );
 };
