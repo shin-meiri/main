@@ -422,16 +422,7 @@ const styles = {
     borderCollapse: 'collapse',
     marginTop: '1rem',
   },
-  th: {
-    backgroundColor: '#f1f1f1',
-    borderBottom: '2px solid #ddd',
-    padding: '0.5rem',
-    textAlign: 'left',
-  },
-  td: {
-    padding: '0.5rem',
-    borderBottom: '1px solid #eee',
-  },
+  
 };
 
 export default MySQL;
