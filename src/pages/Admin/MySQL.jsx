@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
 const MySQL = () => {
-  // Form konfigurasi
   const [form, setForm] = useState({
     host: 'localhost',
     port: '3306',
@@ -9,45 +8,57 @@ const MySQL = () => {
     pass: '',
     dbname: '',
   });
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [tables, setTables] = useState([]);
+  const [selectedTable, setSelectedTable] = useState('');
 
-  const [tables, setTables] = useState([]);        // Daftar tabel
-  const [message, setMessage] = useState('');      // Status message
-  const [testing, setTesting] = useState(false);   // Loading test
-  const [saving, setSaving] = useState(false);     // Loading save
-  const [loadingTables, setLoadingTables] = useState(false); // Loading tabel
-
-  // Load konfigurasi saat komponen mount
+  // 🔹 1. Load konfigurasi dari db.php saat komponen mount
   useEffect(() => {
-    const fetchConfig = () => {
-      fetch('/api/db.php') // GET request ke db.php
+    const loadConfig = () => {
+      fetch('/api/db.php') // GET request → ambil konfig
         .then((res) => {
-          if (!res.ok) throw new Error('Gagal muat konfigurasi');
+          if (!res.ok) throw new Error('Gagal muat respons');
           return res.json();
         })
         .then((data) => {
           if (data.success && data.config) {
-            setForm(data.config); // Isi form dengan konfig dari db.php
+            const config = data.config;
+            setForm({
+              host: config.host || 'localhost',
+              port: config.port || '3306',
+              user: config.user || '',
+              pass: config.pass || '',
+              dbname: config.dbname || '',
+            });
           }
+          setMessage('');
         })
         .catch((err) => {
-          setMessage('⚠️ Tidak bisa muat konfigurasi: ' + err.message);
+          setMessage('⚠️ Gagal muat konfigurasi DB.');
           console.error(err);
         });
     };
 
-    fetchConfig();
+    loadConfig();
   }, []);
 
-  // Handler: Ubah input form
+  // 🔹 2. Handle perubahan input
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    // Reset status koneksi jika form berubah
+    setConnected(false);
+    setTables([]);
+    setSelectedTable('');
   };
 
-  // Handler: Simpan konfigurasi ke db.php
+  // 🔹 3. Simpan konfigurasi ke db.php
   const handleSave = () => {
     setMessage('Menyimpan konfigurasi...');
-    setSaving(true);
+    setLoading(true);
 
     fetch('/api/db.php', {
       method: 'POST',
@@ -59,53 +70,56 @@ const MySQL = () => {
         if (data.success) {
           setMessage('✅ Konfigurasi berhasil disimpan!');
         } else {
-          setMessage('❌ Gagal simpan: ' + (data.message || 'Unknown error'));
+          setMessage('❌ Simpan gagal: ' + (data.message || 'Unknown'));
         }
-        setTimeout(() => setMessage(''), 5000);
       })
       .catch((err) => {
-        setMessage('❌ Error: Tidak bisa menyimpan.');
+        setMessage('❌ Error: Tidak bisa simpan.');
         console.error(err);
       })
-      .finally(() => setSaving(false));
+      .finally(() => {
+        setLoading(false);
+        setTimeout(() => setMessage(''), 3000);
+      });
   };
 
-  // Handler: Test koneksi ke MySQL
+  // 🔹 4. Test koneksi ke database
   const handleTest = () => {
-    setMessage('Sedang menguji koneksi...');
+    setMessage('Menguji koneksi...');
     setTesting(true);
+    setConnected(false);
+    setTables([]);
+    setSelectedTable('');
 
     fetch('/api/db.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, action: 'test_db' }),
+      body: JSON.stringify({ action: 'test_db' }),
     })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setMessage('✅ ' + data.message);
-          // Simpan otomatis jika sukses
-          handleSave();
+          setMessage('✔️ Koneksi berhasil!');
+          setConnected(true);
+          // Muat tabel jika ada dbname
+          if (form.dbname) {
+            loadTables();
+          }
         } else {
-          setMessage('❌ ' + data.message);
+          setMessage('❌ Koneksi gagal: ' + data.message);
         }
       })
       .catch((err) => {
-        setMessage('❌ Koneksi gagal: ' + err.message);
+        setMessage('❌ Error koneksi: ' + err.message);
+        console.error(err);
       })
-      .finally(() => setTesting(false));
+      .finally(() => {
+        setTesting(false);
+      });
   };
 
-  // Handler: Muat daftar tabel
+  // 🔹 5. Muat daftar tabel
   const loadTables = () => {
-    if (!form.dbname) {
-      setMessage('⚠️ Pilih database terlebih dahulu.');
-      return;
-    }
-
-    setLoadingTables(true);
-    setMessage('Memuat daftar tabel...');
-
     fetch('/api/db.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -115,21 +129,28 @@ const MySQL = () => {
       .then((data) => {
         if (data.success) {
           setTables(data.tables);
-          setMessage(`✅ ${data.tables.length} tabel ditemukan.`);
+          if (data.tables.length > 0) {
+            setSelectedTable(data.tables[0]); // default pilih tabel pertama
+          }
         } else {
-          setMessage('❌ Gagal muat tabel: ' + data.message);
+          setMessage('⚠️ Gagal ambil tabel: ' + data.message);
         }
       })
       .catch((err) => {
-        setMessage('❌ Error: Tidak bisa ambil tabel.');
+        setMessage('❌ Gagal ambil tabel.');
         console.error(err);
-      })
-      .finally(() => setLoadingTables(false));
+      });
+  };
+
+  // 🔹 6. Handle pilih tabel dari dropdown
+  const handleSelectTable = (e) => {
+    const table = e.target.value;
+    setSelectedTable(table);
   };
 
   return (
     <div style={styles.container}>
-      <h1>🔧 Konfigurasi Database MySQL</h1>
+      <h1>🔧 Konfigurasi Database</h1>
 
       {/* Status Message */}
       {message && <div style={styles.message}>{message}</div>}
@@ -137,214 +158,199 @@ const MySQL = () => {
       {/* Form Input */}
       <div style={styles.form}>
         <div style={styles.row}>
-          <div style={styles.col}>
-            <label>Host</label>
-            <input
-              type="text"
-              name="host"
-              value={form.host}
-              onChange={handleChange}
-              style={styles.input}
-            />
-          </div>
-          <div style={styles.col}>
-            <label>Port</label>
-            <input
-              type="text"
-              name="port"
-              value={form.port}
-              onChange={handleChange}
-              style={styles.input}
-            />
-          </div>
+          <input
+            name="host"
+            placeholder="Host"
+            value={form.host}
+            onChange={handleChange}
+            style={styles.input}
+          />
+          <input
+            name="port"
+            placeholder="Port"
+            value={form.port}
+            onChange={handleChange}
+            style={styles.input}
+          />
         </div>
-
         <div style={styles.row}>
-          <div style={styles.col}>
-            <label>Username</label>
-            <input
-              type="text"
-              name="user"
-              value={form.user}
-              onChange={handleChange}
-              style={styles.input}
-            />
-          </div>
-          <div style={styles.col}>
-            <label>Password</label>
-            <input
-              type="password"
-              name="pass"
-              value={form.pass}
-              onChange={handleChange}
-              style={styles.input}
-            />
-          </div>
+          <input
+            name="user"
+            placeholder="Username"
+            value={form.user}
+            onChange={handleChange}
+            style={styles.input}
+          />
+          <input
+            name="pass"
+            type="password"
+            placeholder="Password"
+            value={form.pass}
+            onChange={handleChange}
+            style={styles.input}
+          />
         </div>
-
-        <div style={styles.row}>
-          <div style={styles.col}>
-            <label>Database (Opsional)</label>
-            <input
-              type="text"
-              name="dbname"
-              value={form.dbname}
-              onChange={handleChange}
-              placeholder="Nama database (opsional)"
-              style={styles.input}
-            />
-          </div>
-        </div>
-
-        {/* Buttons */}
-        <div style={styles.buttonGroup}>
-          <button
-            onClick={handleTest}
-            disabled={testing}
-            style={testing ? { ...styles.btn, opacity: 0.7 } : styles.btn}
-          >
-            {testing ? '🔧 Testing...' : '🔧 Test Koneksi'}
-          </button>
-
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={saving ? { ...styles.btnSave, opacity: 0.7 } : styles.btnSave}
-          >
-            {saving ? 'Menyimpan...' : '💾 Simpan Konfigurasi'}
-          </button>
-
-          <button
-            onClick={loadTables}
-            disabled={loadingTables || !form.dbname}
-            style={
-              loadingTables || !form.dbname
-                ? { ...styles.btnLoad, opacity: 0.7 }
-                : styles.btnLoad
-            }
-          >
-            {loadingTables ? 'Loading...' : '📊 Muat Tabel'}
-          </button>
-        </div>
+        <input
+          name="dbname"
+          placeholder="Database (opsional)"
+          value={form.dbname}
+          onChange={handleChange}
+          style={styles.full}
+        />
       </div>
 
-      {/* Dropdown Tabel */}
-      {tables.length > 0 && (
+      {/* Buttons */}
+      <div style={styles.buttonGroup}>
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          style={loading ? { ...styles.btn, opacity: 0.6 } : styles.btn}
+        >
+          {loading ? 'Menyimpan...' : '💾 Simpan Konfig'}
+        </button>
+        <button
+          onClick={handleTest}
+          disabled={testing}
+          style={testing ? { ...styles.btnPrimary, opacity: 0.6 } : styles.btnPrimary}
+        >
+          {testing ? 'Testing...' : '🔍 Test Koneksi'}
+        </button>
+      </div>
+
+      {/* Connection Status */}
+      {connected && (
+        <div style={styles.status}>
+          <span style={styles.dot} title="Connected">🟢</span>
+          Terhubung ke <strong>{form.dbname || 'server'}</strong>
+        </div>
+      )}
+
+      {/* Tabel Dropdown */}
+      {connected && form.dbname && (
         <div style={styles.section}>
-          <h2>📋 Daftar Tabel di Database: <strong>{form.dbname}</strong></h2>
-          <select
-            style={styles.select}
-            onChange={(e) => {
-              const table = e.target.value;
-              if (table) alert(`Anda memilih tabel: ${table}`);
-              // Di sini bisa tambah fungsi baca data tabel
-            }}
-          >
-            <option value="">Pilih tabel untuk dilihat</option>
-            {tables.map((table, i) => (
-              <option key={i} value={table}>
-                {table}
-              </option>
-            ))}
-          </select>
+          <h2>📁 Pilih Tabel</h2>
+          {tables.length === 0 ? (
+            <p>Belum ada tabel. Klik "Test Koneksi" lagi untuk muat.</p>
+          ) : (
+            <select value={selectedTable} onChange={handleSelectTable} style={styles.select}>
+              {tables.map((table, i) => (
+                <option key={i} value={table}>
+                  {table}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* Info Tabel Terpilih */}
+      {selectedTable && (
+        <div style={styles.info}>
+          <p>
+            <strong>Tabel aktif:</strong> <code>{selectedTable}</code>
+          </p>
         </div>
       )}
     </div>
   );
 };
 
-// === STYLES ===
+// ✅ Styles
 const styles = {
   container: {
     padding: '2rem',
-    fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
     maxWidth: '800px',
     margin: '0 auto',
-    backgroundColor: '#fff',
-    borderRadius: '10px',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
   },
   message: {
-    padding: '1rem',
-    marginBottom: '1.5rem',
+    padding: '0.75rem',
+    marginBottom: '1rem',
+    borderRadius: '6px',
     backgroundColor: '#e3f2fd',
     color: '#1976d2',
-    border: '1px solid #bbdefb',
-    borderRadius: '6px',
     fontSize: '0.95rem',
+    border: '1px solid #bbdefb',
   },
   form: {
-    backgroundColor: '#f8f9fa',
-    padding: '1.5rem',
-    borderRadius: '8px',
-    border: '1px solid #e9ecef',
+    marginBottom: '1.5rem',
   },
   row: {
     display: 'flex',
     gap: '1rem',
     marginBottom: '1rem',
   },
-  col: {
-    flex: 1,
-  },
   input: {
-    width: '100%',
-    padding: '0.7rem',
-    border: '1px solid #ced4da',
+    flex: 1,
+    padding: '0.75rem',
+    border: '1px solid #ccc',
     borderRadius: '6px',
     fontSize: '1rem',
-    boxSizing: 'border-box',
+  },
+  full: {
+    width: '100%',
+    padding: '0.75rem',
+    border: '1px solid #ccc',
+    borderRadius: '6px',
+    fontSize: '1rem',
   },
   buttonGroup: {
     display: 'flex',
     gap: '1rem',
-    marginTop: '1.5rem',
+    marginBottom: '1.5rem',
     flexWrap: 'wrap',
   },
   btn: {
-    padding: '0.7rem 1.2rem',
-    backgroundColor: '#ffc107',
-    color: '#000',
-    border: 'none',
-    borderRadius: '6px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    fontSize: '0.95rem',
-  },
-  btnSave: {
-    padding: '0.7rem 1.2rem',
-    backgroundColor: '#28a745',
+    padding: '0.75rem 1.25rem',
+    backgroundColor: '#6c757d',
     color: 'white',
     border: 'none',
     borderRadius: '6px',
-    fontWeight: '600',
     cursor: 'pointer',
-    fontSize: '0.95rem',
+    fontSize: '1rem',
   },
-  btnLoad: {
-    padding: '0.7rem 1.2rem',
+  btnPrimary: {
+    padding: '0.75rem 1.25rem',
     backgroundColor: '#007BFF',
     color: 'white',
     border: 'none',
     borderRadius: '6px',
-    fontWeight: '600',
     cursor: 'pointer',
-    fontSize: '0.95rem',
+    fontSize: '1rem',
+  },
+  status: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '1rem',
+    backgroundColor: '#d4edda',
+    color: '#155724',
+    border: '1px solid #c3e6cb',
+    borderRadius: '6px',
+    marginBottom: '1.5rem',
+    fontSize: '1rem',
+  },
+  dot: {
+    fontSize: '1.2rem',
   },
   section: {
-    marginTop: '2rem',
-    padding: '1.5rem',
-    backgroundColor: '#f1f3f5',
-    borderRadius: '8px',
-    border: '1px solid #e9ecef',
+    marginBottom: '1.5rem',
   },
   select: {
     width: '100%',
-    padding: '0.7rem',
-    border: '1px solid #ced4da',
+    padding: '0.75rem',
+    border: '1px solid #ccc',
     borderRadius: '6px',
     fontSize: '1rem',
     backgroundColor: 'white',
+  },
+  info: {
+    marginTop: '1rem',
+    padding: '1rem',
+    backgroundColor: '#f8f9fa',
+    border: '1px solid #dee2e6',
+    borderRadius: '6px',
+    fontSize: '0.95rem',
   },
 };
 
