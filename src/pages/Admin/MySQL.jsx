@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
 const MySQL = () => {
-  // Form state
   const [form, setForm] = useState({
     host: 'localhost',
     user: '',
@@ -10,16 +9,14 @@ const MySQL = () => {
     port: '3306',
   });
 
-  // Daftar konfigurasi
   const [configs, setConfigs] = useState([]);
   const [selectedConfig, setSelectedConfig] = useState(null);
-
-  // Tabel & data
+  const [status, setStatus] = useState({});
+  const [message, setMessage] = useState('');
+  const [loadingTables, setLoadingTables] = useState(false);
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState('');
   const [tableData, setTableData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
 
   // Load konfig dari db.php
   useEffect(() => {
@@ -27,34 +24,34 @@ const MySQL = () => {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          const list = Array.isArray(data.config) ? data.config : [data.config];
-          setConfigs(list);
-          if (list[0]) {
-            const c = list[0];
+          const configList = Array.isArray(data.config) ? data.config : [data.config];
+          setConfigs(configList);
+          if (configList[0]) {
+            const c = configList[0];
             setForm(c);
             setSelectedConfig(c);
+            // Auto test koneksi pertama
+            testConnection(c, 0);
           }
         }
       })
       .catch(() => setMessage('Gagal muat konfigurasi.'));
   }, []);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Simpan konfigurasi baru
+  // Simpan konfig baru
   const saveConfig = () => {
     const newConfig = { ...form };
     const exists = configs.findIndex(
-      (c) => c.host === newConfig.host && c.user === newConfig.user
+      (c) => c.host === newConfig.host && c.user === newConfig.user && c.dbname === newConfig.dbname
     );
 
-    const updated = exists >= 0
-      ? configs.map((c, i) => (i === exists ? newConfig : c))
-      : [...configs, newConfig];
+    if (exists >= 0) {
+      setMessage('Konfigurasi ini sudah ada.');
+      setTimeout(() => setMessage(''), 2000);
+      return;
+    }
 
+    const updated = [...configs, newConfig];
     fetch('/api/db.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -64,57 +61,95 @@ const MySQL = () => {
       .then((data) => {
         if (data.success) {
           setConfigs(updated);
-          setSelectedConfig(newConfig);
-          setMessage('Konfigurasi disimpan.');
+          setForm({
+            host: 'localhost',
+            user: '',
+            pass: '',
+            dbname: '',
+            port: '3306',
+          });
+          setMessage('Konfigurasi berhasil ditambahkan.');
+          testConnection(newConfig, updated.length - 1);
         } else {
-          setMessage('Gagal simpan: ' + data.message);
+          setMessage('Simpan gagal: ' + data.message);
         }
         setTimeout(() => setMessage(''), 3000);
+      });
+  };
+
+  // Test koneksi (untuk auto status)
+  const testConnection = (config, index) => {
+    setStatus((prev) => ({ ...prev, [index]: 'testing' }));
+
+    fetch('/api/db.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...config, action: 'test_db' }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setStatus((prev) => ({
+          ...prev,
+          [index]: data.success ? 'success' : 'error',
+        }));
+      })
+      .catch(() => {
+        setStatus((prev) => ({ ...prev, [index]: 'error' }));
       });
   };
 
   // Hapus konfigurasi
   const deleteConfig = (index) => {
     const updated = configs.filter((_, i) => i !== index);
-    const isCurrent = selectedConfig === configs[index];
+    const newConfig = updated.length > 0 ? updated[0] : null;
 
-    // Simpan ke server (pakai yang tersisa)
+    // Simpan ke server (overwrite db.json)
     fetch('/api/db.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        ...(newConfig || {}),
         action: 'save_config',
-        ...updated[0] || { host: 'localhost', user: '', pass: '', dbname: '', port: '3306' }
       }),
     })
       .then((res) => res.json())
-      .then((data) => {
-        if (data.success || updated.length === 0) {
-          setConfigs(updated);
-          if (isCurrent) {
-            const fallback = updated[0] || {
-              host: 'localhost',
-              user: '',
-              pass: '',
-              dbname: '',
-              port: '3306',
-            };
-            setForm(fallback);
-            setSelectedConfig(fallback);
-          }
-          setMessage('Konfigurasi dihapus.');
-          setTimeout(() => setMessage(''), 3000);
+      .then(() => {
+        setConfigs(updated);
+        setSelectedConfig(newConfig);
+        setStatus({});
+        setTables([]);
+        setSelectedTable('');
+        setTableData([]);
+
+        if (newConfig) {
+          setForm(newConfig);
+          testConnection(newConfig, 0);
+        } else {
+          setForm({
+            host: 'localhost',
+            user: '',
+            pass: '',
+            dbname: '',
+            port: '3306',
+          });
         }
+
+        setMessage('Konfigurasi dihapus.');
+        setTimeout(() => setMessage(''), 2000);
       });
   };
 
-  // Muat daftar tabel
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
   const loadTables = () => {
     if (!selectedConfig?.dbname) {
       setMessage('Pilih database dulu.');
       return;
     }
-    setLoading(true);
+    setLoadingTables(true);
     setTables([]);
     setSelectedTable('');
     setTableData([]);
@@ -128,20 +163,19 @@ const MySQL = () => {
       .then((data) => {
         if (data.success) {
           setTables(data.tables);
-          setMessage(`Ditemukan ${data.tables.length} tabel.`);
+          setMessage('Tabel dimuat.');
         } else {
           setMessage('Gagal muat tabel: ' + data.message);
         }
       })
-      .catch(() => setMessage('Error koneksi.'))
-      .finally(() => setLoading(false));
+      .catch(() => setMessage('Gagal ambil tabel.'))
+      .finally(() => setLoadingTables(false));
   };
 
-  // Baca isi tabel
   const viewTable = (table) => {
     setSelectedTable(table);
     setTableData([]);
-    setLoading(true);
+    setLoadingTables(true);
 
     fetch('/api/db.php', {
       method: 'POST',
@@ -153,10 +187,10 @@ const MySQL = () => {
         if (data.success) {
           setTableData(data.data);
         } else {
-          setMessage('Gagal baca tabel: ' + data.message);
+          setMessage('Gagal baca tabel.');
         }
       })
-      .finally(() => setLoading(false));
+      .finally(() => setLoadingTables(false));
   };
 
   return (
@@ -201,93 +235,100 @@ const MySQL = () => {
         </div>
         <input
           name="dbname"
-          placeholder="Database (opsional)"
+          placeholder="Database"
           value={form.dbname}
           onChange={handleInputChange}
           style={styles.full}
         />
-        <div style={styles.buttonGroup}>
-          <button onClick={saveConfig} style={styles.btnSave}>
-            💾 Simpan
-          </button>
-          <button onClick={loadTables} style={styles.btnLoad}>
-            🔄 Muat Tabel
-          </button>
-        </div>
+        <button onClick={saveConfig} style={styles.btnSave}>
+          ➕ Tambah
+        </button>
       </div>
 
-      {/* Tabel Daftar Konfigurasi */}
-      <div style={styles.section}>
-        <h2>Daftar Koneksi</h2>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th>No.</th>
-              <th>Host:Port</th>
-              <th>User</th>
-              <th>Database</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {configs.map((cfg, i) => (
-              <tr
-                key={i}
-                style={selectedConfig === cfg ? styles.rowSelected : undefined}
-                onClick={() => {
-                  setSelectedConfig(cfg);
-                  setForm(cfg);
-                }}
-              >
-                <td>{i + 1}</td>
-                <td>{cfg.host}:{cfg.port}</td>
-                <td>{cfg.user}</td>
-                <td>{cfg.dbname || '-'}</td>
-                <td>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (window.confirm(`Hapus koneksi ke ${cfg.host} (${cfg.user})?`))
-                        deleteConfig(i);
-                    }}
-                    style={styles.btnDelete}
-                  >
-                    🗑️
-                  </button>
-                </td>
+      {/* Tabel Konfigurasi */}
+      {configs.length > 0 && (
+        <div style={styles.section}>
+          <h2>Daftar Koneksi</h2>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Database</th>
+                <th>Status</th>
+                <th>Hapus</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {configs.map((cfg, i) => (
+                <tr
+                  key={i}
+                  style={selectedConfig === cfg ? styles.rowSelected : undefined}
+                  onClick={() => {
+                    setSelectedConfig(cfg);
+                    setForm(cfg);
+                  }}
+                >
+                  <td>{i + 1}</td>
+                  <td>{cfg.dbname || '-'}</td>
+                  <td>
+                    {status[i] === 'testing'
+                      ? '⏳'
+                      : status[i] === 'success'
+                      ? '🟢'
+                      : '🔴'}
+                  </td>
+                  <td>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (window.confirm(`Hapus koneksi ke "${cfg.dbname || cfg.host}"?`))
+                          deleteConfig(i);
+                      }}
+                      style={styles.btnDelete}
+                    >
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Dropdown Tabel */}
       {selectedConfig?.dbname && (
         <div style={styles.section}>
           <h2>Database: <strong>{selectedConfig.dbname}</strong></h2>
-          {loading ? (
+          <button onClick={loadTables} style={styles.btnLoad}>
+            🔄 Muat Tabel
+          </button>
+
+          {loadingTables ? (
             <p>Memuat tabel...</p>
           ) : (
-            <select
-              value={selectedTable}
-              onChange={(e) => viewTable(e.target.value)}
-              style={styles.select}
-            >
-              <option value="">-- Pilih Tabel --</option>
-              {tables.map((tbl, i) => (
-                <option key={i} value={tbl}>
-                  {tbl}
-                </option>
-              ))}
-            </select>
+            tables.length > 0 && (
+              <select
+                value={selectedTable}
+                onChange={(e) => viewTable(e.target.value)}
+                style={styles.select}
+              >
+                <option value="">-- Pilih Tabel --</option>
+                {tables.map((tbl, idx) => (
+                  <option key={idx} value={tbl}>
+                    {tbl}
+                  </option>
+                ))}
+              </select>
+            )
           )}
         </div>
       )}
 
-      {/* Tampilkan Data Tabel */}
+      {/* Tampilkan Data */}
       {selectedTable && tableData.length > 0 && (
         <div style={styles.section}>
-          <h3>Isi Tabel: <code>{selectedTable}</code> ({tableData.length} baris)</h3>
+          <h3>Tabel: <code>{selectedTable}</code> ({tableData.length} baris)</h3>
           <div style={styles.tableContainer}>
             <table style={styles.dataTable}>
               <thead>
@@ -323,7 +364,7 @@ const styles = {
   container: {
     padding: '2rem',
     fontFamily: 'Arial, sans-serif',
-    maxWidth: '1000px',
+    maxWidth: '900px',
     margin: '0 auto',
   },
   message: {
@@ -358,32 +399,13 @@ const styles = {
     borderRadius: '4px',
     marginBottom: '1rem',
   },
-  buttonGroup: {
-    display: 'flex',
-    gap: '1rem',
-    flexWrap: 'wrap',
-  },
   btnSave: {
-    padding: '0.75rem 1.5rem',
-    backgroundColor: '#28a745',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-  },
-  btnLoad: {
     padding: '0.75rem 1.5rem',
     backgroundColor: '#007BFF',
     color: 'white',
     border: 'none',
     borderRadius: '4px',
     cursor: 'pointer',
-  },
-  btnDelete: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '1.2rem',
   },
   section: {
     marginTop: '2rem',
@@ -402,9 +424,25 @@ const styles = {
   td: {
     padding: '0.75rem',
     borderBottom: '1px solid #eee',
+    textAlign: 'center',
   },
   rowSelected: {
     backgroundColor: '#e3f2fd',
+    cursor: 'pointer',
+  },
+  btnDelete: {
+    background: 'none',
+    border: 'none',
+    fontSize: '1.2rem',
+    cursor: 'pointer',
+    color: '#dc3545',
+  },
+  btnLoad: {
+    padding: '0.5rem 1rem',
+    backgroundColor: '#28a745',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
     cursor: 'pointer',
   },
   select: {
@@ -413,16 +451,26 @@ const styles = {
     border: '1px solid #ddd',
     borderRadius: '4px',
     fontSize: '1rem',
+    marginTop: '1rem',
   },
   tableContainer: {
     overflowX: 'auto',
+    marginTop: '1rem',
   },
   dataTable: {
     width: '100%',
     borderCollapse: 'collapse',
-    marginTop: '1rem',
   },
-  
+  th: {
+    backgroundColor: '#f1f1f1',
+    borderBottom: '2px solid #ddd',
+    padding: '0.5rem',
+    textAlign: 'left',
+  },
+  td: {
+    padding: '0.5rem',
+    borderBottom: '1px solid #eee',
+  },
 };
 
 export default MySQL;
