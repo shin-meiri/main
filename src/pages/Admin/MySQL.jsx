@@ -8,26 +8,20 @@ const MySQL = () => {
     dbname: '',
     port: '3306',
   });
+  const [tables, setTables] = useState([]);
+  const [tableData, setTableData] = useState([]);
+  const [selectedTable, setSelectedTable] = useState('');
   const [message, setMessage] = useState('');
   const [testing, setTesting] = useState(false);
   const [loadingTables, setLoadingTables] = useState(false);
-  const [tables, setTables] = useState([]);
-  const [selectedTable, setSelectedTable] = useState('');
-  const [tableData, setTableData] = useState([]);
+  const [loadingData, setLoadingData] = useState(false);
 
-  // Load konfig dari data.json
+  // Load config dari session (jika ada)
   useEffect(() => {
-    fetch('/api/data.php')
+    fetch('/api/db.php')
       .then(res => res.json())
-      .then(data => {
-        const db = data.database || {};
-        setForm({
-          host: db.host || 'localhost',
-          user: db.user || '',
-          pass: db.pass || '',
-          dbname: db.dbname || '',
-          port: db.port || '3306',
-        });
+      .catch(() => {
+        // Error = belum ada session → abaikan
       });
   }, []);
 
@@ -36,30 +30,44 @@ const MySQL = () => {
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const testConnection = () => {
-    setMessage('Testing...');
-    setTesting(true);
-    fetch('/api/db.php?action=test', {
+  const saveConfig = () => {
+    setMessage('Menyimpan konfigurasi...');
+    fetch('/api/db.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, action: 'save_config' }),
     })
       .then(res => res.json())
-      .then(data => setMessage(data.message))
-      .catch(() => setMessage('Error: Tidak bisa hubungi db.php'))
+      .then(data => {
+        setMessage(data.message || 'Konfigurasi disimpan.');
+        setTimeout(() => setMessage(''), 3000);
+      });
+  };
+
+  const testConnection = () => {
+    setTesting(true);
+    setMessage('Testing koneksi...');
+    fetch('/api/db.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...form, action: 'test_db' }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        setMessage(data.message);
+        if (data.success) {
+          saveConfig(); // Simpan jika berhasil
+        }
+      })
       .finally(() => setTesting(false));
   };
 
   const loadTables = () => {
-    if (!form.dbname) {
-      setMessage('Pilih database dulu!');
-      return;
-    }
     setLoadingTables(true);
-    fetch('/api/db.php?action=tables', {
+    fetch('/api/db.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ action: 'get_tables' }),
     })
       .then(res => res.json())
       .then(data => {
@@ -72,131 +80,98 @@ const MySQL = () => {
       .finally(() => setLoadingTables(false));
   };
 
-  const loadTableData = (table) => {
+  const viewTable = (table) => {
     setSelectedTable(table);
-    fetch('/api/db.php?action=read', {
+    setLoadingData(true);
+    setTableData([]);
+    fetch('/api/db.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, table }),
+      body: JSON.stringify({ action: 'read_table', table }),
     })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
           setTableData(data.data);
+        } else {
+          setMessage(data.message);
         }
-      });
-  };
-
-  const saveConfig = () => {
-    const payload = {
-      ...form,
-      database: {
-        host: form.host,
-        user: form.user,
-        pass: form.pass,
-        dbname: form.dbname,
-        port: form.port,
-      },
-    };
-    fetch('/api/data.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-      .then(res => res.json())
-      .then(data => {
-        setMessage(data.message);
-        setTimeout(() => setMessage(''), 3000);
-      });
+      })
+      .finally(() => setLoadingData(false));
   };
 
   return (
     <div style={styles.container}>
-      <h1>Konfigurasi Database MySQL</h1>
+      <h1>Konfigurasi MySQL & CRUD</h1>
       {message && <p style={styles.message}>{message}</p>}
 
       <div style={styles.grid}>
-        <div style={styles.formGroup}>
-          <label>Host</label>
-          <input name="host" value={form.host} onChange={handleChange} style={styles.input} />
-        </div>
-        <div style={styles.formGroup}>
-          <label>Port</label>
-          <input name="port" value={form.port} onChange={handleChange} style={styles.input} />
-        </div>
-        <div style={styles.formGroup}>
-          <label>Username</label>
-          <input name="user" value={form.user} onChange={handleChange} style={styles.input} />
-        </div>
-        <div style={styles.formGroup}>
-          <label>Password</label>
-          <input
-            type="password"
-            name="pass"
-            value={form.pass}
-            onChange={handleChange}
-            style={styles.input}
-          />
-        </div>
-        <div style={styles.formGroup}>
-          <label>Database (opsional)</label>
-          <input name="dbname" value={form.dbname} onChange={handleChange} style={styles.input} />
-        </div>
+        <input name="host" placeholder="Host" value={form.host} onChange={handleChange} style={styles.input} />
+        <input name="port" placeholder="Port" value={form.port} onChange={handleChange} style={styles.input} />
+        <input name="user" placeholder="Username" value={form.user} onChange={handleChange} style={styles.input} />
+        <input
+          type="password"
+          name="pass"
+          placeholder="Password"
+          value={form.pass}
+          onChange={handleChange}
+          style={styles.input}
+        />
+        <input name="dbname" placeholder="Database (opsional)" value={form.dbname} onChange={handleChange} style={styles.input} />
       </div>
 
       <div style={styles.buttonGroup}>
         <button onClick={testConnection} disabled={testing} style={styles.btnTest}>
           {testing ? 'Testing...' : '🔧 Test Koneksi'}
         </button>
+        <button onClick={saveConfig} style={styles.btnSave}>💾 Simpan Konfig</button>
         <button onClick={loadTables} disabled={loadingTables} style={styles.btnLoad}>
-          {loadingTables ? 'Loading...' : '📋 Muat Tabel'}
-        </button>
-        <button onClick={saveConfig} style={styles.btnSave}>
-          💾 Simpan Konfigurasi
+          {loadingTables ? 'Loading...' : '📊 Muat Tabel'}
         </button>
       </div>
 
-      {tables.length > 0 && (
-        <div style={styles.section}>
-          <h2>Daftar Tabel</h2>
-          <ul style={styles.tableList}>
-            {tables.map((tbl, i) => (
+      <div style={styles.section}>
+        <h2>Tabel</h2>
+        <ul style={styles.tableList}>
+          {tables.length === 0 ? (
+            <li style={styles.tableItem}>Belum ada tabel</li>
+          ) : (
+            tables.map((table, i) => (
               <li key={i} style={styles.tableItem}>
-                <button onClick={() => loadTableData(tbl)} style={styles.tableBtn}>
-                  📄 {tbl}
+                <button onClick={() => viewTable(table)} style={styles.tableBtn}>
+                  📄 {table}
                 </button>
               </li>
-            ))}
-          </ul>
-        </div>
-      )}
+            ))
+          )}
+        </ul>
+      </div>
 
       {selectedTable && (
         <div style={styles.section}>
-          <h2>Data: {selectedTable}</h2>
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                {tableData.length > 0 &&
-                  Object.keys(tableData[0]).map((key) => (
+          <h2>Isi Tabel: <code>{selectedTable}</code> ({tableData.length} baris)</h2>
+          {loadingData ? (
+            <p>Memuat data...</p>
+          ) : (
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  {tableData[0] && Object.keys(tableData[0]).map(key => (
                     <th key={key} style={styles.th}>{key}</th>
                   ))}
-              </tr>
-            </thead>
-            <tbody>
-              {tableData.map((row, i) => (
-                <tr key={i}>
-                  {Object.values(row).map((val, j) => (
-                    <td key={j} style={styles.td}>
-                      {String(val).length > 50
-                        ? String(val).slice(0, 50) + '...'
-                        : String(val)}
-                    </td>
-                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {tableData.map((row, i) => (
+                  <tr key={i}>
+                    {Object.values(row).map((val, j) => (
+                      <td key={j} style={styles.td}>{String(val)}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
     </div>
@@ -205,21 +180,20 @@ const MySQL = () => {
 
 const styles = {
   container: { padding: '2rem', maxWidth: '1000px', margin: '0 auto' },
-  grid: { display: 'grid', gap: '1rem', gridTemplateColumns: '1fr 1fr' },
-  formGroup: { marginBottom: '1rem' },
-  input: { width: '100%', padding: '0.7rem', border: '1px solid #ccc', borderRadius: '4px' },
-  buttonGroup: { display: 'flex', gap: '1rem', margin: '1.5rem 0', flexWrap: 'wrap' },
-  btnTest: { padding: '0.7rem 1rem', backgroundColor: '#ffc107', border: 'none', borderRadius: '4px', cursor: 'pointer' },
-  btnLoad: { padding: '0.7rem 1rem', backgroundColor: '#007BFF', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
-  btnSave: { padding: '0.7rem 1rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+  grid: { display: 'grid', gap: '0.5rem', gridTemplateColumns: '1fr 1fr', marginBottom: '1rem' },
+  input: { padding: '0.7rem', border: '1px solid #ccc', borderRadius: '4px' },
+  buttonGroup: { display: 'flex', gap: '1rem', flexWrap: 'wrap', margin: '1.5rem 0' },
+  btnTest: { padding: '0.7rem', backgroundColor: '#ffc107', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+  btnSave: { padding: '0.7rem', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
+  btnLoad: { padding: '0.7rem', backgroundColor: '#007BFF', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' },
   message: { padding: '1rem', backgroundColor: '#d1ecf1', color: '#0c5460', border: '1px solid #bee5eb', borderRadius: '4px' },
-  section: { marginTop: '2rem', padding: '1.5rem', backgroundColor: '#f8f9fa', borderRadius: '8px' },
+  section: { marginTop: '2rem' },
   tableList: { listStyle: 'none', padding: 0 },
-  tableItem: { marginBottom: '0.5rem' },
-  tableBtn: { padding: '0.5rem 1rem', backgroundColor: '#fff', border: '1px solid #ccc', width: '100%', textAlign: 'left', cursor: 'pointer' },
+  tableItem: { margin: '0.5rem 0' },
+  tableBtn: { padding: '0.5rem 1rem', backgroundColor: '#f8f9fa', border: '1px solid #ddd', width: '100%', textAlign: 'left', cursor: 'pointer' },
   table: { width: '100%', borderCollapse: 'collapse', marginTop: '1rem' },
-  th: { border: '1px solid #ddd', padding: '0.5rem', backgroundColor: '#f1f1f1', textAlign: 'left' },
-  td: { border: '1px solid #ddd', padding: '0.5rem' },
+  th: { textAlign: 'left', borderBottom: '2px solid #ddd', padding: '0.5rem', backgroundColor: '#f1f1f1' },
+  td: { borderBottom: '1px solid #eee', padding: '0.5rem' },
 };
 
 export default MySQL;
