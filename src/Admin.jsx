@@ -98,9 +98,4 @@ const styles = {
   },
 };
 
-// Hover effect via inline (simplified)
-// Catatan: Untuk efek hover lebih baik pakai CSS file, tapi ini contoh inline minimal
-const navItemStyle = styles.navItem;
-navItemStyle[':hover'] = { backgroundColor: '#34495e' };
-
 export default Admin;
