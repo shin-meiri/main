@@ -1,6 +1,7 @@
 // App.js
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
-import TestConnection from './components/TestConnection'; // Sesuaikan path
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import TestConnection from './TestConnection'; // Pastikan path benar
 
 function App() {
   return (
@@ -8,7 +9,6 @@ function App() {
       <div className="App">
         <Routes>
           <Route path="/test-db" element={<TestConnection />} />
-          {/* Rute lain... */}
         </Routes>
       </div>
     </Router>
