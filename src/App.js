@@ -1,6 +1,6 @@
 // App.js
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import React, { useEffect } from 'react'; // 🔴 Tambahkan { useEffect }
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import DynamicPage from './DynamicPage';
 
 function App() {
@@ -16,12 +16,13 @@ function App() {
   );
 }
 
+// Komponen untuk redirect ke /page/home
 function HomeRedirect() {
-  // Redirect ke /page/home
   useEffect(() => {
     window.location.href = '/page/home';
-  }, []);
-  return <div>Memuat...</div>;
+  }, []); // [] artinya jalan sekali saat mount
+
+  return <div>Memuat halaman utama...</div>;
 }
 
 export default App;
