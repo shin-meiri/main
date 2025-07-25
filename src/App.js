@@ -1,7 +1,7 @@
 // Contoh di App.js
 import { Routes, Route, Navigate } from 'react-router-dom';
-import Login from './pages/Login';
-import Admin from './pages/Admin';
+import Login from 'Login';
+import Admin from 'Admin';
 
 function App() {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
