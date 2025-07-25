@@ -21,8 +21,8 @@ const App = () => {
             <Route path="/login" element={<Login />} />
 <Route path="/admin" element={<AdminLayout />}>
   <Route index element={<Dashboard />} />
-  <Route path="settings" element={<Settings />} />
-  <Route path="mysql" element={<MySQL />} />
+  <Route path="/settings" element={<Settings />} />
+  <Route path="/mysql" element={<MySQL />} />
 
             </Route>
           </Routes>
