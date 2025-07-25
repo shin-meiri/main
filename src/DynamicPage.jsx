@@ -1,5 +1,5 @@
-// src/DynamicPage.js
-import React, { useState, useEffect } from 'react'; // Pastikan useEffect di-import
+// src/DynamicPage.jsx
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 export default function DynamicPage() {
@@ -7,26 +7,6 @@ export default function DynamicPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ useEffect ditaruh DI DALAM komponen
-  useEffect(() => {
-    const style = document.createElement("style");
-    style.textContent = `
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      // Cleanup style
-      if (document.head.contains(style)) {
-        document.head.removeChild(style);
-      }
-    };
-  }, []);
-
-  // Ambil data dari API
   useEffect(() => {
     const fetchPage = async () => {
       try {
@@ -35,32 +15,29 @@ export default function DynamicPage() {
         if (json.success) {
           setData(json);
         } else {
-          setData({ error: json.error });
+          setData({ error: json.error || "Halaman tidak ditemukan" });
         }
       } catch (err) {
-        setData({ error: "Gagal memuat halaman." });
+        setData({ error: "Gagal memuat halaman. Cek koneksi." });
       } finally {
         setLoading(false);
       }
     };
-
     fetchPage();
   }, [slug]);
 
   if (loading) return <Loading />;
-  if (data?.error) return <ErrorPage message={data.error} />;
+  if (data?.error) return <Error message={data.error} />;
 
   const { page, menu, settings } = data;
 
   return (
     <div style={styles.container}>
-      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
-
       {/* Navbar */}
       <nav style={styles.navbar}>
-        <div style={styles.logo}>{settings?.site_name || "My Site"}</div>
+        <div style={styles.siteName}>{settings?.site_name || "Website Saya"}</div>
         <div style={styles.navLinks}>
-          {menu.map((item) => (
+          {menu.map(item => (
             <a
               key={item.slug}
               href={`/#/page/${item.slug}`}
@@ -69,51 +46,47 @@ export default function DynamicPage() {
               {item.label}
             </a>
           ))}
+          <a href="/admin" style={styles.adminLink}>⚙️ Admin</a>
         </div>
       </nav>
 
       {/* Hero */}
       <header style={styles.hero}>
-        <h1 style={styles.heroTitle}>{page.title}</h1>
-        <p style={styles.heroSubtitle}>
-          {settings?.site_description || "Website dinamis dengan React & database"}
-        </p>
+        <h1>{page.title}</h1>
       </header>
 
       {/* Konten */}
       <main style={styles.main}>
-        <article style={styles.article}>
-          <div
-            style={styles.content}
-            dangerouslySetInnerHTML={{ __html: page.content }}
-          />
-        </article>
+        <div
+          style={styles.content}
+          dangerouslySetInnerHTML={{ __html: page.content }}
+        />
       </main>
 
       {/* Footer */}
       <footer style={styles.footer}>
-        &copy; {new Date().getFullYear()} {settings?.footer_text || "All rights reserved."}
+        {settings?.footer_text || "© 2025"}
       </footer>
     </div>
   );
 }
 
-// === Komponen Pendukung (Loading & Error) ===
+// === Komponen Pendukung ===
 function Loading() {
   return (
-    <div style={styles.loadingContainer}>
+    <div style={styles.loading}>
       <div style={styles.spinner}></div>
-      <p style={styles.loadingText}>Memuat konten...</p>
+      <p>Memuat konten...</p>
     </div>
   );
 }
 
-function ErrorPage({ message }) {
+function Error({ message }) {
   return (
-    <div style={styles.errorContainer}>
-      <h2 style={styles.errorTitle}>⚠️ Terjadi Kesalahan</h2>
+    <div style={styles.error}>
+      <h2>⚠️ Terjadi Kesalahan</h2>
       <p>{message}</p>
-      <button onClick={() => window.location.reload()} style={styles.retryButton}>
+      <button onClick={() => window.location.reload()} style={styles.retry}>
         Coba Lagi
       </button>
     </div>
@@ -122,29 +95,24 @@ function ErrorPage({ message }) {
 
 // === STYLES ===
 const styles = {
-  // ... (sama seperti sebelumnya, gak usah diubah)
-  // Biarkan styles tetap di bawah
   container: {
-    fontFamily: "'Nunito', sans-serif",
+    fontFamily: "'Segoe UI', Arial, sans-serif",
     backgroundColor: "#f9fafa",
     color: "#2c3e50",
     minHeight: "100vh",
-    display: "flex",
-    flexDirection: "column",
+    margin: 0,
+    padding: 0,
   },
   navbar: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#007BFF",
     padding: "1rem 5%",
+    backgroundColor: "#007BFF",
     color: "white",
     boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-    position: "sticky",
-    top: 0,
-    zIndex: 100,
   },
-  logo: {
+  siteName: {
     fontSize: "1.5rem",
     fontWeight: "bold",
   },
@@ -155,8 +123,13 @@ const styles = {
   navLink: {
     color: "white",
     textDecoration: "none",
-    fontSize: "1.1rem",
     fontWeight: "600",
+  },
+  adminLink: {
+    marginLeft: "2rem",
+    color: "#fff",
+    textDecoration: "none",
+    fontWeight: "bold",
   },
   hero: {
     textAlign: "center",
@@ -164,26 +137,10 @@ const styles = {
     backgroundColor: "linear-gradient(135deg, #007BFF, #0056b3)",
     color: "white",
   },
-  heroTitle: {
-    fontSize: "2.8rem",
-    margin: "0 0 1rem 0",
-  },
-  heroSubtitle: {
-    fontSize: "1.2rem",
-    opacity: 0.9,
-  },
   main: {
-    flex: 1,
-    padding: "2rem 5%",
+    padding: "3rem 5%",
     maxWidth: "1200px",
     margin: "0 auto",
-    width: "100%",
-  },
-  article: {
-    backgroundColor: "white",
-    borderRadius: "12px",
-    padding: "2rem",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
   },
   content: {
     lineHeight: "1.8",
@@ -193,12 +150,12 @@ const styles = {
   footer: {
     marginTop: "auto",
     textAlign: "center",
-    padding: "1.5rem",
+    padding: "2rem",
     backgroundColor: "#2c3e50",
     color: "white",
     fontSize: "0.9rem",
   },
-  loadingContainer: {
+  loading: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -213,20 +170,12 @@ const styles = {
     height: "40px",
     animation: "spin 1s linear infinite",
   },
-  loadingText: {
-    marginTop: "1rem",
-    fontSize: "1.1rem",
-    color: "#555",
-  },
-  errorContainer: {
+  error: {
     padding: "3rem",
     textAlign: "center",
     color: "#e74c3c",
   },
-  errorTitle: {
-    color: "#c0392b",
-  },
-  retryButton: {
+  retry: {
     marginTop: "1rem",
     padding: "0.7rem 1.5rem",
     backgroundColor: "#007BFF",
@@ -236,3 +185,13 @@ const styles = {
     cursor: "pointer",
   },
 };
+
+// Animasi
+const style = document.createElement("style");
+style.textContent = `
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(style);
