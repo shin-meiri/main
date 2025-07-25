@@ -1,17 +1,21 @@
-// App.js
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+// src/App.js
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'; // 🔴 Tambahkan { Navigate }
 import DynamicPage from './DynamicPage';
-import AdminPanel from './AdminPanel'; // Tambahkan ini
+import AdminPanel from './AdminPanel';
 
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/page/:slug" element={<DynamicPage />} />
-        <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/" element={<Navigate to="/page/home" />} />
-      </Routes>
+      <div className="App">
+        <Routes>
+          <Route path="/page/:slug" element={<DynamicPage />} />
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/" element={<Navigate to="/page/home" />} /> {/* ✅ Sekarang aman */}
+        </Routes>
+      </div>
     </Router>
   );
 }
+
 export default App;
