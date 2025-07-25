@@ -23,7 +23,7 @@ const App = () => {
   <Route index element={<Dashboard />} />
   <Route path="settings" element={<Settings />} />
   <Route path="mysql" element={<MySQL />} />
-</Route>
+
             </Route>
           </Routes>
         </main>
