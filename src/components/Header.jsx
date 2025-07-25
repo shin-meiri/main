@@ -6,18 +6,15 @@ const Header = () => {
 
   useEffect(() => {
     fetch('/api/data.php')
-      .then((res) => {
-        if (!res.ok) throw new Error('Gagal muat data');
-        return res.json();
-      })
-      .then((json) => setData(json))
-      .catch((err) => console.error(err));
+      .then((res) => res.json())
+      .then((json) => setData(json));
   }, []);
 
-  // Tunggu data selesai dimuat
-  if (!data.logo) {
-    return <header style={styles.header}>Loading...</header>;
-  }
+  // Gabungkan menu header + halaman dinamis
+  const links = [
+    ...(data.header?.links || []),
+    ...(data.pages || []).map((p) => ({ name: p.title, url: `/page/${p.slug}` })),
+  ];
 
   return (
     <header style={styles.header}>
@@ -27,18 +24,16 @@ const Header = () => {
         </Link>
       </div>
       <div style={styles.right}>
-        {Array.isArray(data.header?.links) &&
-          data.header.links.map((link, index) => (
-            <Link key={index} to={link.url} style={styles.link}>
-              {link.name}
-            </Link>
-          ))}
+        {links.map((link, i) => (
+          <Link key={i} to={link.url} style={styles.link}>
+            {link.name}
+          </Link>
+        ))}
       </div>
     </header>
   );
 };
 
-// ... styles tetap sama
 const styles = {
   header: {
     display: 'flex',
@@ -56,7 +51,6 @@ const styles = {
     textDecoration: 'none',
     color: '#333',
     fontWeight: '500',
-    fontSize: '1rem',
   },
 };
 
