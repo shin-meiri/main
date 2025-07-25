@@ -1,8 +1,7 @@
 // src/AdminPanel.jsx
 import React, { useState, useEffect } from 'react';
 
-// API URL — sesuaikan dengan milikmu
-const API_URL = 'https://bos.free.nf/api';
+const API_URL = 'https://bos.free.nf/api'; // Ganti kalau beda
 
 export default function AdminPanel() {
   const [token, setToken] = useState(localStorage.getItem('admin_token'));
@@ -12,15 +11,13 @@ export default function AdminPanel() {
   const [settings, setSettings] = useState({});
   const [loginForm, setLoginForm] = useState({ password: '' });
   const [editPage, setEditPage] = useState(null);
-  const [editMenu, setEditMenu] = useState(null);
   const [addMenuForm, setAddMenuForm] = useState({ label: '', slug: '' });
 
-  // 🔐 Login
   const handleLogin = (e) => {
     e.preventDefault();
-    // Simulasi login — ganti password di sini
-    if (loginForm.password === 'admin123') { // 🔴 GANTI INI!
-      const newToken = 'fake-jwt-token-' + Date.now();
+    // 🔑 GANTI PASSWORD DI SINI (misal: 'rahasia123')
+    if (loginForm.password === 'admin123') {
+      const newToken = 'simple-token-123';
       localStorage.setItem('admin_token', newToken);
       setToken(newToken);
     } else {
@@ -28,17 +25,18 @@ export default function AdminPanel() {
     }
   };
 
-  // 🔐 Logout
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
     setToken(null);
-    setLoginForm({ password: '' });
   };
 
-  // 🔽 Ambil data dari API
   const fetchData = async () => {
     try {
-      const res = await fetch(`${API_URL}/getAdminData.php`);
+      const res = await fetch(`${API_URL}/crud.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'getAdminData' })
+      });
       const data = await res.json();
       if (data.success) {
         setPages(data.pages);
@@ -46,22 +44,19 @@ export default function AdminPanel() {
         setSettings(data.settings);
       }
     } catch (err) {
-      alert('Gagal ambil data');
+      alert('Gagal ambil data dari server');
     }
   };
 
   useEffect(() => {
-    if (token) {
-      fetchData();
-    }
+    if (token) fetchData();
   }, [token]);
 
-  // ✏️ Simpan halaman
   const savePage = async () => {
-    const res = await fetch(`${API_URL}/savePage.php`, {
+    const res = await fetch(`${API_URL}/crud.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(editPage)
+      body: JSON.stringify({ ...editPage, action: 'savePage' })
     });
     const result = await res.json();
     if (result.success) {
@@ -71,12 +66,11 @@ export default function AdminPanel() {
     }
   };
 
-  // ➕ Tambah menu
   const addNewMenu = async () => {
-    const res = await fetch(`${API_URL}/addMenu.php`, {
+    const res = await fetch(`${API_URL}/crud.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(addMenuForm)
+      body: JSON.stringify({ ...addMenuForm, action: 'addMenu' })
     });
     const result = await res.json();
     if (result.success) {
@@ -86,13 +80,12 @@ export default function AdminPanel() {
     }
   };
 
-  // ❌ Hapus menu
   const deleteMenu = async (id) => {
     if (!window.confirm('Yakin hapus menu ini?')) return;
-    const res = await fetch(`${API_URL}/deleteMenu.php`, {
+    const res = await fetch(`${API_URL}/crud.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
+      body: JSON.stringify({ id, action: 'deleteMenu' })
     });
     const result = await res.json();
     if (result.success) {
@@ -100,12 +93,11 @@ export default function AdminPanel() {
     }
   };
 
-  // ✏️ Simpan pengaturan
   const saveSettings = async () => {
-    const res = await fetch(`${API_URL}/saveSettings.php`, {
+    const res = await fetch(`${API_URL}/crud.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings)
+      body: JSON.stringify({ ...settings, action: 'saveSettings' })
     });
     const result = await res.json();
     if (result.success) {
@@ -113,7 +105,6 @@ export default function AdminPanel() {
     }
   };
 
-  // Jika belum login
   if (!token) {
     return (
       <div style={styles.loginContainer}>
@@ -135,10 +126,8 @@ export default function AdminPanel() {
     );
   }
 
-  // Jika sudah login
   return (
     <div style={styles.container}>
-      {/* Sidebar */}
       <div style={styles.sidebar}>
         <h3>🛠️ Admin Panel</h3>
         <nav>
@@ -157,17 +146,14 @@ export default function AdminPanel() {
             </div>
           ))}
         </nav>
-        <button onClick={handleLogout} style={styles.logoutButton}>
-          🔴 Logout
-        </button>
+        <button onClick={handleLogout} style={styles.logoutButton}>🔴 Logout</button>
       </div>
 
-      {/* Main Content */}
       <div style={styles.content}>
         {activePage === 'dashboard' && (
           <div>
             <h2>🏠 Dashboard</h2>
-            <p>Selamat datang di admin panel. Pilih menu di kiri untuk mengelola situs.</p>
+            <p>Selamat datang! Gunakan menu kiri untuk mengelola website.</p>
             <div style={styles.stats}>
               <div style={styles.statCard}>📄 {pages.length} Halaman</div>
               <div style={styles.statCard}>🔗 {menu.length} Menu</div>
@@ -189,12 +175,7 @@ export default function AdminPanel() {
                   <td>{p.slug}</td>
                   <td>{p.title}</td>
                   <td>
-                    <button
-                      onClick={() => setEditPage({ ...p })}
-                      style={{ ...styles.button, marginRight: '10px' }}
-                    >
-                      Edit
-                    </button>
+                    <button onClick={() => setEditPage({ ...p })} style={styles.button}>Edit</button>
                   </td>
                 </tr>
               ))}
@@ -218,12 +199,8 @@ export default function AdminPanel() {
                   style={{ ...styles.input, height: '200px' }}
                 />
                 <div style={styles.modalButtons}>
-                  <button onClick={() => setEditPage(null)} style={styles.cancelButton}>
-                    Batal
-                  </button>
-                  <button onClick={savePage} style={styles.button}>
-                    Simpan
-                  </button>
+                  <button onClick={() => setEditPage(null)} style={styles.cancelButton}>Batal</button>
+                  <button onClick={savePage} style={styles.button}>Simpan</button>
                 </div>
               </div>
             )}
@@ -246,10 +223,7 @@ export default function AdminPanel() {
                   <td>{item.label}</td>
                   <td>{item.slug}</td>
                   <td>
-                    <button
-                      onClick={() => deleteMenu(item.id)}
-                      style={{ ...styles.button, backgroundColor: '#dc3545' }}
-                    >
+                    <button onClick={() => deleteMenu(item.id)} style={{ ...styles.button, backgroundColor: '#dc3545' }}>
                       Hapus
                     </button>
                   </td>
@@ -267,14 +241,12 @@ export default function AdminPanel() {
             />
             <input
               type="text"
-              placeholder="Slug (contoh: about)"
+              placeholder="Slug (contoh: blog)"
               value={addMenuForm.slug}
               onChange={(e) => setAddMenuForm({ ...addMenuForm, slug: e.target.value })}
               style={styles.input}
             />
-            <button onClick={addNewMenu} style={styles.button}>
-              Tambah Menu
-            </button>
+            <button onClick={addNewMenu} style={styles.button}>Tambah Menu</button>
           </div>
         )}
 
@@ -302,9 +274,7 @@ export default function AdminPanel() {
               onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
               style={styles.input}
             />
-            <button onClick={saveSettings} style={styles.button}>
-              Simpan Pengaturan
-            </button>
+            <button onClick={saveSettings} style={styles.button}>Simpan Pengaturan</button>
           </div>
         )}
       </div>
@@ -312,118 +282,22 @@ export default function AdminPanel() {
   );
 }
 
-// === STYLES ===
 const styles = {
-  container: {
-    display: 'flex',
-    minHeight: '100vh',
-    fontFamily: 'Arial, sans-serif',
-  },
-  sidebar: {
-    width: '250px',
-    backgroundColor: '#2c3e50',
-    color: 'white',
-    padding: '20px',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  sidebarItem: {
-    padding: '12px 15px',
-    cursor: 'pointer',
-    borderRadius: '5px',
-    marginBottom: '8px',
-  },
-  sidebarItemActive: {
-    padding: '12px 15px',
-    cursor: 'pointer',
-    borderRadius: '5px',
-    marginBottom: '8px',
-    backgroundColor: '#3498db',
-    fontWeight: 'bold',
-  },
-  logoutButton: {
-    marginTop: 'auto',
-    padding: '12px',
-    backgroundColor: '#e74c3c',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-  },
-  content: {
-    flex: 1,
-    padding: '30px',
-    backgroundColor: '#f8f9fa',
-  },
-  loginContainer: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-    backgroundColor: '#f8f9fa',
-  },
-  loginBox: {
-    padding: '40px',
-    backgroundColor: 'white',
-    borderRadius: '10px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-    textAlign: 'center',
-  },
+  container: { display: 'flex', minHeight: '100vh', fontFamily: 'Arial' },
+  sidebar: { width: '250px', backgroundColor: '#2c3e50', color: 'white', padding: '20px', display: 'flex', flexDirection: 'column' },
+  sidebarItem: { padding: '12px 15px', cursor: 'pointer', borderRadius: '5px', marginBottom: '8px' },
+  sidebarItemActive: { padding: '12px 15px', cursor: 'pointer', borderRadius: '5px', marginBottom: '8px', backgroundColor: '#3498db', fontWeight: 'bold' },
+  logoutButton: { marginTop: 'auto', padding: '12px', backgroundColor: '#e74c3c', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' },
+  content: { flex: 1, padding: '30px', backgroundColor: '#f8f9fa' },
+  loginContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8f9fa' },
+  loginBox: { padding: '40px', backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', textAlign: 'center' },
   form: { marginTop: '20px' },
-  input: {
-    padding: '12px',
-    width: '100%',
-    border: '1px solid #ddd',
-    borderRadius: '5px',
-    marginBottom: '10px',
-    fontSize: '16px',
-  },
-  button: {
-    padding: '12px 20px',
-    backgroundColor: '#007BFF',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    fontSize: '16px',
-  },
-  cancelButton: {
-    padding: '12px 20px',
-    backgroundColor: '#6c757d',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    marginRight: '10px',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    marginBottom: '30px',
-  },
-  modal: {
-    marginTop: '30px',
-    padding: '20px',
-    backgroundColor: 'white',
-    borderRadius: '10px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-  },
-  modalButtons: {
-    marginTop: '20px',
-    textAlign: 'right',
-  },
-  stats: {
-    display: 'flex',
-    gap: '20px',
-    margin: '20px 0',
-  },
-  statCard: {
-    padding: '15px',
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-    flex: 1,
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
+  input: { padding: '12px', width: '100%', border: '1px solid #ddd', borderRadius: '5px', marginBottom: '10px', fontSize: '16px' },
+  button: { padding: '12px 20px', backgroundColor: '#007BFF', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', fontSize: '16px' },
+  cancelButton: { padding: '12px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer', marginRight: '10px' },
+  table: { width: '100%', borderCollapse: 'collapse', marginBottom: '30px' },
+  modal: { marginTop: '30px', padding: '20px', backgroundColor: 'white', borderRadius: '10px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' },
+  modalButtons: { marginTop: '20px', textAlign: 'right' },
+  stats: { display: 'flex', gap: '20px', margin: '20px 0' },
+  statCard: { padding: '15px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 2px 10px rgba(0,0,0,0.1)', flex: 1, textAlign: 'center', fontWeight: 'bold' },
 };
