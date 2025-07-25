@@ -19,80 +19,69 @@ const Login = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <form onSubmit={handleLogin} style={styles.form}>
-        <h2>Login</h2>
-        {error && <p style={styles.error}>{error}</p>}
-        <div style={styles.inputGroup}>
+    <div style={{
+      backgroundColor: '#fff',
+      padding: '40px',
+      borderRadius: '8px',
+      boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+      width: '300px',
+      textAlign: 'center'
+    }}>
+      <h2>Login</h2>
+      {error && <p style={{ color: 'red', fontSize: '14px' }}>{error}</p>}
+      <form onSubmit={handleLogin}>
+        <div style={{ marginBottom: '15px', textAlign: 'left' }}>
           <label>Username</label>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
-            style={styles.input}
+            style={{
+              width: '100%',
+              padding: '8px',
+              marginTop: '5px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              boxSizing: 'border-box'
+            }}
           />
         </div>
-        <div style={styles.inputGroup}>
+        <div style={{ marginBottom: '15px', textAlign: 'left' }}>
           <label>Password</label>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={styles.input}
+            style={{
+              width: '100%',
+              padding: '8px',
+              marginTop: '5px',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              boxSizing: 'border-box'
+            }}
           />
         </div>
-        <button type="submit" style={styles.button}>
+        <button
+          type="submit"
+          style={{
+            width: '100%',
+            padding: '10px',
+            backgroundColor: '#007bff',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginTop: '10px'
+          }}
+        >
           Login
         </button>
       </form>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: '100vh',
-    backgroundColor: '#f4f6f8',
-  },
-  form: {
-    backgroundColor: '#fff',
-    padding: '40px',
-    borderRadius: '8px',
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    width: '300px',
-    textAlign: 'center',
-  },
-  inputGroup: {
-    marginBottom: '15px',
-    textAlign: 'left',
-  },
-  input: {
-    width: '100%',
-    padding: '8px',
-    marginTop: '5px',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    boxSizing: 'border-box',
-  },
-  button: {
-    width: '100%',
-    padding: '10px',
-    backgroundColor: '#007bff',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    marginTop: '10px',
-  },
-  error: {
-    color: 'red',
-    fontSize: '14px',
-  },
 };
 
 export default Login;
