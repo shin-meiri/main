@@ -10,12 +10,9 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Gunakan Pages sebagai layout, dan di dalamnya tampilkan Login */}
         <Route path="/" element={<Pages />}>
           <Route index element={<Login />} />
         </Route>
-
-        {/* Halaman Admin */}
         <Route
           path="/admin"
           element={isLoggedIn ? <Admin /> : <Navigate to="/" replace />}
