@@ -8,13 +8,28 @@ const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (username === 'amy' && password === 'amymeiri') {
-      localStorage.setItem('isLoggedIn', 'true');
-      navigate('/admin', { replace: true });
-    } else {
-      setError('Username atau password salah');
+    setError('');
+    
+    try {
+      const res = await fetch('http://localhost/api/datadb.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('username', data.user.username);
+        navigate('/admin', { replace: true });
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError('Gagal terhubung ke server');
     }
   };
 
