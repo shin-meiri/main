@@ -1,6 +1,6 @@
 // src/App.js
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'; // 🔴 Tambahkan { Navigate }
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import DynamicPage from './DynamicPage';
 import AdminPanel from './AdminPanel';
 
@@ -11,7 +11,7 @@ function App() {
         <Routes>
           <Route path="/page/:slug" element={<DynamicPage />} />
           <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/" element={<Navigate to="/page/home" />} /> {/* ✅ Sekarang aman */}
+          <Route path="/" element={<Navigate to="/page/home" />} />
         </Routes>
       </div>
     </Router>
