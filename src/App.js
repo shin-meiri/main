@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -10,7 +10,7 @@ import Dashboard from './pages/Admin/Dashboard';
 import Settings from './pages/Admin/Settings';
 import MySQL from './pages/Admin/MySQL'; 
 
-const App = () => {
+function App() {
   return (
     <Router>
       <div style={styles.app}>
@@ -19,11 +19,10 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
-<Route path="/admin/" element={<AdminLayout />}>
-  <Route index element={<Dashboard />} />
-  <Route path="settings" element={<Settings />} />
-  <Route path="mysql" element={<MySQL />} />
-
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="mysql" element={<MySQL />} />
             </Route>
           </Routes>
         </main>
@@ -31,7 +30,7 @@ const App = () => {
       </div>
     </Router>
   );
-};
+}
 
 const styles = {
   app: {
