@@ -1,5 +1,5 @@
 // src/DynamicPage.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // Pastikan useEffect di-import
 import { useParams } from 'react-router-dom';
 
 export default function DynamicPage() {
@@ -7,6 +7,26 @@ export default function DynamicPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ useEffect ditaruh DI DALAM komponen
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      // Cleanup style
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
+
+  // Ambil data dari API
   useEffect(() => {
     const fetchPage = async () => {
       try {
@@ -18,7 +38,7 @@ export default function DynamicPage() {
           setData({ error: json.error });
         }
       } catch (err) {
-        setData({ error: "Gagal memuat halaman. Cek koneksi atau database." });
+        setData({ error: "Gagal memuat halaman." });
       } finally {
         setLoading(false);
       }
@@ -34,7 +54,6 @@ export default function DynamicPage() {
 
   return (
     <div style={styles.container}>
-      {/* Google Fonts */}
       <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet" />
 
       {/* Navbar */}
@@ -53,7 +72,7 @@ export default function DynamicPage() {
         </div>
       </nav>
 
-      {/* Hero/Header */}
+      {/* Hero */}
       <header style={styles.hero}>
         <h1 style={styles.heroTitle}>{page.title}</h1>
         <p style={styles.heroSubtitle}>
@@ -61,7 +80,7 @@ export default function DynamicPage() {
         </p>
       </header>
 
-      {/* Main Content */}
+      {/* Konten */}
       <main style={styles.main}>
         <article style={styles.article}>
           <div
@@ -79,7 +98,7 @@ export default function DynamicPage() {
   );
 }
 
-// === Loading Screen ===
+// === Komponen Pendukung (Loading & Error) ===
 function Loading() {
   return (
     <div style={styles.loadingContainer}>
@@ -89,7 +108,6 @@ function Loading() {
   );
 }
 
-// === Error Screen ===
 function ErrorPage({ message }) {
   return (
     <div style={styles.errorContainer}>
@@ -104,6 +122,8 @@ function ErrorPage({ message }) {
 
 // === STYLES ===
 const styles = {
+  // ... (sama seperti sebelumnya, gak usah diubah)
+  // Biarkan styles tetap di bawah
   container: {
     fontFamily: "'Nunito', sans-serif",
     backgroundColor: "#f9fafa",
@@ -111,8 +131,6 @@ const styles = {
     minHeight: "100vh",
     display: "flex",
     flexDirection: "column",
-    margin: 0,
-    padding: 0,
   },
   navbar: {
     display: "flex",
@@ -139,28 +157,20 @@ const styles = {
     textDecoration: "none",
     fontSize: "1.1rem",
     fontWeight: "600",
-    transition: "color 0.3s",
-  },
-  navLinkHover: {
-    color: "#cce7ff",
   },
   hero: {
     textAlign: "center",
     padding: "4rem 2rem",
-    backgroundColor: "#007BFF",
+    backgroundColor: "linear-gradient(135deg, #007BFF, #0056b3)",
     color: "white",
-    backgroundImage: "linear-gradient(135deg, #007BFF, #0056b3)",
   },
   heroTitle: {
     fontSize: "2.8rem",
     margin: "0 0 1rem 0",
-    fontWeight: "700",
   },
   heroSubtitle: {
     fontSize: "1.2rem",
     opacity: 0.9,
-    maxWidth: "600px",
-    margin: "0 auto",
   },
   main: {
     flex: 1,
@@ -174,7 +184,6 @@ const styles = {
     borderRadius: "12px",
     padding: "2rem",
     boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-    transition: "transform 0.3s",
   },
   content: {
     lineHeight: "1.8",
@@ -195,8 +204,6 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     height: "100vh",
-    fontSize: "1.2rem",
-    color: "#555",
   },
   spinner: {
     border: "4px solid #f3f3f3",
@@ -205,7 +212,6 @@ const styles = {
     width: "40px",
     height: "40px",
     animation: "spin 1s linear infinite",
-    marginBottom: "1rem",
   },
   loadingText: {
     marginTop: "1rem",
@@ -228,18 +234,5 @@ const styles = {
     border: "none",
     borderRadius: "5px",
     cursor: "pointer",
-    fontWeight: "600",
   },
 };
-
-// Tambahkan animasi ke document (di useEffect)
-useEffect(() => {
-  const style = document.createElement("style");
-  style.textContent = `
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  `;
-  document.head.appendChild(style);
-}, []);
