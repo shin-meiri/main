@@ -10,54 +10,99 @@ const MySQL = () => {
     port: '3306',
   });
 
-  // Data dari db.json (banyak konfig)
+  // Daftar konfigurasi
   const [configs, setConfigs] = useState([]);
   const [selectedConfig, setSelectedConfig] = useState(null);
 
   // Status & loading
   const [status, setStatus] = useState({});
-  const [testing, setTesting] = useState(false);
   const [loadingTables, setLoadingTables] = useState(false);
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState('');
   const [tableData, setTableData] = useState([]);
   const [message, setMessage] = useState('');
 
-  // Load semua konfig dari db.php (GET)
+  // Load konfig dari db.php
   useEffect(() => {
     fetch('/api/db.php')
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          // Jika db.json cuma 1 konfig, jadikan array
-          const configList = Array.isArray(data.config)
-            ? data.config
-            : [data.config];
-          setConfigs(configList);
-          if (configList[0]) {
-            const c = configList[0];
-            setForm({
-              host: c.host || 'localhost',
-              user: c.user || '',
-              pass: c.pass || '',
-              dbname: c.dbname || '',
-              port: c.port || '3306',
-            });
+          const list = Array.isArray(data.config) ? data.config : [data.config];
+          setConfigs(list);
+          if (list[0]) {
+            const c = list[0];
+            setForm(c);
             setSelectedConfig(c);
+            // Coba cek status otomatis
+            testConnection(c, 0);
           }
         }
       })
-      .catch((err) => {
-        console.error('Gagal muat konfig:', err);
-        setMessage('Gagal muat konfigurasi.');
-      });
+      .catch(() => setMessage('Gagal muat konfigurasi.'));
   }, []);
 
-  // Cek status koneksi untuk satu konfig
-  const testConnection = (config, index) => {
-    const key = index;
+  // Simpan konfigurasi baru
+  const saveConfig = () => {
+    const newConfig = { ...form };
+    const existsIndex = configs.findIndex(
+      (c) => c.host === newConfig.host && c.user === newConfig.user && c.dbname === newConfig.dbname
+    );
+
+    let updated;
+    if (existsIndex >= 0) {
+      updated = configs.map((c, i) => (i === existsIndex ? newConfig : c));
+    } else {
+      updated = [...configs, newConfig];
+    }
+
+    fetch('/api/db.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...newConfig, action: 'save_config' }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setConfigs(updated);
+          setSelectedConfig(newConfig);
+          setMessage('Konfigurasi disimpan.');
+          setTimeout(() => setMessage(''), 3000);
+          testConnection(newConfig, configs.length); // Cek status
+        } else {
+          setMessage('Gagal simpan: ' + data.message);
+        }
+      });
+  };
+
+  // Hapus konfigurasi
+  const deleteConfig = (index) => {
+    const updated = configs.filter((_, i) => i !== index);
+    setConfigs(updated);
+
+    // Simpan ke file (update db.json)
+    fetch('/api/db.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: updated, action: 'save_config' }),
+    }).then(() => {
+      if (selectedConfig === configs[index]) {
+        setSelectedConfig(null);
+        setForm({ host: 'localhost', user: '', pass: '', dbname: '', port: '3306' });
+        setTableData([]);
+        setSelectedTable('');
+      }
+      setStatus((prev) => {
+        const newStatus = { ...prev };
+        delete newStatus[index];
+        return newStatus;
+      });
+    });
+  };
+
+  // Cek koneksi (otomatis saat simpan atau klik muat tabel)
+  const testConnection = (config, key) => {
     setStatus((prev) => ({ ...prev, [key]: 'testing' }));
-    setTesting(true);
 
     fetch('/api/db.php', {
       method: 'POST',
@@ -70,63 +115,23 @@ const MySQL = () => {
           ...prev,
           [key]: data.success ? 'success' : 'error',
         }));
-        if (data.success) {
-          // Auto-pilih jika sukses
-          setSelectedConfig(config);
-          setForm(config);
-          setMessage('Koneksi berhasil!');
-          setTimeout(() => setMessage(''), 2000);
-        }
       })
       .catch(() => {
         setStatus((prev) => ({ ...prev, [key]: 'error' }));
-      })
-      .finally(() => setTesting(false));
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const saveConfig = () => {
-    const newConfig = { ...form };
-    const exists = configs.findIndex(
-      (c) => c.host === newConfig.host && c.user === newConfig.user
-    );
-
-    let updated;
-    if (exists >= 0) {
-      updated = configs.map((c, i) => (i === exists ? newConfig : c));
-    } else {
-      updated = [...configs, newConfig];
-    }
-
-    // Simpan ke server
-    fetch('/api/db.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...newConfig, action: 'save_config' }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setConfigs(updated);
-          setSelectedConfig(newConfig);
-          setMessage('Konfigurasi disimpan dan diuji otomatis.');
-          testConnection(newConfig, configs.length); // Coba koneksi
-        } else {
-          setMessage('Gagal simpan: ' + data.message);
-        }
-        setTimeout(() => setMessage(''), 3000);
       });
   };
 
+  // Muat daftar tabel
   const loadTables = () => {
-    if (!selectedConfig?.dbname) {
+    if (!selectedConfig) {
+      setMessage('Pilih konfigurasi dulu.');
+      return;
+    }
+    if (!selectedConfig.dbname) {
       setMessage('Pilih database dulu.');
       return;
     }
+
     setLoadingTables(true);
     setTables([]);
     setSelectedTable('');
@@ -141,17 +146,19 @@ const MySQL = () => {
       .then((data) => {
         if (data.success) {
           setTables(data.tables);
-          setMessage('Tabel dimuat.');
+          setMessage(`Tabel dimuat: ${data.tables.length} tabel ditemukan.`);
         } else {
           setMessage('Gagal muat tabel: ' + data.message);
         }
       })
-      .catch((err) => {
-        setMessage('Error: ' + err.message);
-      })
-      .finally(() => setLoadingTables(false));
+      .catch(() => setMessage('Error saat mengambil tabel.'))
+      .finally(() => {
+        setTimeout(() => setMessage(''), 5000);
+        setLoadingTables(false);
+      });
   };
 
+  // Lihat isi tabel
   const viewTable = (table) => {
     setSelectedTable(table);
     setTableData([]);
@@ -170,10 +177,13 @@ const MySQL = () => {
           setMessage('Gagal baca tabel: ' + data.message);
         }
       })
-      .catch((err) => {
-        setMessage('Error baca tabel.');
-      })
+      .catch(() => setMessage('Error baca tabel.'))
       .finally(() => setLoadingTables(false));
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -227,9 +237,6 @@ const MySQL = () => {
           <button onClick={saveConfig} style={styles.btnSave}>
             💾 Simpan
           </button>
-          <button onClick={() => testConnection(form, 'form')} style={styles.btnTest}>
-            {testing ? 'Testing...' : '🔧 Test Koneksi'}
-          </button>
           <button onClick={loadTables} style={styles.btnLoad}>
             🔄 Muat Tabel
           </button>
@@ -247,18 +254,18 @@ const MySQL = () => {
               <th>User</th>
               <th>Database</th>
               <th>Status</th>
+              <th>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {configs.map((cfg, i) => (
               <tr
                 key={i}
-                style={
-                  selectedConfig === cfg ? styles.rowSelected : undefined
-                }
+                style={selectedConfig === cfg ? styles.rowSelected : undefined}
                 onClick={() => {
                   setSelectedConfig(cfg);
                   setForm(cfg);
+                  testConnection(cfg, i); // Cek status saat pilih
                 }}
               >
                 <td>{i + 1}</td>
@@ -273,16 +280,21 @@ const MySQL = () => {
                   ) : status[i] === 'error' ? (
                     '🔴'
                   ) : (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        testConnection(cfg, i);
-                      }}
-                      style={styles.btnStatus}
-                    >
-                      🧪
-                    </button>
+                    '⚪'
                   )}
+                </td>
+                <td>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Hapus koneksi ke ${cfg.host}/${cfg.dbname}?`)) {
+                        deleteConfig(i);
+                      }
+                    }}
+                    style={styles.btnDelete}
+                  >
+                    🗑️
+                  </button>
                 </td>
               </tr>
             ))}
@@ -293,9 +305,9 @@ const MySQL = () => {
       {/* Dropdown Tabel */}
       {selectedConfig?.dbname && (
         <div style={styles.section}>
-          <h2>Pilih Tabel dari Database: <strong>{selectedConfig.dbname}</strong></h2>
+          <h2>Database: <strong>{selectedConfig.dbname}</strong></h2>
           {loadingTables ? (
-            <p>Memuat...</p>
+            <p>Memuat daftar tabel...</p>
           ) : (
             <select
               value={selectedTable}
@@ -400,13 +412,6 @@ const styles = {
     borderRadius: '4px',
     cursor: 'pointer',
   },
-  btnTest: {
-    padding: '0.75rem 1.5rem',
-    backgroundColor: '#ffc107',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-  },
   btnLoad: {
     padding: '0.75rem 1.5rem',
     backgroundColor: '#007BFF',
@@ -415,11 +420,12 @@ const styles = {
     borderRadius: '4px',
     cursor: 'pointer',
   },
-  btnStatus: {
+  btnDelete: {
     background: 'none',
     border: 'none',
-    cursor: 'pointer',
     fontSize: '1.2rem',
+    cursor: 'pointer',
+    color: '#dc3545',
   },
   section: {
     marginTop: '2rem',
@@ -458,13 +464,13 @@ const styles = {
     borderCollapse: 'collapse',
     marginTop: '1rem',
   },
-  dataTh: {
+  th: {
     backgroundColor: '#f1f1f1',
     borderBottom: '2px solid #ddd',
     padding: '0.5rem',
     textAlign: 'left',
   },
-  dataTd: {
+  td: {
     padding: '0.5rem',
     borderBottom: '1px solid #eee',
   },
