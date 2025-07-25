@@ -1,13 +1,13 @@
 // src/Admin.jsx
 import React from 'react';
-import { useNavigate } from 'react-router-dom'; // Hanya ini yang dipakai
+import { useNavigate } from 'react-router-dom';
 
 const Admin = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem('isLoggedIn');
-    navigate('/');
+    navigate('/', { replace: true });
   };
 
   return (
