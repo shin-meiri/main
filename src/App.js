@@ -1,19 +1,21 @@
 // src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Pages from './pages/Pages';
 import Login from './pages/Login';
 import Admin from './Admin';
 
 function App() {
-  // Selalu baca dari localStorage saat render
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* Halaman Login */}
-        <Route path="/" element={<Login />} />
+        {/* Gunakan Pages sebagai layout, dan di dalamnya tampilkan Login */}
+        <Route path="/" element={<Pages />}>
+          <Route index element={<Login />} />
+        </Route>
 
-        {/* Halaman Admin - hanya bisa masuk jika sudah login */}
+        {/* Halaman Admin */}
         <Route
           path="/admin"
           element={isLoggedIn ? <Admin /> : <Navigate to="/" replace />}
