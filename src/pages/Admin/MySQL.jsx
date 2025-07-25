@@ -14,12 +14,11 @@ const MySQL = () => {
   const [configs, setConfigs] = useState([]);
   const [selectedConfig, setSelectedConfig] = useState(null);
 
-  // Status & loading
-  const [status, setStatus] = useState({});
-  const [loadingTables, setLoadingTables] = useState(false);
+  // Tabel & data
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState('');
   const [tableData, setTableData] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
   // Load konfig dari db.php
@@ -34,27 +33,27 @@ const MySQL = () => {
             const c = list[0];
             setForm(c);
             setSelectedConfig(c);
-            // Coba cek status otomatis
-            testConnection(c, 0);
           }
         }
       })
       .catch(() => setMessage('Gagal muat konfigurasi.'));
   }, []);
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
   // Simpan konfigurasi baru
   const saveConfig = () => {
     const newConfig = { ...form };
-    const existsIndex = configs.findIndex(
-      (c) => c.host === newConfig.host && c.user === newConfig.user && c.dbname === newConfig.dbname
+    const exists = configs.findIndex(
+      (c) => c.host === newConfig.host && c.user === newConfig.user
     );
 
-    let updated;
-    if (existsIndex >= 0) {
-      updated = configs.map((c, i) => (i === existsIndex ? newConfig : c));
-    } else {
-      updated = [...configs, newConfig];
-    }
+    const updated = exists >= 0
+      ? configs.map((c, i) => (i === exists ? newConfig : c))
+      : [...configs, newConfig];
 
     fetch('/api/db.php', {
       method: 'POST',
@@ -67,72 +66,55 @@ const MySQL = () => {
           setConfigs(updated);
           setSelectedConfig(newConfig);
           setMessage('Konfigurasi disimpan.');
-          setTimeout(() => setMessage(''), 3000);
-          testConnection(newConfig, configs.length); // Cek status
         } else {
           setMessage('Gagal simpan: ' + data.message);
         }
+        setTimeout(() => setMessage(''), 3000);
       });
   };
 
   // Hapus konfigurasi
   const deleteConfig = (index) => {
     const updated = configs.filter((_, i) => i !== index);
-    setConfigs(updated);
+    const isCurrent = selectedConfig === configs[index];
 
-    // Simpan ke file (update db.json)
+    // Simpan ke server (pakai yang tersisa)
     fetch('/api/db.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: updated, action: 'save_config' }),
-    }).then(() => {
-      if (selectedConfig === configs[index]) {
-        setSelectedConfig(null);
-        setForm({ host: 'localhost', user: '', pass: '', dbname: '', port: '3306' });
-        setTableData([]);
-        setSelectedTable('');
-      }
-      setStatus((prev) => {
-        const newStatus = { ...prev };
-        delete newStatus[index];
-        return newStatus;
-      });
-    });
-  };
-
-  // Cek koneksi (otomatis saat simpan atau klik muat tabel)
-  const testConnection = (config, key) => {
-    setStatus((prev) => ({ ...prev, [key]: 'testing' }));
-
-    fetch('/api/db.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...config, action: 'test_db' }),
+      body: JSON.stringify({
+        action: 'save_config',
+        ...updated[0] || { host: 'localhost', user: '', pass: '', dbname: '', port: '3306' }
+      }),
     })
       .then((res) => res.json())
       .then((data) => {
-        setStatus((prev) => ({
-          ...prev,
-          [key]: data.success ? 'success' : 'error',
-        }));
-      })
-      .catch(() => {
-        setStatus((prev) => ({ ...prev, [key]: 'error' }));
+        if (data.success || updated.length === 0) {
+          setConfigs(updated);
+          if (isCurrent) {
+            const fallback = updated[0] || {
+              host: 'localhost',
+              user: '',
+              pass: '',
+              dbname: '',
+              port: '3306',
+            };
+            setForm(fallback);
+            setSelectedConfig(fallback);
+          }
+          setMessage('Konfigurasi dihapus.');
+          setTimeout(() => setMessage(''), 3000);
+        }
       });
   };
 
   // Muat daftar tabel
   const loadTables = () => {
-    if (!selectedConfig) {
-      setMessage('Pilih konfigurasi dulu.');
-      return;
-    }
-    if (!selectedConfig.dbname) {
+    if (!selectedConfig?.dbname) {
       setMessage('Pilih database dulu.');
       return;
     }
-
-    setLoadingTables(true);
+    setLoading(true);
     setTables([]);
     setSelectedTable('');
     setTableData([]);
@@ -146,23 +128,20 @@ const MySQL = () => {
       .then((data) => {
         if (data.success) {
           setTables(data.tables);
-          setMessage(`Tabel dimuat: ${data.tables.length} tabel ditemukan.`);
+          setMessage(`Ditemukan ${data.tables.length} tabel.`);
         } else {
           setMessage('Gagal muat tabel: ' + data.message);
         }
       })
-      .catch(() => setMessage('Error saat mengambil tabel.'))
-      .finally(() => {
-        setTimeout(() => setMessage(''), 5000);
-        setLoadingTables(false);
-      });
+      .catch(() => setMessage('Error koneksi.'))
+      .finally(() => setLoading(false));
   };
 
-  // Lihat isi tabel
+  // Baca isi tabel
   const viewTable = (table) => {
     setSelectedTable(table);
     setTableData([]);
-    setLoadingTables(true);
+    setLoading(true);
 
     fetch('/api/db.php', {
       method: 'POST',
@@ -177,13 +156,7 @@ const MySQL = () => {
           setMessage('Gagal baca tabel: ' + data.message);
         }
       })
-      .catch(() => setMessage('Error baca tabel.'))
-      .finally(() => setLoadingTables(false));
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+      .finally(() => setLoading(false));
   };
 
   return (
@@ -253,7 +226,6 @@ const MySQL = () => {
               <th>Host:Port</th>
               <th>User</th>
               <th>Database</th>
-              <th>Status</th>
               <th>Aksi</th>
             </tr>
           </thead>
@@ -265,7 +237,6 @@ const MySQL = () => {
                 onClick={() => {
                   setSelectedConfig(cfg);
                   setForm(cfg);
-                  testConnection(cfg, i); // Cek status saat pilih
                 }}
               >
                 <td>{i + 1}</td>
@@ -273,23 +244,11 @@ const MySQL = () => {
                 <td>{cfg.user}</td>
                 <td>{cfg.dbname || '-'}</td>
                 <td>
-                  {status[i] === 'testing' ? (
-                    '⏳'
-                  ) : status[i] === 'success' ? (
-                    '🟢'
-                  ) : status[i] === 'error' ? (
-                    '🔴'
-                  ) : (
-                    '⚪'
-                  )}
-                </td>
-                <td>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.confirm(`Hapus koneksi ke ${cfg.host}/${cfg.dbname}?`)) {
+                      if (window.confirm(`Hapus koneksi ke ${cfg.host} (${cfg.user})?`))
                         deleteConfig(i);
-                      }
                     }}
                     style={styles.btnDelete}
                   >
@@ -306,8 +265,8 @@ const MySQL = () => {
       {selectedConfig?.dbname && (
         <div style={styles.section}>
           <h2>Database: <strong>{selectedConfig.dbname}</strong></h2>
-          {loadingTables ? (
-            <p>Memuat daftar tabel...</p>
+          {loading ? (
+            <p>Memuat tabel...</p>
           ) : (
             <select
               value={selectedTable}
@@ -423,9 +382,8 @@ const styles = {
   btnDelete: {
     background: 'none',
     border: 'none',
-    fontSize: '1.2rem',
     cursor: 'pointer',
-    color: '#dc3545',
+    fontSize: '1.2rem',
   },
   section: {
     marginTop: '2rem',
