@@ -1,30 +1,7 @@
-import React, { useState, useEffect } from 'react';
-
-const Footer = () => {
-  const [data, setData] = useState({});
-
-  useEffect(() => {
-    fetch('/api/data.php')
-      .then((res) => res.json())
-      .then((json) => setData(json))
-      .catch((err) => console.error(err));
-  }, []);
-
-  return (
-    <footer style={styles.footer}>
-      <p>{data.footer?.text || '© Website'}</p>
+export default function Footer() {
+  return `
+    <footer style="padding: 1rem; background: #333; color: white; text-align: center;">
+      &copy; 2025 My React App
     </footer>
-  );
-};
-
-const styles = {
-  footer: {
-    textAlign: 'center',
-    padding: '1rem',
-    backgroundColor: '#f1f1f1',
-    borderTop: '1px solid #ddd',
-    marginTop: 'auto',
-  },
-};
-
-export default Footer;
+  `;
+}
