@@ -1,24 +1,20 @@
-// src/App.jsx
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Pages from './pages/Pages';
-import Login from './pages/Login';
-import Admin from './Admin';
+// frontend/src/App.js
+import React from 'react';
+import DatabaseConnector from './components/DatabaseConnector';
+import './App.css';
 
 function App() {
-  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Pages />}>
-          <Route index element={<Login />} />
-        </Route>
-        <Route
-          path="/admin"
-          element={isLoggedIn ? <Admin /> : <Navigate to="/" replace />}
-        />
-      </Routes>
-    </BrowserRouter>
+    <div className="App">
+      <header className="App-header">
+        <h1>Multi-Database Manager</h1>
+        <p>Connect to any database with your credentials</p>
+      </header>
+      
+      <main>
+        <DatabaseConnector />
+      </main>
+    </div>
   );
 }
 
