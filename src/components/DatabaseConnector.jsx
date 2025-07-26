@@ -59,7 +59,7 @@ const DatabaseConnector = () => {
     
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/backend/api/konek.php', {
+      const response = await fetch('https://bos.free.nf/api/konek.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
