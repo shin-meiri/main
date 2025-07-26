@@ -1,6 +1,5 @@
 // frontend/src/components/DatabaseConnector.js
 import React, { useState } from 'react';
-import axios from 'axios';
 
 const DatabaseConnector = () => {
   // State untuk kredensial database
@@ -25,23 +24,30 @@ const DatabaseConnector = () => {
     });
   };
 
-  // Test koneksi database
+  // Test koneksi database (menggunakan fetch bawaan)
   const testConnection = async () => {
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost/backend/api/konek.php', {
-        action: 'test_connection',
-        host: credentials.host,
-        username: credentials.username,
-        password: credentials.password,
-        database: credentials.database
+      const response = await fetch('http://localhost:8000/backend/api/konek.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'test_connection',
+          host: credentials.host,
+          username: credentials.username,
+          password: credentials.password,
+          database: credentials.database
+        })
       });
       
-      setConnectionStatus(response.data);
+      const data = await response.json();
+      setConnectionStatus(data);
     } catch (error) {
       setConnectionStatus({
         status: 'error',
-        message: error.response?.data?.message || 'Connection failed'
+        message: error.message || 'Connection failed'
       });
     }
     setLoading(false);
@@ -53,20 +59,27 @@ const DatabaseConnector = () => {
     
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost/backend/api/konek.php', {
-        action: 'connect_and_query',
-        host: credentials.host,
-        username: credentials.username,
-        password: credentials.password,
-        database: credentials.database,
-        query: query
+      const response = await fetch('http://localhost:8000/backend/api/konek.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'connect_and_query',
+          host: credentials.host,
+          username: credentials.username,
+          password: credentials.password,
+          database: credentials.database,
+          query: query
+        })
       });
       
-      setQueryResult(response.data);
+      const data = await response.json();
+      setQueryResult(data);
     } catch (error) {
       setQueryResult({
         status: 'error',
-        message: error.response?.data?.message || 'Query failed'
+        message: error.message || 'Query failed'
       });
     }
     setLoading(false);
@@ -76,19 +89,26 @@ const DatabaseConnector = () => {
   const getDatabaseStructure = async () => {
     setLoading(true);
     try {
-      const response = await axios.post('http://localhost/backend/api/konek.php', {
-        action: 'get_structure',
-        host: credentials.host,
-        username: credentials.username,
-        password: credentials.password,
-        database: credentials.database
+      const response = await fetch('http://localhost:8000/backend/api/konek.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'get_structure',
+          host: credentials.host,
+          username: credentials.username,
+          password: credentials.password,
+          database: credentials.database
+        })
       });
       
-      setQueryResult(response.data);
+      const data = await response.json();
+      setQueryResult(data);
     } catch (error) {
       setQueryResult({
         status: 'error',
-        message: error.response?.data?.message || 'Failed to get structure'
+        message: error.message || 'Failed to get structure'
       });
     }
     setLoading(false);
