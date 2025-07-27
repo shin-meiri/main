@@ -8,7 +8,6 @@ import DynamicPage from './components/DynamicPage';
 const AppContent = () => {
   const location = useLocation();
   const [connection, setConnection] = useState({ apiUrl: '', credentials: {} });
-  const [isAdmin, setIsAdmin] = useState(location.pathname.startsWith('/admin'));
 
   const handleConnectionSuccess = (apiUrl, credentials) => {
     setConnection({ apiUrl, credentials });
