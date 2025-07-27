@@ -287,3 +287,85 @@
   outline: none;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
 }
+
+/* Tambahkan ke App.css */
+
+/* Clear dan Refresh Buttons */
+.btn-clear {
+  background: #ffc107;
+  color: #212529;
+  border: none;
+  padding: 12px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.btn-clear:hover {
+  background: #e0a800;
+}
+
+.btn-refresh {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.btn-refresh:hover {
+  background: #138496;
+}
+
+/* Profiles Header */
+.profiles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.profiles-header h3 {
+  margin: 0;
+}
+
+/* Profile Actions */
+.profile-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.profile-actions .btn-delete {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.profile-actions .btn-delete:hover {
+  background: #c82333;
+}
+
+.profile-actions .btn-load {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.3s;
+}
+
+.profile-actions .btn-load:hover {
+  background: #218838;
+}
