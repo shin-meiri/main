@@ -73,7 +73,7 @@ const DatabaseConnector = () => {
     setQueryResult(null);
     
     try {
-      const response = await axios.post('./api/konek.php', {
+      const response = await axios.post('/api/konek.php', {
         action: 'connect_and_query',
         host: credentials.host,
         username: credentials.username,
