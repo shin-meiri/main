@@ -58,7 +58,7 @@ const DatabaseConnector = () => {
         debug: {
           status: error.response?.status,
           statusText: error.response?.statusText,
-          url: './api/konek.php'
+          url: 'https:/api/konek.php'
         }
       });
     }
@@ -110,7 +110,7 @@ const DatabaseConnector = () => {
     setQueryResult(null);
     
     try {
-      const response = await axios.post('http://localhost:8000/api/konek.php', {
+      const response = await axios.post('/api/konek.php', {
         action: 'get_structure',
         host: credentials.host,
         username: credentials.username,
