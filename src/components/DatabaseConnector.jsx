@@ -1,5 +1,5 @@
 // frontend/src/components/DatabaseConnector.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const DatabaseConnector = () => {
@@ -25,10 +25,29 @@ const DatabaseConnector = () => {
   const [query, setQuery] = useState('SELECT VERSION() as mysql_version');
   const [activeTab, setActiveTab] = useState('connection');
 
-  // Load profiles saat component mount
+  // Load connection profiles - menggunakan useCallback
+  const loadProfiles = useCallback(async () => {
+    try {
+      const response = await axios.post(apiUrl, {
+        action: 'get_profiles'
+      });
+      
+      if (response.data.status === 'success') {
+        setProfiles(Object.entries(response.data.profiles).map(([name, data]) => ({
+          name,
+          ...data
+        })));
+      }
+    } catch (error) {
+      console.error('Error loading profiles:', error);
+      setProfiles([]); // Clear profiles on error
+    }
+  }, [apiUrl]); // Dependency: apiUrl
+
+  // Load profiles saat component mount dan ketika apiUrl berubah
   useEffect(() => {
     loadProfiles();
-  }, [apiUrl]); // Reload ketika API URL berubah
+  }, [loadProfiles]); // Sekarang aman karena loadProfiles ada di dependency
 
   // Handle API URL change
   const handleApiUrlChange = (e) => {
@@ -46,25 +65,6 @@ const DatabaseConnector = () => {
   // Handle profile name change
   const handleProfileNameChange = (e) => {
     setProfileName(e.target.value);
-  };
-
-  // Load connection profiles
-  const loadProfiles = async () => {
-    try {
-      const response = await axios.post(apiUrl, {
-        action: 'get_profiles'
-      });
-      
-      if (response.data.status === 'success') {
-        setProfiles(Object.entries(response.data.profiles).map(([name, data]) => ({
-          name,
-          ...data
-        })));
-      }
-    } catch (error) {
-      console.error('Error loading profiles:', error);
-      setProfiles([]); // Clear profiles on error
-    }
   };
 
   // Test koneksi database
