@@ -2,6 +2,38 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Konfigurasi axios default
+const api = axios.create({
+  baseURL: '/api',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
+
+// Interceptor untuk debugging
+api.interceptors.request.use(
+  (config) => {
+    console.log('API Request:', config);
+    return config;
+  },
+  (error) => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+api.interceptors.response.use(
+  (response) => {
+    console.log('API Response:', response);
+    return response;
+  },
+  (error) => {
+    console.error('API Response Error:', error);
+    return Promise.reject(error);
+  }
+);
+
 const Pages = () => {
   // State untuk data CRUD
   const [users, setUsers] = useState([]);
@@ -22,7 +54,7 @@ const Pages = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/dat.php');
+      const response = await api.get('/dat.php');
       setUsers(response.data);
     } catch (err) {
       console.error('Error loading ', err);
@@ -53,14 +85,14 @@ const Pages = () => {
     try {
       if (editingId) {
         // Update data yang ada (PUT request)
-        await axios.put('/api/dat.php', {
+        await api.put('/dat.php', {
           id: editingId,
           user: formData.user,
           password: formData.password
         });
       } else {
         // Tambah data baru (POST request)
-        await axios.post('/api/dat.php', {
+        await api.post('/dat.php', {
           user: formData.user,
           password: formData.password
         });
@@ -73,26 +105,16 @@ const Pages = () => {
       
     } catch (err) {
       console.error('Save error:', err);
-      setError('Gagal menyimpan data: ' + (err.response?.data?.error || err.message));
+      setError('Gagal menyimpan  ' + (err.response?.data?.error || err.message));
     }
   };
 
-  // Handle edit
-  const handleEdit = (user) => {
-    setFormData({
-      id: user.id,
-      user: user.user,
-      password: user.password
-    });
-    setEditingId(user.id);
-  };
-
-  // Handle delete - PERBAIKAN DI SINI
+  // Handle delete - PERBAIKAN TOTAL
   const handleDelete = async (id) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
       try {
-        // Kirim ID sebagai query parameter untuk menghindari masalah dengan body DELETE
-        await axios.delete(`/api/dat.php?id=${id}`);
+        // Gunakan path parameter daripada query parameter
+        await api.delete(`/dat.php/${id}`);
         
         await loadData(); // Reload data setelah delete
         
@@ -104,9 +126,24 @@ const Pages = () => {
         
       } catch (err) {
         console.error('Delete error:', err);
-        setError('Gagal menghapus data: ' + (err.response?.data?.error || err.message));
+        // Tampilkan error yang lebih detail
+        const errorMessage = err.response?.data?.error || 
+                           err.response?.statusText || 
+                           err.message || 
+                           'Network Error';
+        setError('Gagal menghapus  ' + errorMessage);
       }
     }
+  };
+
+  // Handle edit
+  const handleEdit = (user) => {
+    setFormData({
+      id: user.id,
+      user: user.user,
+      password: user.password
+    });
+    setEditingId(user.id);
   };
 
   // Handle cancel edit
