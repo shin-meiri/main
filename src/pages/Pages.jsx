@@ -1,86 +1,147 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import '../styles/Pages.css';
 
 const Pages = () => {
+  const [user, setUser] = useState(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const navigate = useNavigate();
 
   useEffect(() => {
     // Cek apakah user sudah login
     const isAuthenticated = localStorage.getItem('isAuthenticated');
+    const userData = localStorage.getItem('user');
+    
     if (!isAuthenticated) {
-      navigate('/login');
+      navigate('/login', { replace: true });
+      return;
     }
+    
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+
+    // Update waktu setiap detik
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, [navigate]);
 
   const handleLogout = () => {
-    // Hapus status login dan redirect ke login
-    localStorage.removeItem('isAuthenticated');
-    navigate('/login');
+    // Konfirmasi logout
+    if (window.confirm('Apakah Anda yakin ingin logout?')) {
+      // Hapus status login
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('user');
+      // Redirect ke login
+      navigate('/login', { replace: true });
+    }
   };
 
+  const formatTime = (date) => {
+    return date.toLocaleString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
+  if (!user) {
+    return (
+      <div className="loading-container">
+        <div className="spinner-large"></div>
+        <p>Memuat data pengguna...</p>
+      </div>
+    );
+  }
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#f8f9fa',
-      padding: '2rem'
-    }}>
-      <div style={{
-        maxWidth: '800px',
-        margin: '0 auto',
-        backgroundColor: 'white',
-        padding: '2rem',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem'
-        }}>
-          <h1 style={{ color: '#333', margin: 0 }}>Dashboard</h1>
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            Logout
-          </button>
-        </div>
-
-        <div style={{
-          textAlign: 'center',
-          padding: '3rem',
-          backgroundColor: '#d4edda',
-          border: '1px solid #c3e6cb',
-          borderRadius: '8px',
-          color: '#155724'
-        }}>
-          <h2 style={{ margin: '0 0 1rem 0' }}>✅ Berhasil Login</h2>
-          <p style={{ fontSize: '1.1rem' }}>
-            Selamat datang! Anda telah berhasil masuk ke sistem.
-          </p>
-        </div>
-
-        <div style={{ marginTop: '2rem' }}>
-          <h3>Informasi Login:</h3>
-          <div style={{
-            backgroundColor: '#f8f9fa',
-            padding: '1rem',
-            borderRadius: '4px',
-            border: '1px solid #dee2e6'
-          }}>
-            <p><strong>Username:</strong> admin</p>
-            <p><strong>Password:</strong> 1234admin</p>
+    <div className="dashboard-container">
+      {/* Header */}
+      <header className="dashboard-header">
+        <div className="header-content">
+          <h1 className="dashboard-title">Dashboard Sistem</h1>
+          <div className="user-info">
+            <span className="welcome-text">
+              Selamat datang, <strong>{user.username}</strong>
+            </span>
+            <button
+              onClick={handleLogout}
+              className="btn btn-danger btn-sm"
+              title="Logout"
+            >
+              🚪 Logout
+            </button>
           </div>
         </div>
-      </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="dashboard-main">
+        {/* Success Card */}
+        <div className="success-card">
+          <div className="success-content">
+            <div className="success-icon">✅</div>
+            <div className="success-text">
+              <h2>Berhasil Login</h2>
+              <p>Anda telah berhasil masuk ke sistem. Selamat datang kembali!</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Info Cards */}
+        <div className="info-cards">
+          <div className="info-card">
+            <div className="info-card-icon">🕒</div>
+            <div className="info-card-content">
+              <h3>Waktu Server</h3>
+              <p className="info-card-value">{formatTime(currentTime)}</p>
+            </div>
+          </div>
+
+          <div className="info-card">
+            <div className="info-card-icon">👤</div>
+            <div className="info-card-content">
+              <h3>Pengguna</h3>
+              <p className="info-card-value">{user.username}</p>
+            </div>
+          </div>
+
+          <div className="info-card">
+            <div className="info-card-icon">🔒</div>
+            <div className="info-card-content">
+              <h3>Status</h3>
+              <p className="info-card-value success">Terautentikasi</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Credentials Info */}
+        <div className="credentials-card">
+          <h3>Informasi Kredensial</h3>
+          <div className="credentials-content">
+            <div className="credential-item">
+              <span className="credential-label">Username:</span>
+              <code className="credential-value">admin</code>
+            </div>
+            <div className="credential-item">
+              <span className="credential-label">Password:</span>
+              <code className="credential-value">1234admin</code>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="dashboard-footer">
+        <p>&copy; {new Date().getFullYear()} Sistem Manajemen. Hak Cipta Dilindungi.</p>
+      </footer>
     </div>
   );
 };
