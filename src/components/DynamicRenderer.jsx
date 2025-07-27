@@ -12,10 +12,18 @@ const DynamicRenderer = ({ pageSlug }) => {
     try {
       setIsConnected(false);
       
-      // Load pages from JSON
-      const pagesResponse = await fetch('/default-data/pages.json');
-      if (!pagesResponse.ok) throw new Error('Failed to load pages data');
-      const pages = await pagesResponse.json();
+      // Load pages from JSON with error handling
+      let pages = [];
+      try {
+        const pagesResponse = await fetch('/default-data/pages.json');
+        if (!pagesResponse.ok) {
+          throw new Error(`HTTP error! status: ${pagesResponse.status}`);
+        }
+        pages = await pagesResponse.json();
+      } catch (pagesError) {
+        console.error('Pages JSON error:', pagesError);
+        throw new Error('Failed to load pages data: ' + pagesError.message);
+      }
       
       // Find page by slug
       let page = pages.find(p => p.page_slug === slug);
@@ -25,14 +33,30 @@ const DynamicRenderer = ({ pageSlug }) => {
       
       if (page) {
         // Load templates from JSON
-        const templatesResponse = await fetch('/default-data/templates.json');
-        if (!templatesResponse.ok) throw new Error('Failed to load templates data');
-        const templates = await templatesResponse.json();
+        let templates = [];
+        try {
+          const templatesResponse = await fetch('/default-data/templates.json');
+          if (!templatesResponse.ok) {
+            throw new Error(`HTTP error! status: ${templatesResponse.status}`);
+          }
+          templates = await templatesResponse.json();
+        } catch (templatesError) {
+          console.error('Templates JSON error:', templatesError);
+          throw new Error('Failed to load templates data: ' + templatesError.message);
+        }
         
         // Load settings from JSON
-        const settingsResponse = await fetch('/default-data/settings.json');
-        if (!settingsResponse.ok) throw new Error('Failed to load settings data');
-        const settings = await settingsResponse.json();
+        let settings = {};
+        try {
+          const settingsResponse = await fetch('/default-data/settings.json');
+          if (!settingsResponse.ok) {
+            throw new Error(`HTTP error! status: ${settingsResponse.status}`);
+          }
+          settings = await settingsResponse.json();
+        } catch (settingsError) {
+          console.error('Settings JSON error:', settingsError);
+          // Settings optional, continue without it
+        }
         
         setPageData({
           ...page,
