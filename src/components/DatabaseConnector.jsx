@@ -25,7 +25,7 @@ const DatabaseConnector = () => {
   const [query, setQuery] = useState('SELECT VERSION() as mysql_version');
   const [activeTab, setActiveTab] = useState('connection');
 
-  // Load current connection dan API settings
+  // Load current connection
   const loadCurrentConnection = useCallback(async () => {
     try {
       const response = await axios.post(apiUrl, {
@@ -45,9 +45,9 @@ const DatabaseConnector = () => {
     }
   }, [apiUrl]);
 
+  // Load API settings
   const loadApiSettings = useCallback(async () => {
     try {
-      // Gunakan API URL default dulu untuk load settings
       const defaultApiUrl = 'http://localhost:8000/api/konek.php';
       const response = await axios.post(defaultApiUrl, {
         action: 'get_api_settings'
@@ -63,6 +63,7 @@ const DatabaseConnector = () => {
     }
   }, []);
 
+  // Load connection profiles
   const loadProfiles = useCallback(async () => {
     try {
       const response = await axios.post(apiUrl, {
@@ -80,59 +81,6 @@ const DatabaseConnector = () => {
       setProfiles([]);
     }
   }, [apiUrl]);
-
-  // Load data saat component mount
-  useEffect(() => {
-    loadApiSettings(); // Load API settings dulu
-  }, [loadApiSettings]);
-
-  // Load current connection dan profiles setelah API URL siap
-  useEffect(() => {
-    if (apiUrl) {
-      loadCurrentConnection();
-      loadProfiles();
-    }
-  }, [apiUrl, loadCurrentConnection, loadProfiles]);
-
-  // Auto-save current connection ketika credentials berubah
-  useEffect(() => {
-    const saveTimer = setTimeout(() => {
-      if (credentials.host || credentials.username || credentials.password || credentials.database) {
-        saveCurrentConnection();
-      }
-    }, 2000);
-
-    return () => clearTimeout(saveTimer);
-  }, [credentials]);
-
-  // Auto-save API URL ketika berubah
-  useEffect(() => {
-    const saveTimer = setTimeout(() => {
-      if (apiUrl && apiUrl !== 'http://localhost:8000/api/konek.php') {
-        saveApiSettings();
-      }
-    }, 1000);
-
-    return () => clearTimeout(saveTimer);
-  }, [apiUrl]);
-
-  // Handle API URL change
-  const handleApiUrlChange = (e) => {
-    setApiUrl(e.target.value);
-  };
-
-  // Handle perubahan input
-  const handleInputChange = (e) => {
-    setCredentials({
-      ...credentials,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  // Handle profile name change
-  const handleProfileNameChange = (e) => {
-    setProfileName(e.target.value);
-  };
 
   // Save current connection
   const saveCurrentConnection = useCallback(async () => {
@@ -152,7 +100,6 @@ const DatabaseConnector = () => {
   // Save API settings
   const saveApiSettings = useCallback(async () => {
     try {
-      // Gunakan API URL default untuk save settings
       const defaultApiUrl = 'http://localhost:8000/api/konek.php';
       await axios.post(defaultApiUrl, {
         action: 'save_api_settings',
@@ -162,6 +109,59 @@ const DatabaseConnector = () => {
       console.error('Error saving API settings:', error);
     }
   }, [apiUrl]);
+
+  // Load data saat component mount
+  useEffect(() => {
+    loadApiSettings();
+  }, [loadApiSettings]);
+
+  // Load current connection dan profiles setelah API URL siap
+  useEffect(() => {
+    if (apiUrl) {
+      loadCurrentConnection();
+      loadProfiles();
+    }
+  }, [apiUrl, loadCurrentConnection, loadProfiles]);
+
+  // Auto-save current connection ketika credentials berubah
+  useEffect(() => {
+    const saveTimer = setTimeout(() => {
+      if (credentials.host || credentials.username || credentials.password || credentials.database) {
+        saveCurrentConnection();
+      }
+    }, 2000);
+
+    return () => clearTimeout(saveTimer);
+  }, [credentials, saveCurrentConnection]);
+
+  // Auto-save API URL ketika berubah
+  useEffect(() => {
+    const saveTimer = setTimeout(() => {
+      if (apiUrl && apiUrl !== 'http://localhost:8000/api/konek.php') {
+        saveApiSettings();
+      }
+    }, 1000);
+
+    return () => clearTimeout(saveTimer);
+  }, [apiUrl, saveApiSettings]);
+
+  // Handle API URL change
+  const handleApiUrlChange = (e) => {
+    setApiUrl(e.target.value);
+  };
+
+  // Handle perubahan input
+  const handleInputChange = (e) => {
+    setCredentials({
+      ...credentials,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  // Handle profile name change
+  const handleProfileNameChange = (e) => {
+    setProfileName(e.target.value);
+  };
 
   // Clear current connection
   const clearCurrentConnection = async () => {
