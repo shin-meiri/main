@@ -25,7 +25,7 @@ const DatabaseConnector = () => {
   const [query, setQuery] = useState('SELECT VERSION() as mysql_version');
   const [activeTab, setActiveTab] = useState('connection');
 
-  // Load current connection
+  // Load current connection dan API settings
   const loadCurrentConnection = useCallback(async () => {
     try {
       const response = await axios.post(apiUrl, {
@@ -45,7 +45,24 @@ const DatabaseConnector = () => {
     }
   }, [apiUrl]);
 
-  // Load connection profiles
+  const loadApiSettings = useCallback(async () => {
+    try {
+      // Gunakan API URL default dulu untuk load settings
+      const defaultApiUrl = 'http://localhost:8000/api/konek.php';
+      const response = await axios.post(defaultApiUrl, {
+        action: 'get_api_settings'
+      });
+      
+      if (response.data.status === 'success' && response.data.settings) {
+        if (response.data.settings.apiUrl) {
+          setApiUrl(response.data.settings.apiUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading API settings:', error);
+    }
+  }, []);
+
   const loadProfiles = useCallback(async () => {
     try {
       const response = await axios.post(apiUrl, {
@@ -64,26 +81,18 @@ const DatabaseConnector = () => {
     }
   }, [apiUrl]);
 
-  // Save current connection
-  const saveCurrentConnection = useCallback(async () => {
-    try {
-      await axios.post(apiUrl, {
-        action: 'save_current',
-        host: credentials.host,
-        username: credentials.username,
-        password: credentials.password,
-        database: credentials.database
-      });
-    } catch (error) {
-      console.error('Error saving current connection:', error);
-    }
-  }, [apiUrl, credentials]);
-
   // Load data saat component mount
   useEffect(() => {
-    loadCurrentConnection();
-    loadProfiles();
-  }, [loadCurrentConnection, loadProfiles]);
+    loadApiSettings(); // Load API settings dulu
+  }, [loadApiSettings]);
+
+  // Load current connection dan profiles setelah API URL siap
+  useEffect(() => {
+    if (apiUrl) {
+      loadCurrentConnection();
+      loadProfiles();
+    }
+  }, [apiUrl, loadCurrentConnection, loadProfiles]);
 
   // Auto-save current connection ketika credentials berubah
   useEffect(() => {
@@ -94,7 +103,18 @@ const DatabaseConnector = () => {
     }, 2000);
 
     return () => clearTimeout(saveTimer);
-  }, [credentials, saveCurrentConnection]);
+  }, [credentials]);
+
+  // Auto-save API URL ketika berubah
+  useEffect(() => {
+    const saveTimer = setTimeout(() => {
+      if (apiUrl && apiUrl !== 'http://localhost:8000/api/konek.php') {
+        saveApiSettings();
+      }
+    }, 1000);
+
+    return () => clearTimeout(saveTimer);
+  }, [apiUrl]);
 
   // Handle API URL change
   const handleApiUrlChange = (e) => {
@@ -113,6 +133,35 @@ const DatabaseConnector = () => {
   const handleProfileNameChange = (e) => {
     setProfileName(e.target.value);
   };
+
+  // Save current connection
+  const saveCurrentConnection = useCallback(async () => {
+    try {
+      await axios.post(apiUrl, {
+        action: 'save_current',
+        host: credentials.host,
+        username: credentials.username,
+        password: credentials.password,
+        database: credentials.database
+      });
+    } catch (error) {
+      console.error('Error saving current connection:', error);
+    }
+  }, [apiUrl, credentials]);
+
+  // Save API settings
+  const saveApiSettings = useCallback(async () => {
+    try {
+      // Gunakan API URL default untuk save settings
+      const defaultApiUrl = 'http://localhost:8000/api/konek.php';
+      await axios.post(defaultApiUrl, {
+        action: 'save_api_settings',
+        apiUrl: apiUrl
+      });
+    } catch (error) {
+      console.error('Error saving API settings:', error);
+    }
+  }, [apiUrl]);
 
   // Clear current connection
   const clearCurrentConnection = async () => {
