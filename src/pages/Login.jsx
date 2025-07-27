@@ -17,7 +17,7 @@ const Login = () => {
 
     try {
       // Membaca file room.json
-      const response = await axios.get('/room.json');
+      const response = await axios.get('/api/rom.json');
       const { user, pass } = response.data;
 
       // Validasi kredensial
