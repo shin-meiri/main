@@ -12,6 +12,7 @@ const AdminPanel = ({ onConnectionSuccess }) => {
   });
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [connectionTested, setConnectionTested] = useState(false);
 
   // Load saved connection
   useEffect(() => {
@@ -23,6 +24,7 @@ const AdminPanel = ({ onConnectionSuccess }) => {
         
         if (response.data.status === 'success' && response.data.current) {
           setCredentials(response.data.current);
+          setConnectionTested(true);
           onConnectionSuccess(apiUrl, response.data.current);
         }
       } catch (error) {
@@ -37,7 +39,6 @@ const AdminPanel = ({ onConnectionSuccess }) => {
   useEffect(() => {
     const saveTimer = setTimeout(() => {
       if (apiUrl && apiUrl !== 'http://localhost:8000/api/konek.php') {
-        // Simpan API URL ke localStorage atau file
         localStorage.setItem('cms_api_url', apiUrl);
       }
     }, 1000);
@@ -68,6 +69,7 @@ const AdminPanel = ({ onConnectionSuccess }) => {
       });
       
       setConnectionStatus(response.data);
+      setConnectionTested(true);
       
       if (response.data.status === 'success') {
         // Save connection
@@ -85,6 +87,7 @@ const AdminPanel = ({ onConnectionSuccess }) => {
         status: 'error',
         message: error.response?.data?.message || error.message
       });
+      setConnectionTested(true);
     }
     setLoading(false);
   };
@@ -163,6 +166,13 @@ const AdminPanel = ({ onConnectionSuccess }) => {
         {connectionStatus && (
           <div className={`status-message ${connectionStatus.status}`}>
             <strong>Status:</strong> {connectionStatus.message}
+          </div>
+        )}
+        
+        {connectionTested && connectionStatus?.status === 'error' && (
+          <div className="info-message">
+            <p>Don't worry! The website will work with default data until you connect to database.</p>
+            <p><a href="/">View Website with Default Data</a></p>
           </div>
         )}
       </div>
