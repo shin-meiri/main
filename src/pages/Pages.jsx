@@ -14,9 +14,6 @@ const Pages = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Konfigurasi axios default
-  axios.defaults.baseURL = '/api';
-
   // Load data dari API saat komponen pertama kali dimuat
   useEffect(() => {
     loadData();
@@ -25,10 +22,10 @@ const Pages = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/dat.php');
+      const response = await axios.get('/api/dat.php');
       setUsers(response.data);
     } catch (err) {
-      console.error('Error loading data:', err);
+      console.error('Error loading ', err);
       setError('Gagal memuat  ' + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
@@ -56,14 +53,14 @@ const Pages = () => {
     try {
       if (editingId) {
         // Update data yang ada (PUT request)
-        await axios.put('/dat.php', {
+        await axios.put('/api/dat.php', {
           id: editingId,
           user: formData.user,
           password: formData.password
         });
       } else {
         // Tambah data baru (POST request)
-        await axios.post('/dat.php', {
+        await axios.post('/api/dat.php', {
           user: formData.user,
           password: formData.password
         });
@@ -90,41 +87,57 @@ const Pages = () => {
     setEditingId(user.id);
   };
 
-  // Handle delete - PERBAIKAN UNTUK MENGATASI NETWORK ERROR
+  // Handle delete - SOLUSI ALTERNATIF UNTUK MENGATASI NETWORK ERROR
   const handleDelete = async (id) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
       try {
-        // Gunakan konfigurasi yang lebih spesifik untuk menghindari network error
-        const config = {
-          method: 'delete',
-          url: `/dat.php?id=${id}`,
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          // Tambahkan timeout
-          timeout: 10000,
-        };
-
-        await axios(config);
+        // SOLUSI 1: Gunakan POST dengan parameter action=delete
+        const response = await axios.post(`/api/dat.php?action=delete&id=${id}`, {
+          id: id
+        });
         
-        await loadData(); // Reload data setelah delete
-        
-        // Reset form jika sedang edit data yang dihapus
-        if (editingId === id) {
-          setFormData({ id: '', user: '', password: '' });
-          setEditingId(null);
+        if (response.data.message) {
+          // Berhasil dihapus
+          await loadData();
+          
+          // Reset form jika sedang edit data yang dihapus
+          if (editingId === id) {
+            setFormData({ id: '', user: '', password: '' });
+            setEditingId(null);
+          }
+        } else {
+          throw new Error(response.data.error || 'Gagal menghapus data');
         }
         
       } catch (err) {
         console.error('Delete error:', err);
-        // Tampilkan error yang lebih detail
-        let errorMessage = 'Network Error - Gagal terhubung ke server';
-        if (err.response) {
-          errorMessage = err.response.data?.error || `HTTP Error: ${err.response.status}`;
-        } else if (err.request) {
-          errorMessage = 'Tidak ada respons dari server. Periksa koneksi atau server.';
+        
+        // SOLUSI 2: Fallback ke fetch API
+        try {
+          const response = await fetch(`/api/dat.php?action=delete&id=${id}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: id })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Gagal menghapus data');
+          }
+          
+          await loadData();
+          
+          if (editingId === id) {
+            setFormData({ id: '', user: '', password: '' });
+            setEditingId(null);
+          }
+          
+        } catch (fetchErr) {
+          console.error('Fetch delete error:', fetchErr);
+          setError('Gagal menghapus  ' + fetchErr.message);
         }
-        setError('Gagal menghapus data: ' + errorMessage);
       }
     }
   };
