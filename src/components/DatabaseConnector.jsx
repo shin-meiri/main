@@ -33,7 +33,7 @@ const DatabaseConnector = () => {
     try {
       console.log('Testing connection with:', credentials); // Debug log
       
-      const response = await axios.post('http://localhost:8000/api/konek.php', {
+      const response = await axios.post('/api/konek.php', {
         action: 'test_connection',
         host: credentials.host,
         username: credentials.username,
@@ -58,7 +58,7 @@ const DatabaseConnector = () => {
         debug: {
           status: error.response?.status,
           statusText: error.response?.statusText,
-          url: 'https:/api/konek.php'
+          url: '/api/konek.php'
         }
       });
     }
