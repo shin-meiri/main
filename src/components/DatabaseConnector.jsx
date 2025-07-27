@@ -104,6 +104,33 @@ const DatabaseConnector = () => {
     setLoading(false);
   };
 
+// Contoh pemanggilan fungsi-fungsi baru
+const getTables = async () => {
+  const response = await axios.post('/api/konek.php', {
+    action: 'get_tables',
+    host: '',
+    username: '',
+    password: '',
+    database: ''
+  });
+  console.log(response.data.tables);
+};
+
+const insertData = async () => {
+  const response = await axios.post('/api/konek.php', {
+    action: 'insert_data',
+    host: '',
+    username: '',
+    password: '',
+    database: '',
+    table_name: '',
+     {
+      name: 'New User',
+      email: 'newuser@example.com'
+    }
+  });
+};
+
   // Dapatkan struktur database
   const getDatabaseStructure = async () => {
     setLoading(true);
