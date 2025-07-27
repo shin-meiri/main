@@ -12,66 +12,71 @@ const DynamicRenderer = ({ pageSlug }) => {
     try {
       setIsConnected(false);
       
-      // Load pages from JSON with error handling
+      // Coba load pages
       let pages = [];
       try {
         const pagesResponse = await fetch('/default-data/pages.json');
-        if (!pagesResponse.ok) {
-          throw new Error(`HTTP error! status: ${pagesResponse.status}`);
-        }
-        pages = await pagesResponse.json();
+        const pagesText = await pagesResponse.text();
+        console.log('Pages JSON:', pagesText);
+        pages = JSON.parse(pagesText);
       } catch (pagesError) {
-        console.error('Pages JSON error:', pagesError);
-        throw new Error('Failed to load pages data: ' + pagesError.message);
+        console.error('Pages JSON error details:', pagesError);
+        throw new Error('Pages JSON invalid: ' + pagesError.message);
       }
       
-      // Find page by slug
+      // Cari page
       let page = pages.find(p => p.page_slug === slug);
       if (!page) {
         page = pages.find(p => p.page_slug === 'home');
       }
       
-      if (page) {
-        // Load templates from JSON
-        let templates = [];
-        try {
-          const templatesResponse = await fetch('/default-data/templates.json');
-          if (!templatesResponse.ok) {
-            throw new Error(`HTTP error! status: ${templatesResponse.status}`);
-          }
-          templates = await templatesResponse.json();
-        } catch (templatesError) {
-          console.error('Templates JSON error:', templatesError);
-          throw new Error('Failed to load templates data: ' + templatesError.message);
-        }
-        
-        // Load settings from JSON
-        let settings = {};
-        try {
-          const settingsResponse = await fetch('/default-data/settings.json');
-          if (!settingsResponse.ok) {
-            throw new Error(`HTTP error! status: ${settingsResponse.status}`);
-          }
-          settings = await settingsResponse.json();
-        } catch (settingsError) {
-          console.error('Settings JSON error:', settingsError);
-          // Settings optional, continue without it
-        }
-        
-        setPageData({
-          ...page,
-          header_html: templates[0]?.header_html || '',
-          footer_html: templates[0]?.footer_html || '',
-          template_css: templates[0]?.template_css || '',
-          template_js: templates[0]?.template_js || '',
-          settings: settings || {}
-        });
-      } else {
-        throw new Error('Default page not found');
+      if (!page) {
+        throw new Error('No default page found');
       }
+      
+      // Load templates
+      let templates = [];
+      try {
+        const templatesResponse = await fetch('/default-data/templates.json');
+        const templatesText = await templatesResponse.text();
+        console.log('Templates JSON:', templatesText);
+        templates = JSON.parse(templatesText);
+      } catch (templatesError) {
+        console.error('Templates JSON error:', templatesError);
+        templates = [{
+          header_html: '<!DOCTYPE html><html><head><title>{{page_title}}</title><style>{{template_css}}{{page_css}}{{custom_css}}</style></head><body><header><nav><a href="/">Home</a></nav></header><main>',
+          footer_html: '</main><footer><p>&copy; 2024</p></footer></body></html>',
+          template_css: 'body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }'
+        }];
+      }
+      
+      // Load settings
+      let settings = {};
+      try {
+        const settingsResponse = await fetch('/default-data/settings.json');
+        const settingsText = await settingsResponse.text();
+        console.log('Settings JSON:', settingsText);
+        settings = JSON.parse(settingsText);
+      } catch (settingsError) {
+        console.error('Settings JSON error:', settingsError);
+        settings = {
+          site_title: 'Default Site',
+          custom_css: ''
+        };
+      }
+      
+      setPageData({
+        ...page,
+        header_html: templates[0]?.header_html || '',
+        footer_html: templates[0]?.footer_html || '',
+        template_css: templates[0]?.template_css || '',
+        template_js: templates[0]?.template_js || '',
+        settings: settings
+      });
+      
     } catch (error) {
       console.error('Failed to load default data:', error);
-      setError('Failed to load default data: ' + error.message);
+      setError('Default data error: ' + error.message);
     }
     
     setLoading(false);
@@ -81,7 +86,6 @@ const DynamicRenderer = ({ pageSlug }) => {
     setLoading(true);
     setError(null);
     
-    // Default database configuration
     const defaultDbConfig = {
       host: 'localhost',
       username: 'root',
@@ -90,7 +94,7 @@ const DynamicRenderer = ({ pageSlug }) => {
     };
     
     try {
-      // Try to load saved connection
+      // Coba load saved connection
       let dbConfig = defaultDbConfig;
       try {
         const savedResponse = await axios.post('http://localhost:8000/api/konek.php', {
@@ -101,10 +105,10 @@ const DynamicRenderer = ({ pageSlug }) => {
           dbConfig = savedResponse.data.current;
         }
       } catch (savedError) {
-        console.log('No saved connection found, using defaults');
+        console.log('Using default connection');
       }
       
-      // Try to connect to database
+      // Coba koneksi ke database
       try {
         const testResponse = await axios.post('http://localhost:8000/api/konek.php', {
           action: 'test_connection',
@@ -117,7 +121,7 @@ const DynamicRenderer = ({ pageSlug }) => {
         if (testResponse.data.status === 'success') {
           setIsConnected(true);
           
-          // Load page from database
+          // Load page dari database
           const pageResponse = await axios.post('http://localhost:8000/api/konek.php', {
             action: 'get_page',
             slug: pageSlug || 'home',
@@ -137,16 +141,15 @@ const DynamicRenderer = ({ pageSlug }) => {
           }
         }
       } catch (dbError) {
-        console.log('Database connection failed, using default data');
+        console.log('Database not available, using default data');
       }
       
-      // Fallback to default data
+      // Fallback ke default data
       await loadDefaultData(pageSlug || 'home');
       
     } catch (err) {
-      console.error('Failed to load page:', err);
-      setError('Failed to load page: ' + err.message);
-      setLoading(false);
+      console.error('Load page error:', err);
+      await loadDefaultData(pageSlug || 'home');
     }
   }, [pageSlug, loadDefaultData]);
 
@@ -156,13 +159,7 @@ const DynamicRenderer = ({ pageSlug }) => {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        fontSize: '18px'
-      }}>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
         Loading page...
       </div>
     );
@@ -170,32 +167,24 @@ const DynamicRenderer = ({ pageSlug }) => {
 
   if (error) {
     return (
-      <div style={{
-        textAlign: 'center',
-        padding: '50px',
-        color: '#dc3545'
-      }}>
+      <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>
         <h2>Error</h2>
         <p>{error}</p>
-        <a href="/" style={{ color: '#007bff' }}>Go Home</a>
+        <button onclick="window.location.reload()">Retry</button>
       </div>
     );
   }
 
   if (!pageData) {
     return (
-      <div style={{
-        textAlign: 'center',
-        padding: '50px'
-      }}>
+      <div style={{ textAlign: 'center', padding: '50px' }}>
         <h2>404 - Page Not Found</h2>
-        <p>The page you're looking for doesn't exist.</p>
-        <a href="/" style={{ color: '#007bff' }}>Go Home</a>
+        <a href="/">Go Home</a>
       </div>
     );
   }
 
-  // Render complete page with header, content, and footer
+  // Render page
   let fullHtml = '';
   
   if (pageData.header_html) {
@@ -211,22 +200,10 @@ const DynamicRenderer = ({ pageSlug }) => {
   if (pageData.footer_html) {
     fullHtml += pageData.footer_html;
   }
-  
-  // Add JavaScript if any
-  let fullJs = '';
-  if (pageData.template_js) {
-    fullJs += pageData.template_js;
-  }
-  if (pageData.page_js) {
-    fullJs += pageData.page_js;
-  }
 
   return (
     <div>
       <div dangerouslySetInnerHTML={{ __html: fullHtml }} />
-      {fullJs && (
-        <script dangerouslySetInnerHTML={{ __html: fullJs }} />
-      )}
       {isConnected && (
         <div style={{ 
           position: 'fixed', 
@@ -235,24 +212,9 @@ const DynamicRenderer = ({ pageSlug }) => {
           background: '#4CAF50', 
           color: 'white', 
           padding: '5px 10px', 
-          fontSize: '12px',
-          zIndex: 1000
+          fontSize: '12px'
         }}>
-          <small>✓ Connected to database</small>
-        </div>
-      )}
-      {!isConnected && (
-        <div style={{ 
-          position: 'fixed', 
-          bottom: 0, 
-          right: 0, 
-          background: '#ff9800', 
-          color: 'white', 
-          padding: '5px 10px', 
-          fontSize: '12px',
-          zIndex: 1000
-        }}>
-          <small>⚠ Using default data</small>
+          Connected
         </div>
       )}
     </div>
