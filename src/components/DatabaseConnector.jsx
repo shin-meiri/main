@@ -5,7 +5,7 @@ import axios from 'axios';
 const DatabaseConnector = () => {
   // State untuk kredensial database
   const [credentials, setCredentials] = useState({
-    host: 'localhost',
+    host: '',
     username: '',
     password: '',
     database: ''
@@ -58,7 +58,7 @@ const DatabaseConnector = () => {
         debug: {
           status: error.response?.status,
           statusText: error.response?.statusText,
-          url: 'http://localhost:8000/api/konek.php'
+          url: './api/konek.php'
         }
       });
     }
@@ -73,7 +73,7 @@ const DatabaseConnector = () => {
     setQueryResult(null);
     
     try {
-      const response = await axios.post('http://localhost:8000/api/konek.php', {
+      const response = await axios.post('./api/konek.php', {
         action: 'connect_and_query',
         host: credentials.host,
         username: credentials.username,
