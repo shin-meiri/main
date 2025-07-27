@@ -25,8 +25,8 @@ const Pages = () => {
       const response = await axios.get('/api/dat.php');
       setUsers(response.data);
     } catch (err) {
-      console.error('Error loading data:', err);
-      setError('Gagal memuat data: ' + err.message);
+      console.error('Error loading ', err);
+      setError('Gagal memuat  ' + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ const Pages = () => {
       
     } catch (err) {
       console.error('Save error:', err);
-      setError('Gagal menyimpan data: ' + err.message);
+      setError('Gagal menyimpan data: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -87,13 +87,12 @@ const Pages = () => {
     setEditingId(user.id);
   };
 
-  // Handle delete
+  // Handle delete - PERBAIKAN DI SINI
   const handleDelete = async (id) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
       try {
-        await axios.delete('/api/dat.php', {
-          data: { id: id }
-        });
+        // Kirim ID sebagai query parameter untuk menghindari masalah dengan body DELETE
+        await axios.delete(`/api/dat.php?id=${id}`);
         
         await loadData(); // Reload data setelah delete
         
@@ -105,7 +104,7 @@ const Pages = () => {
         
       } catch (err) {
         console.error('Delete error:', err);
-        setError('Gagal menghapus data: ' + err.message);
+        setError('Gagal menghapus data: ' + (err.response?.data?.error || err.message));
       }
     }
   };
