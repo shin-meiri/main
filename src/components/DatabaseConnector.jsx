@@ -8,7 +8,7 @@ const DatabaseConnector = () => {
   
   // State untuk kredensial database
   const [credentials, setCredentials] = useState({
-    host: 'localhost',
+    host: '',
     username: '',
     password: '',
     database: ''
