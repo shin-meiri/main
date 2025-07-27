@@ -54,6 +54,7 @@ const DynamicPage = ({ apiUrl, dbCredentials, pageSlug }) => {
                     ...pageResponse.data.page,
                     template_html: templateResponse.data.template.template_html,
                     template_css: templateResponse.data.template.template_css,
+                    page_css: pageResponse.data.page.page_css || '',
                     template_js: templateResponse.data.template.template_js
                   });
                 } else {
@@ -62,7 +63,7 @@ const DynamicPage = ({ apiUrl, dbCredentials, pageSlug }) => {
                     ...pageResponse.data.page,
                     template_html: '<div class="page-container"><h1>{{page_title}}</h1><div class="page-content">{{page_content}}</div></div>',
                     template_css: '.page-container { max-width: 800px; margin: 0 auto; padding: 20px; } .page-content { line-height: 1.6; }',
-                    template_js: ''
+                    page_css: pageResponse.data.page.page_css || ''
                   });
                 }
                 setLoading(false);
@@ -118,18 +119,21 @@ const DynamicPage = ({ apiUrl, dbCredentials, pageSlug }) => {
         setPageData({
           ...page,
           template_html: template?.template_html || '<div class="page-container"><h1>{{page_title}}</h1><div class="page-content">{{page_content}}</div></div>',
-          template_css: `${settings.custom_css || ''} ${template?.template_css || ''}`,
-          template_js: template?.template_js || ''
+          template_css: template?.template_css || '.page-container { max-width: 800px; margin: 0 auto; padding: 20px; } .page-content { line-height: 1.6; }',
+          page_css: page.page_css || '',
+          custom_css: settings.custom_css || ''
         });
       }
     } catch (error) {
-      console.error('Error loading default data:', error);
+      console.error('Error loading default ', error);
       // Fallback sangat dasar
       setPageData({
         page_title: 'Welcome',
         page_content: '<p>Default page content</p>',
         template_html: '<div class="page-container"><h1>{{page_title}}</h1><div class="page-content">{{page_content}}</div></div>',
-        template_css: '.page-container { max-width: 800px; margin: 0 auto; padding: 20px; } .page-content { line-height: 1.6; }'
+        template_css: '.page-container { max-width: 800px; margin: 0 auto; padding: 20px; } .page-content { line-height: 1.6; }',
+        page_css: '',
+        custom_css: ''
       });
     }
     setLoading(false);
@@ -155,20 +159,25 @@ const DynamicPage = ({ apiUrl, dbCredentials, pageSlug }) => {
     .replace('{{page_title}}', pageData.page_title || '')
     .replace('{{page_content}}', pageData.page_content || '');
   
-  const pageCss = pageData.template_css || '';
+  // Gabungkan semua CSS
+  const combinedCss = `
+    ${pageData.custom_css || ''}
+    ${pageData.template_css || ''}
+    ${pageData.page_css || ''}
+  `;
 
   return (
     <div className="dynamic-page">
-      <style>{pageCss}</style>
+      <style>{combinedCss}</style>
       <div dangerouslySetInnerHTML={{ __html: pageHtml }} />
       {isConnected && (
-        <div className="connection-status">
+        <div className="connection-status" style={{ position: 'fixed', bottom: 0, right: 0, background: '#4CAF50', color: 'white', padding: '5px 10px', fontSize: '12px' }}>
           <small>Connected to database</small>
         </div>
       )}
       {!isConnected && (
-        <div className="connection-status">
-          <small>Using default data - <a href="/admin">Connect to database</a></small>
+        <div className="connection-status" style={{ position: 'fixed', bottom: 0, right: 0, background: '#ff9800', color: 'white', padding: '5px 10px', fontSize: '12px' }}>
+          <small>Using default data - <a href="/admin" style={{ color: 'white', textDecoration: 'underline' }}>Connect to database</a></small>
         </div>
       )}
     </div>
