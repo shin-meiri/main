@@ -4,7 +4,7 @@ import axios from 'axios';
 
 const DatabaseConnector = () => {
   // State untuk URL API
-  const [apiUrl, setApiUrl] = useState('http://localhost:8000/api/konek.php');
+  const [apiUrl, setApiUrl] = useState('/api/konek.php');
   
   // State untuk kredensial database
   const [credentials, setCredentials] = useState({
