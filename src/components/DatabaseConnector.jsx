@@ -15,7 +15,7 @@ const DatabaseConnector = () => {
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [queryResult, setQueryResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [query, setQuery] = useState('SELECT * FROM users LIMIT 10');
+  const [query, setQuery] = useState('SELECT VERSION() as mysql_version');
 
   // Handle perubahan input
   const handleInputChange = (e) => {
@@ -28,20 +28,38 @@ const DatabaseConnector = () => {
   // Test koneksi database
   const testConnection = async () => {
     setLoading(true);
+    setConnectionStatus(null);
+    
     try {
-      const response = await axios.post('http://localhost/backend/api/konek.php', {
+      console.log('Testing connection with:', credentials); // Debug log
+      
+      const response = await axios.post('http://localhost:8000/api/konek.php', {
         action: 'test_connection',
         host: credentials.host,
         username: credentials.username,
         password: credentials.password,
         database: credentials.database
+      }, {
+        timeout: 10000 // 10 detik timeout
       });
       
+      console.log('Response:', response.data); // Debug log
       setConnectionStatus(response.data);
     } catch (error) {
+      console.error('Connection error:', error); // Debug log
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Connection failed';
+      
       setConnectionStatus({
         status: 'error',
-        message: error.response?.data?.message || 'Connection failed'
+        message: errorMessage,
+        debug: {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          url: 'http://localhost:8000/api/konek.php'
+        }
       });
     }
     setLoading(false);
@@ -52,21 +70,35 @@ const DatabaseConnector = () => {
     if (!query.trim()) return;
     
     setLoading(true);
+    setQueryResult(null);
+    
     try {
-      const response = await axios.post('http://localhost/backend/api/konek.php', {
+      const response = await axios.post('http://localhost:8000/api/konek.php', {
         action: 'connect_and_query',
         host: credentials.host,
         username: credentials.username,
         password: credentials.password,
         database: credentials.database,
         query: query
+      }, {
+        timeout: 15000 // 15 detik timeout
       });
       
       setQueryResult(response.data);
     } catch (error) {
+      console.error('Query error:', error);
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Query failed';
+      
       setQueryResult({
         status: 'error',
-        message: error.response?.data?.message || 'Query failed'
+        message: errorMessage,
+        debug: {
+          status: error.response?.status,
+          statusText: error.response?.statusText
+        }
       });
     }
     setLoading(false);
@@ -75,8 +107,10 @@ const DatabaseConnector = () => {
   // Dapatkan struktur database
   const getDatabaseStructure = async () => {
     setLoading(true);
+    setQueryResult(null);
+    
     try {
-      const response = await axios.post('http://localhost/backend/api/konek.php', {
+      const response = await axios.post('http://localhost:8000/api/konek.php', {
         action: 'get_structure',
         host: credentials.host,
         username: credentials.username,
@@ -86,9 +120,15 @@ const DatabaseConnector = () => {
       
       setQueryResult(response.data);
     } catch (error) {
+      console.error('Structure error:', error);
+      
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Failed to get structure';
+      
       setQueryResult({
         status: 'error',
-        message: error.response?.data?.message || 'Failed to get structure'
+        message: errorMessage
       });
     }
     setLoading(false);
@@ -158,6 +198,12 @@ const DatabaseConnector = () => {
         {connectionStatus && (
           <div className={`status-message ${connectionStatus.status}`}>
             <strong>Status:</strong> {connectionStatus.message}
+            {connectionStatus.debug && (
+              <div style={{marginTop: '10px', fontSize: '12px'}}>
+                <strong>Debug Info:</strong>
+                <pre>{JSON.stringify(connectionStatus.debug, null, 2)}</pre>
+              </div>
+            )}
           </div>
         )}
       </div>
