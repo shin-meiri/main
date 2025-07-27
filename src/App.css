@@ -133,3 +133,126 @@
   font-size: 12px;
   max-height: 300px;
 }
+
+/* Tambahkan ke App.css */
+
+/* Tabs */
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+}
+
+.tabs button {
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-bottom: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  margin-right: 5px;
+  border-radius: 5px 5px 0 0;
+}
+
+.tabs button.tab-active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.btn-save {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.3s;
+}
+
+.btn-save:hover:not(:disabled) {
+  background: #218838;
+}
+
+.btn-save:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Profiles Tab */
+.profiles-tab {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+}
+
+.profiles-list {
+  display: grid;
+  gap: 15px;
+}
+
+.profile-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 15px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  background: #f8f9fa;
+}
+
+.profile-info h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.profile-info p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.profile-info small {
+  color: #666;
+}
+
+.profile-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-load {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btn-load:hover {
+  background: #138496;
+}
+
+.btn-delete {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.btn-delete:hover {
+  background: #c82333;
+}
