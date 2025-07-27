@@ -1,5 +1,5 @@
 // frontend/src/components/PageManager.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const PageManager = ({ apiUrl, dbCredentials }) => {
@@ -8,11 +8,7 @@ const PageManager = ({ apiUrl, dbCredentials }) => {
   const [showEditor, setShowEditor] = useState(false);
   const [editingPage, setEditingPage] = useState(null);
 
-  useEffect(() => {
-    loadPages();
-  }, [apiUrl, dbCredentials]);
-
-  const loadPages = async () => {
+  const loadPages = useCallback(async () => {
     setLoading(true);
     try {
       const response = await axios.post(apiUrl, {
@@ -30,7 +26,11 @@ const PageManager = ({ apiUrl, dbCredentials }) => {
       console.error('Error loading pages:', error);
     }
     setLoading(false);
-  };
+  }, [apiUrl, dbCredentials]);
+
+  useEffect(() => {
+    loadPages();
+  }, [loadPages]);
 
   const createNewPage = () => {
     setEditingPage({
