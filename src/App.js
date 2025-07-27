@@ -1,22 +1,21 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import DynamicRenderer from './components/DynamicRenderer';
-
-const AppContent = () => {
-  const location = useLocation();
-  const pageSlug = location.pathname === '/' ? 'home' : location.pathname.substring(1);
-
-  return (
-    <Routes>
-      <Route path="*" element={<DynamicRenderer pageSlug={pageSlug} />} />
-    </Routes>
-  );
-};
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Pages from './pages/Pages';
 
 function App() {
+  const isAuthenticated = localStorage.getItem('isAuthenticated');
+
   return (
     <Router>
-      <AppContent />
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" />} />
+        <Route path="/login" element={<Login />} />
+        <Route 
+          path="/pages" 
+          element={isAuthenticated ? <Pages /> : <Navigate to="/login" />} 
+        />
+      </Routes>
     </Router>
   );
 }
