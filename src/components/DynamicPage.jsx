@@ -5,64 +5,148 @@ import axios from 'axios';
 const DynamicPage = ({ apiUrl, dbCredentials, pageSlug }) => {
   const [pageData, setPageData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     const loadPage = async () => {
+      setLoading(true);
+      const slug = pageSlug || 'home';
+      
       try {
-        // Load default template and page
-        const templateHtml = '<div class="page-container"><h1>{{page_title}}</h1><div class="page-content">{{page_content}}</div></div>';
-        const templateCss = '.page-container { max-width: 800px; margin: 0 auto; padding: 20px; } .page-content { line-height: 1.6; }';
-        
-        // Load page data
-        const pageResponse = await axios.post(apiUrl, {
-          action: 'get_page',
-          slug: pageSlug || 'home',
-          host: dbCredentials.host,
-          username: dbCredentials.username,
-          password: dbCredentials.password,
-          database: dbCredentials.database
-        });
-        
-        if (pageResponse.data.status === 'success' && pageResponse.data.page) {
-          setPageData({
-            ...pageResponse.data.page,
-            template_html: templateHtml,
-            template_css: templateCss
-          });
-        } else {
-          // Load home page if slug not found
-          const homeResponse = await axios.post(apiUrl, {
-            action: 'get_page',
-            slug: 'home',
-            host: dbCredentials.host,
-            username: dbCredentials.username,
-            password: dbCredentials.password,
-            database: dbCredentials.database
-          });
-          
-          if (homeResponse.data.status === 'success' && homeResponse.data.page) {
-            setPageData({
-              ...homeResponse.data.page,
-              template_html: templateHtml,
-              template_css: templateCss
+        // Coba load dari database jika terhubung
+        if (dbCredentials.host && dbCredentials.username && apiUrl) {
+          try {
+            // Test koneksi dulu
+            const testResponse = await axios.post(apiUrl, {
+              action: 'test_connection',
+              host: dbCredentials.host,
+              username: dbCredentials.username,
+              password: dbCredentials.password,
+              database: dbCredentials.database
             });
+            
+            if (testResponse.data.status === 'success') {
+              setIsConnected(true);
+              
+              // Load page dari database
+              const pageResponse = await axios.post(apiUrl, {
+                action: 'get_page',
+                slug: slug,
+                host: dbCredentials.host,
+                username: dbCredentials.username,
+                password: dbCredentials.password,
+                database: dbCredentials.database
+              });
+              
+              if (pageResponse.data.status === 'success' && pageResponse.data.page) {
+                // Load template
+                const templateResponse = await axios.post(apiUrl, {
+                  action: 'get_template',
+                  template_name: pageResponse.data.page.template_name || 'default',
+                  host: dbCredentials.host,
+                  username: dbCredentials.username,
+                  password: dbCredentials.password,
+                  database: dbCredentials.database
+                });
+                
+                if (templateResponse.data.status === 'success' && templateResponse.data.template) {
+                  setPageData({
+                    ...pageResponse.data.page,
+                    template_html: templateResponse.data.template.template_html,
+                    template_css: templateResponse.data.template.template_css,
+                    template_js: templateResponse.data.template.template_js
+                  });
+                } else {
+                  // Fallback ke template default
+                  setPageData({
+                    ...pageResponse.data.page,
+                    template_html: '<div class="page-container"><h1>{{page_title}}</h1><div class="page-content">{{page_content}}</div></div>',
+                    template_css: '.page-container { max-width: 800px; margin: 0 auto; padding: 20px; } .page-content { line-height: 1.6; }',
+                    template_js: ''
+                  });
+                }
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (dbError) {
+            console.log('Database connection failed, using default data');
           }
         }
+        
+        // Fallback ke default data jika tidak terhubung
+        setIsConnected(false);
+        await loadDefaultData(slug);
+        
       } catch (error) {
         console.error('Error loading page:', error);
+        // Fallback ke default data
+        await loadDefaultData(slug);
       }
-      setLoading(false);
     };
     
     loadPage();
   }, [apiUrl, dbCredentials, pageSlug]);
 
+  const loadDefaultData = async (slug) => {
+    try {
+      // Load pages dari JSON
+      const pagesResponse = await fetch('/default-data/pages.json');
+      const pages = await pagesResponse.json();
+      
+      // Cari page berdasarkan slug
+      let page = pages.find(p => p.page_slug === slug);
+      
+      // Jika tidak ditemukan, load home page
+      if (!page) {
+        page = pages.find(p => p.page_slug === 'home');
+      }
+      
+      if (page) {
+        // Load templates dari JSON
+        const templatesResponse = await fetch('/default-data/templates.json');
+        const templates = await templatesResponse.json();
+        
+        // Cari template
+        const template = templates.find(t => t.template_name === (page.template_name || 'default')) || 
+                        templates.find(t => t.template_name === 'default');
+        
+        // Load settings
+        const settingsResponse = await fetch('/default-data/settings.json');
+        const settings = await settingsResponse.json();
+        
+        setPageData({
+          ...page,
+          template_html: template?.template_html || '<div class="page-container"><h1>{{page_title}}</h1><div class="page-content">{{page_content}}</div></div>',
+          template_css: `${settings.custom_css || ''} ${template?.template_css || ''}`,
+          template_js: template?.template_js || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error loading default data:', error);
+      // Fallback sangat dasar
+      setPageData({
+        page_title: 'Welcome',
+        page_content: '<p>Default page content</p>',
+        template_html: '<div class="page-container"><h1>{{page_title}}</h1><div class="page-content">{{page_content}}</div></div>',
+        template_css: '.page-container { max-width: 800px; margin: 0 auto; padding: 20px; } .page-content { line-height: 1.6; }'
+      });
+    }
+    setLoading(false);
+  };
+
   if (loading) {
-    return <div>Loading page...</div>;
+    return <div className="loading">Loading page...</div>;
   }
 
   if (!pageData) {
-    return <div>Page not found</div>;
+    return (
+      <div className="page-not-found">
+        <h1>404 - Page Not Found</h1>
+        <p>The page you're looking for doesn't exist.</p>
+        <a href="/">Go to Home</a>
+      </div>
+    );
   }
 
   // Render page
@@ -71,15 +155,22 @@ const DynamicPage = ({ apiUrl, dbCredentials, pageSlug }) => {
     .replace('{{page_title}}', pageData.page_title || '')
     .replace('{{page_content}}', pageData.page_content || '');
   
-  const pageCss = `
-    ${pageData.template_css || ''}
-    ${pageData.page_css || ''}
-  `;
+  const pageCss = pageData.template_css || '';
 
   return (
     <div className="dynamic-page">
       <style>{pageCss}</style>
       <div dangerouslySetInnerHTML={{ __html: pageHtml }} />
+      {isConnected && (
+        <div className="connection-status">
+          <small>Connected to database</small>
+        </div>
+      )}
+      {!isConnected && (
+        <div className="connection-status">
+          <small>Using default data - <a href="/admin">Connect to database</a></small>
+        </div>
+      )}
     </div>
   );
 };
