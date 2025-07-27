@@ -25,7 +25,26 @@ const DatabaseConnector = () => {
   const [query, setQuery] = useState('SELECT VERSION() as mysql_version');
   const [activeTab, setActiveTab] = useState('connection');
 
-  // Load connection profiles - menggunakan useCallback
+  // Load current connection dan profiles
+  const loadCurrentConnection = useCallback(async () => {
+    try {
+      const response = await axios.post(apiUrl, {
+        action: 'get_current'
+      });
+      
+      if (response.data.status === 'success' && response.data.current) {
+        setCredentials({
+          host: response.data.current.host || 'localhost',
+          username: response.data.current.username || '',
+          password: response.data.current.password || '',
+          database: response.data.current.database || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error loading current connection:', error);
+    }
+  }, [apiUrl]);
+
   const loadProfiles = useCallback(async () => {
     try {
       const response = await axios.post(apiUrl, {
@@ -40,14 +59,26 @@ const DatabaseConnector = () => {
       }
     } catch (error) {
       console.error('Error loading profiles:', error);
-      setProfiles([]); // Clear profiles on error
+      setProfiles([]);
     }
-  }, [apiUrl]); // Dependency: apiUrl
+  }, [apiUrl]);
 
-  // Load profiles saat component mount dan ketika apiUrl berubah
+  // Load data saat component mount
   useEffect(() => {
+    loadCurrentConnection();
     loadProfiles();
-  }, [loadProfiles]); // Sekarang aman karena loadProfiles ada di dependency
+  }, [loadCurrentConnection, loadProfiles]);
+
+  // Auto-save current connection ketika credentials berubah
+  useEffect(() => {
+    const saveTimer = setTimeout(() => {
+      if (credentials.host || credentials.username || credentials.password || credentials.database) {
+        saveCurrentConnection();
+      }
+    }, 2000); // Save setelah 2 detik tidak ada perubahan
+
+    return () => clearTimeout(saveTimer);
+  }, [credentials]);
 
   // Handle API URL change
   const handleApiUrlChange = (e) => {
@@ -65,6 +96,46 @@ const DatabaseConnector = () => {
   // Handle profile name change
   const handleProfileNameChange = (e) => {
     setProfileName(e.target.value);
+  };
+
+  // Save current connection
+  const saveCurrentConnection = async () => {
+    try {
+      await axios.post(apiUrl, {
+        action: 'save_current',
+        host: credentials.host,
+        username: credentials.username,
+        password: credentials.password,
+        database: credentials.database
+      });
+    } catch (error) {
+      console.error('Error saving current connection:', error);
+    }
+  };
+
+  // Clear current connection
+  const clearCurrentConnection = async () => {
+    if (window.confirm('Are you sure you want to clear the current connection data?')) {
+      try {
+        await axios.post(apiUrl, {
+          action: 'clear_current'
+        });
+        setCredentials({
+          host: 'localhost',
+          username: '',
+          password: '',
+          database: ''
+        });
+        alert('Current connection cleared!');
+      } catch (error) {
+        alert('Error clearing current connection: ' + (error.response?.data?.message || error.message));
+      }
+    }
+  };
+
+  // Load connection profiles
+  const refreshProfiles = async () => {
+    await loadProfiles();
   };
 
   // Test koneksi database
@@ -342,6 +413,14 @@ const DatabaseConnector = () => {
             >
               {loading ? 'Saving...' : 'Save Profile'}
             </button>
+            
+            <button 
+              onClick={clearCurrentConnection} 
+              className="btn-clear"
+              title="Clear current connection data"
+            >
+              🗑️ Clear
+            </button>
           </div>
           
           {connectionStatus && (
@@ -355,7 +434,16 @@ const DatabaseConnector = () => {
       {/* Profiles Tab */}
       {activeTab === 'profiles' && (
         <div className="profiles-tab">
-          <h3>Saved Connection Profiles</h3>
+          <div className="profiles-header">
+            <h3>Saved Connection Profiles</h3>
+            <button 
+              onClick={refreshProfiles}
+              className="btn-refresh"
+              title="Refresh profiles"
+            >
+              🔄 Refresh
+            </button>
+          </div>
           
           {profiles.length === 0 ? (
             <p>No saved profiles found.</p>
@@ -380,8 +468,9 @@ const DatabaseConnector = () => {
                     <button 
                       onClick={() => deleteProfile(profile.name)}
                       className="btn-delete"
+                      title="Delete profile"
                     >
-                      Delete
+                      🗑️
                     </button>
                   </div>
                 </div>
