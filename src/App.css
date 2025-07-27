@@ -256,3 +256,34 @@
 .btn-delete:hover {
   background: #c82333;
 }
+
+/* Tambahkan ke App.css */
+
+/* API URL Section */
+.api-url-section {
+  background: #e9ecef;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.api-url-section .form-group {
+  margin: 0;
+}
+
+.api-url-section label {
+  font-weight: bold;
+  color: #495057;
+}
+
+.api-url-section input[type="url"] {
+  padding: 10px;
+  border: 2px solid #667eea;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.api-url-section input[type="url"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
