@@ -3,9 +3,12 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const DatabaseConnector = () => {
+  // State untuk URL API
+  const [apiUrl, setApiUrl] = useState('http://localhost:8000/api/konek.php');
+  
   // State untuk kredensial database
   const [credentials, setCredentials] = useState({
-    host: '',
+    host: 'localhost',
     username: '',
     password: '',
     database: ''
@@ -25,7 +28,12 @@ const DatabaseConnector = () => {
   // Load profiles saat component mount
   useEffect(() => {
     loadProfiles();
-  }, []);
+  }, [apiUrl]); // Reload ketika API URL berubah
+
+  // Handle API URL change
+  const handleApiUrlChange = (e) => {
+    setApiUrl(e.target.value);
+  };
 
   // Handle perubahan input
   const handleInputChange = (e) => {
@@ -43,7 +51,7 @@ const DatabaseConnector = () => {
   // Load connection profiles
   const loadProfiles = async () => {
     try {
-      const response = await axios.post('/api/konek.php', {
+      const response = await axios.post(apiUrl, {
         action: 'get_profiles'
       });
       
@@ -55,6 +63,7 @@ const DatabaseConnector = () => {
       }
     } catch (error) {
       console.error('Error loading profiles:', error);
+      setProfiles([]); // Clear profiles on error
     }
   };
 
@@ -64,7 +73,7 @@ const DatabaseConnector = () => {
     setConnectionStatus(null);
     
     try {
-      const response = await axios.post('/api/konek.php', {
+      const response = await axios.post(apiUrl, {
         action: 'test_connection',
         host: credentials.host,
         username: credentials.username,
@@ -98,7 +107,7 @@ const DatabaseConnector = () => {
     setLoading(true);
     
     try {
-      const response = await axios.post('/api/konek.php', {
+      const response = await axios.post(apiUrl, {
         action: 'save_profile',
         profile_name: profileName,
         host: credentials.host,
@@ -115,7 +124,10 @@ const DatabaseConnector = () => {
         alert('Error saving profile: ' + response.data.message);
       }
     } catch (error) {
-      alert('Error saving profile: ' + (error.response?.data?.message || error.message));
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'Error saving profile';
+      alert('Error saving profile: ' + errorMessage);
     }
     
     setLoading(false);
@@ -136,7 +148,7 @@ const DatabaseConnector = () => {
   const deleteProfile = async (profileName) => {
     if (window.confirm('Are you sure you want to delete this profile?')) {
       try {
-        const response = await axios.post('/api/konek.php', {
+        const response = await axios.post(apiUrl, {
           action: 'delete_profile',
           profile_name: profileName
         });
@@ -148,7 +160,10 @@ const DatabaseConnector = () => {
           alert('Error deleting profile: ' + response.data.message);
         }
       } catch (error) {
-        alert('Error deleting profile: ' + (error.response?.data?.message || error.message));
+        const errorMessage = error.response?.data?.message || 
+                            error.message || 
+                            'Error deleting profile';
+        alert('Error deleting profile: ' + errorMessage);
       }
     }
   };
@@ -161,7 +176,7 @@ const DatabaseConnector = () => {
     setQueryResult(null);
     
     try {
-      const response = await axios.post('/api/konek.php', {
+      const response = await axios.post(apiUrl, {
         action: 'connect_and_query',
         host: credentials.host,
         username: credentials.username,
@@ -192,7 +207,7 @@ const DatabaseConnector = () => {
     setQueryResult(null);
     
     try {
-      const response = await axios.post('/api/konek.php', {
+      const response = await axios.post(apiUrl, {
         action: 'get_structure',
         host: credentials.host,
         username: credentials.username,
@@ -217,6 +232,20 @@ const DatabaseConnector = () => {
   return (
     <div className="database-connector">
       <h2>Database Connection Toolkit</h2>
+      
+      {/* API URL Input */}
+      <div className="api-url-section">
+        <div className="form-group">
+          <label>API URL:</label>
+          <input
+            type="url"
+            value={apiUrl}
+            onChange={handleApiUrlChange}
+            placeholder="http://your-server.com/api/konek.php"
+            style={{width: '100%', maxWidth: '500px'}}
+          />
+        </div>
+      </div>
       
       {/* Tabs */}
       <div className="tabs">
