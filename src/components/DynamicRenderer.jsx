@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// frontend/src/components/DynamicRenderer.js
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const DynamicRenderer = ({ pageSlug }) => {
@@ -7,83 +8,79 @@ const DynamicRenderer = ({ pageSlug }) => {
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Default database configuration
-  const defaultDbConfig = {
+  // Default database configuration - menggunakan useCallback
+  const getDefaultDbConfig = useCallback(() => ({
     host: 'localhost',
     username: 'root',
     password: '',
     database: 'cms_complete'
-  };
+  }), []);
 
-  useEffect(() => {
-    const loadPage = async () => {
-      setLoading(true);
-      setError(null);
-      
+  const loadPage = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Try to load saved connection
+      let dbConfig = getDefaultDbConfig();
       try {
-        // Try to load saved connection
-        let dbConfig = defaultDbConfig;
-        try {
-          const savedResponse = await axios.post('http://localhost:8000/api/konek.php', {
-            action: 'get_current'
-          });
-          
-          if (savedResponse.data.status === 'success' && savedResponse.data.current) {
-            dbConfig = savedResponse.data.current;
-          }
-        } catch (savedError) {
-          console.log('No saved connection found, using defaults');
-        }
+        const savedResponse = await axios.post('http://localhost:8000/api/konek.php', {
+          action: 'get_current'
+        });
         
-        // Try to connect to database
-        try {
-          const testResponse = await axios.post('http://localhost:8000/api/konek.php', {
-            action: 'test_connection',
+        if (savedResponse.data.status === 'success' && savedResponse.data.current) {
+          dbConfig = savedResponse.data.current;
+        }
+      } catch (savedError) {
+        console.log('No saved connection found, using defaults');
+      }
+      
+      // Try to connect to database
+      try {
+        const testResponse = await axios.post('http://localhost:8000/api/konek.php', {
+          action: 'test_connection',
+          host: dbConfig.host,
+          username: dbConfig.username,
+          password: dbConfig.password,
+          database: dbConfig.database
+        });
+        
+        if (testResponse.data.status === 'success') {
+          setIsConnected(true);
+          
+          // Load page from database
+          const pageResponse = await axios.post('http://localhost:8000/api/konek.php', {
+            action: 'get_page',
+            slug: pageSlug || 'home',
             host: dbConfig.host,
             username: dbConfig.username,
             password: dbConfig.password,
             database: dbConfig.database
           });
           
-          if (testResponse.data.status === 'success') {
-            setIsConnected(true);
-            
-            // Load page from database
-            const pageResponse = await axios.post('http://localhost:8000/api/konek.php', {
-              action: 'get_page',
-              slug: pageSlug || 'home',
-              host: dbConfig.host,
-              username: dbConfig.username,
-              password: dbConfig.password,
-              database: dbConfig.database
+          if (pageResponse.data.status === 'success' && pageResponse.data.page) {
+            setPageData({
+              ...pageResponse.data.page,
+              settings: pageResponse.data.settings || {}
             });
-            
-            if (pageResponse.data.status === 'success' && pageResponse.data.page) {
-              setPageData({
-                ...pageResponse.data.page,
-                settings: pageResponse.data.settings || {}
-              });
-              setLoading(false);
-              return;
-            }
+            setLoading(false);
+            return;
           }
-        } catch (dbError) {
-          console.log('Database connection failed, using default data');
         }
-        
-        // Fallback to default data
-        await loadDefaultData(pageSlug || 'home');
-        
-      } catch (err) {
-        setError('Failed to load page: ' + err.message);
-        setLoading(false);
+      } catch (dbError) {
+        console.log('Database connection failed, using default data');
       }
-    };
-    
-    loadPage();
-  }, [pageSlug]);
+      
+      // Fallback to default data
+      await loadDefaultData(pageSlug || 'home');
+      
+    } catch (err) {
+      setError('Failed to load page: ' + err.message);
+      setLoading(false);
+    }
+  }, [pageSlug, getDefaultDbConfig]);
 
-  const loadDefaultData = async (slug) => {
+  const loadDefaultData = useCallback(async (slug) => {
     try {
       setIsConnected(false);
       
@@ -120,7 +117,11 @@ const DynamicRenderer = ({ pageSlug }) => {
     }
     
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    loadPage();
+  }, [loadPage]);
 
   if (loading) {
     return (
