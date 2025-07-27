@@ -1,5 +1,5 @@
 // frontend/src/components/AdminPanel.js
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AdminPanel = ({ onConnectionSuccess }) => {
@@ -109,18 +109,46 @@ const AdminPanel = ({ onConnectionSuccess }) => {
         <div className="form-grid">
           <div className="form-group">
             <label>Host:</label>
+            <input
+              type="text"
+              name="host"
+              value={credentials.host}
+              onChange={handleInputChange}
+              placeholder="localhost"
+            />
           </div>
           
           <div className="form-group">
             <label>Username:</label>
+            <input
+              type="text"
+              name="username"
+              value={credentials.username}
+              onChange={handleInputChange}
+              placeholder="database username"
+            />
           </div>
           
           <div className="form-group">
             <label>Password:</label>
+            <input
+              type="password"
+              name="password"
+              value={credentials.password}
+              onChange={handleInputChange}
+              placeholder="database password"
+            />
           </div>
           
           <div className="form-group">
             <label>Database:</label>
+            <input
+              type="text"
+              name="database"
+              value={credentials.database}
+              onChange={handleInputChange}
+              placeholder="database name"
+            />
           </div>
         </div>
         
