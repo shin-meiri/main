@@ -1,193 +1,297 @@
+// /pages/Login.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import '../styles/Login.css';
 
 const Login = () => {
-  const [formData, setFormData] = useState({
-    username: '',
+  const [credentials, setCredentials] = useState({
+    user: '',
     password: ''
   });
-  const [errors, setErrors] = useState({});
-  const [serverError, setServerError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [loginError, setLoginError] = useState('');
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Redirect jika sudah login
+  // Load users data from API
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated');
-    if (isAuthenticated) {
-      const from = location.state?.from?.pathname || '/pages';
-      navigate(from, { replace: true });
-    }
-  }, [navigate, location]);
+    loadUsers();
+  }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear error when user types
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-    
-    if (serverError) {
-      setServerError('');
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.username.trim()) {
-      newErrors.username = 'Username tidak boleh kosong';
-    }
-    
-    if (!formData.password) {
-      newErrors.password = 'Password tidak boleh kosong';
-    } else if (formData.password.length < 4) {
-      newErrors.password = 'Password minimal 4 karakter';
-    }
-    
-    return newErrors;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    const formErrors = validateForm();
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
-      return;
-    }
-    
-    setLoading(true);
-    setServerError('');
-
+  const loadUsers = async () => {
     try {
-      // Membaca file room.json
-      const response = await axios.get('/api/rom.json');
-      const { user, pass } = response.data;
-
-      // Validasi kredensial
-      if (formData.username === user && formData.password === pass) {
-        // Simpan status login di localStorage
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('user', JSON.stringify({ username: user }));
-        
-        // Redirect ke halaman sebelumnya atau pages
-        const from = location.state?.from?.pathname || '/pages';
-        navigate(from, { replace: true });
-      } else {
-        setServerError('Username atau password salah!');
-      }
+      setLoading(true);
+      const response = await axios.get('/api/dat.php');
+      setUsers(response.data);
     } catch (err) {
-      setServerError('Terjadi kesalahan saat login. Silakan coba lagi.');
-      console.error('Login error:', err);
+      console.error('Error loading users:', err);
+      setError('Gagal memuat data users');
     } finally {
       setLoading(false);
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCredentials({
+      ...credentials,
+      [name]: value
+    });
+    // Clear error when user types
+    if (loginError) setLoginError('');
   };
 
-  return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <h2 className="login-title">Login Sistem</h2>
-          <p className="login-subtitle">Silakan masukkan kredensial Anda</p>
-        </div>
-        
-        {serverError && (
-          <div className="alert alert-error">
-            <span className="alert-icon">⚠️</span>
-            {serverError}
-          </div>
-        )}
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!credentials.user || !credentials.password) {
+      setLoginError('Username dan password harus diisi!');
+      return;
+    }
 
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="username" className="form-label">
-              Username
+    try {
+      // Cari user yang cocok
+      const user = users.find(u => 
+        u.user === credentials.user && u.password === credentials.password
+      );
+
+      if (user) {
+        // Login berhasil
+        // Simpan info user di sessionStorage
+        sessionStorage.setItem('loggedInUser', JSON.stringify({
+          id: user.id,
+          user: user.user
+        }));
+        
+        // Redirect ke halaman dashboard atau home
+        navigate('/dashboard');
+      } else {
+        setLoginError('Username atau password salah!');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setLoginError('Terjadi kesalahan saat login');
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('loggedInUser');
+    setCredentials({ user: '', password: '' });
+  };
+
+  // Cek apakah user sudah login
+  const loggedInUser = sessionStorage.getItem('loggedInUser');
+  
+  if (loggedInUser) {
+    const user = JSON.parse(loggedInUser);
+    return (
+      <div style={{
+        backgroundColor: 'black',
+        minHeight: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        color: 'white'
+      }}>
+        <div style={{
+          backgroundColor: '#222',
+          padding: '30px',
+          borderRadius: '10px',
+          textAlign: 'center',
+          maxWidth: '400px',
+          width: '100%'
+        }}>
+          <h1 style={{ color: 'pink', marginBottom: '20px' }}>Welcome</h1>
+          <p>Anda sudah login sebagai:</p>
+          <h3 style={{ color: 'cyan', margin: '15px 0' }}>{user.user}</h3>
+          <p>ID User: {user.id}</p>
+          
+          <button
+            onClick={handleLogout}
+            style={{
+              backgroundColor: '#f44336',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              marginTop: '20px'
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) return (
+    <div style={{ 
+      backgroundColor: 'black', 
+      minHeight: '100vh', 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center',
+      color: 'white'
+    }}>
+      Loading users data...
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ 
+      backgroundColor: 'black', 
+      minHeight: '100vh', 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center',
+      color: 'red'
+    }}>
+      Error: {error}
+    </div>
+  );
+
+  return (
+    <div style={{
+      backgroundColor: 'black',
+      minHeight: '100vh',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center'
+    }}>
+      <div style={{
+        backgroundColor: '#222',
+        padding: '30px',
+        borderRadius: '10px',
+        boxShadow: '0 0 20px rgba(255, 192, 203, 0.3)',
+        maxWidth: '400px',
+        width: '100%'
+      }}>
+        {/* Header Welcome */}
+        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <h1 style={{
+            color: 'pink',
+            fontSize: '2.5rem',
+            margin: '0'
+          }}>
+            Welcome
+          </h1>
+          <p style={{ color: '#ccc', marginTop: '10px' }}>
+            Silahkan Login
+          </p>
+        </div>
+
+        {/* Login Form */}
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '8px', 
+              color: 'white' 
+            }}>
+              Username:
             </label>
             <input
-              id="username"
-              name="username"
               type="text"
-              value={formData.username}
-              onChange={handleChange}
-              className={`form-input ${errors.username ? 'input-error' : ''}`}
+              name="user"
+              value={credentials.user}
+              onChange={handleInputChange}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#444',
+                border: '1px solid #666',
+                borderRadius: '5px',
+                color: 'white',
+                fontSize: '16px'
+              }}
               placeholder="Masukkan username"
-              autoComplete="username"
             />
-            {errors.username && (
-              <span className="error-message">{errors.username}</span>
-            )}
+          </div>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '8px', 
+              color: 'white' 
+            }}>
+              Password:
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={credentials.password}
+              onChange={handleInputChange}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#444',
+                border: '1px solid #666',
+                borderRadius: '5px',
+                color: 'white',
+                fontSize: '16px'
+              }}
+              placeholder="Masukkan password"
+            />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password" className="form-label">
-              Password
-            </label>
-            <div className="password-input-container">
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                value={formData.password}
-                onChange={handleChange}
-                className={`form-input ${errors.password ? 'input-error' : ''}`}
-                placeholder="Masukkan password"
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={togglePasswordVisibility}
-                aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-              >
-                {showPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
+          {loginError && (
+            <div style={{ 
+              color: '#ff6b6b', 
+              marginBottom: '15px',
+              padding: '10px',
+              backgroundColor: 'rgba(255, 107, 107, 0.1)',
+              borderRadius: '5px',
+              border: '1px solid #ff6b6b'
+            }}>
+              {loginError}
             </div>
-            {errors.password && (
-              <span className="error-message">{errors.password}</span>
-            )}
-          </div>
+          )}
 
           <button
             type="submit"
-            disabled={loading}
-            className={`btn btn-primary ${loading ? 'btn-loading' : ''}`}
+            style={{
+              width: '100%',
+              backgroundColor: 'pink',
+              color: 'black',
+              border: 'none',
+              padding: '12px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              transition: 'background-color 0.3s'
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#ff8e8e'}
+            onMouseOut={(e) => e.target.style.backgroundColor = 'pink'}
           >
-            {loading ? (
-              <>
-                <span className="spinner"></span>
-                Memproses...
-              </>
-            ) : (
-              'Login'
-            )}
+            Login
           </button>
         </form>
 
-        <div className="login-footer">
-          <p className="login-info">
-            <strong>Kredensial default:</strong><br />
-            Username: admin<br />
-            Password: 1234admin
-          </p>
+        {/* Info Users untuk testing */}
+        <div style={{ 
+          marginTop: '25px', 
+          padding: '15px', 
+          backgroundColor: '#333', 
+          borderRadius: '5px',
+          fontSize: '12px'
+        }}>
+          <h4 style={{ color: 'cyan', margin: '0 0 10px 0' }}>Users Tersedia:</h4>
+          {users.slice(0, 3).map((user, index) => (
+            <div key={user.id} style={{ 
+              marginBottom: '5px',
+              color: '#ccc'
+            }}>
+              <span style={{ color: 'pink' }}>{user.user}</span> / {user.password}
+            </div>
+          ))}
+          {users.length > 3 && (
+            <div style={{ color: '#999', fontStyle: 'italic' }}>
+              ... dan {users.length - 3} user lainnya
+            </div>
+          )}
         </div>
       </div>
     </div>
