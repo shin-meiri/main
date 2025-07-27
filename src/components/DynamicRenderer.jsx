@@ -8,21 +8,60 @@ const DynamicRenderer = ({ pageSlug }) => {
   const [error, setError] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Default database configuration - menggunakan useCallback
-  const getDefaultDbConfig = useCallback(() => ({
-    host: 'localhost',
-    username: 'root',
-    password: '',
-    database: 'cms_complete'
-  }), []);
+  const loadDefaultData = useCallback(async (slug) => {
+    try {
+      setIsConnected(false);
+      
+      // Load pages from JSON
+      const pagesResponse = await fetch('/default-data/pages.json');
+      const pages = await pagesResponse.json();
+      
+      // Find page by slug
+      let page = pages.find(p => p.page_slug === slug);
+      if (!page) {
+        page = pages.find(p => p.page_slug === 'home');
+      }
+      
+      if (page) {
+        // Load templates from JSON
+        const templatesResponse = await fetch('/default-data/templates.json');
+        const templates = await templatesResponse.json();
+        
+        // Load settings from JSON
+        const settingsResponse = await fetch('/default-data/settings.json');
+        const settings = await settingsResponse.json();
+        
+        setPageData({
+          ...page,
+          header_html: templates[0]?.header_html || '',
+          footer_html: templates[0]?.footer_html || '',
+          template_css: templates[0]?.template_css || '',
+          template_js: templates[0]?.template_js || '',
+          settings: settings || {}
+        });
+      }
+    } catch (error) {
+      setError('Failed to load default data: ' + error.message);
+    }
+    
+    setLoading(false);
+  }, []);
 
   const loadPage = useCallback(async () => {
     setLoading(true);
     setError(null);
     
+    // Default database configuration
+    const defaultDbConfig = {
+      host: 'localhost',
+      username: 'root',
+      password: '',
+      database: 'cms_complete'
+    };
+    
     try {
       // Try to load saved connection
-      let dbConfig = getDefaultDbConfig();
+      let dbConfig = defaultDbConfig;
       try {
         const savedResponse = await axios.post('http://localhost:8000/api/konek.php', {
           action: 'get_current'
@@ -78,46 +117,7 @@ const DynamicRenderer = ({ pageSlug }) => {
       setError('Failed to load page: ' + err.message);
       setLoading(false);
     }
-  }, [pageSlug, getDefaultDbConfig]);
-
-  const loadDefaultData = useCallback(async (slug) => {
-    try {
-      setIsConnected(false);
-      
-      // Load pages from JSON
-      const pagesResponse = await fetch('/default-data/pages.json');
-      const pages = await pagesResponse.json();
-      
-      // Find page by slug
-      let page = pages.find(p => p.page_slug === slug);
-      if (!page) {
-        page = pages.find(p => p.page_slug === 'home');
-      }
-      
-      if (page) {
-        // Load templates from JSON
-        const templatesResponse = await fetch('/default-data/templates.json');
-        const templates = await templatesResponse.json();
-        
-        // Load settings from JSON
-        const settingsResponse = await fetch('/default-data/settings.json');
-        const settings = await settingsResponse.json();
-        
-        setPageData({
-          ...page,
-          header_html: templates[0]?.header_html || '',
-          footer_html: templates[0]?.footer_html || '',
-          template_css: templates[0]?.template_css || '',
-          template_js: templates[0]?.template_js || '',
-          settings: settings || {}
-        });
-      }
-    } catch (error) {
-      setError('Failed to load default data: ' + error.message);
-    }
-    
-    setLoading(false);
-  }, []);
+  }, [pageSlug, loadDefaultData]);
 
   useEffect(() => {
     loadPage();
