@@ -73,7 +73,7 @@ const PageManager = ({ apiUrl, dbCredentials }) => {
     try {
       await axios.post(apiUrl, {
         action: 'save_page',
-        page_ pageData,
+        page_data: pageData,
         host: dbCredentials.host,
         username: dbCredentials.username,
         password: dbCredentials.password,
@@ -134,7 +134,16 @@ const PageManager = ({ apiUrl, dbCredentials }) => {
 };
 
 const PageEditor = ({ page, onSave, onCancel }) => {
-  const [pageData, setPageData] = useState(page);
+  const [pageData, setPageData] = useState(page || {
+    page_name: '',
+    page_slug: '',
+    page_title: '',
+    page_content: '',
+    page_css: '',
+    page_js: '',
+    template_name: 'default',
+    status: 'draft'
+  });
 
   const handleInputChange = (e) => {
     setPageData({
