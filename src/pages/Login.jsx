@@ -1,142 +1,194 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import '../styles/Login.css';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({
+    username: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirect jika sudah login
+  useEffect(() => {
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    if (isAuthenticated) {
+      const from = location.state?.from?.pathname || '/pages';
+      navigate(from, { replace: true });
+    }
+  }, [navigate, location]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+    
+    if (serverError) {
+      setServerError('');
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username tidak boleh kosong';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password tidak boleh kosong';
+    } else if (formData.password.length < 4) {
+      newErrors.password = 'Password minimal 4 karakter';
+    }
+    
+    return newErrors;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      return;
+    }
+    
     setLoading(true);
-    setError('');
+    setServerError('');
 
     try {
       // Membaca file room.json
-      const response = await axios.get('/api/rom.json');
+      const response = await axios.get('/room.json');
       const { user, pass } = response.data;
 
       // Validasi kredensial
-      if (username === user && password === pass) {
+      if (formData.username === user && formData.password === pass) {
         // Simpan status login di localStorage
         localStorage.setItem('isAuthenticated', 'true');
-        // Redirect ke halaman Pages
-        navigate('/pages');
+        localStorage.setItem('user', JSON.stringify({ username: user }));
+        
+        // Redirect ke halaman sebelumnya atau pages
+        const from = location.state?.from?.pathname || '/pages';
+        navigate(from, { replace: true });
       } else {
-        setError('Username atau password salah!');
+        setServerError('Username atau password salah!');
       }
     } catch (err) {
-      setError('Terjadi kesalahan saat login');
-      console.error(err);
+      setServerError('Terjadi kesalahan saat login. Silakan coba lagi.');
+      console.error('Login error:', err);
     } finally {
       setLoading(false);
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh',
-      backgroundColor: '#f5f5f5'
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '2rem',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        width: '100%',
-        maxWidth: '400px'
-      }}>
-        <h2 style={{
-          textAlign: 'center',
-          marginBottom: '1.5rem',
-          color: '#333'
-        }}>Login</h2>
+    <div className="login-container">
+      <div className="login-card">
+        <div className="login-header">
+          <h2 className="login-title">Login Sistem</h2>
+          <p className="login-subtitle">Silakan masukkan kredensial Anda</p>
+        </div>
         
-        {error && (
-          <div style={{
-            backgroundColor: '#fee',
-            color: '#c33',
-            padding: '0.75rem',
-            borderRadius: '4px',
-            marginBottom: '1rem',
-            border: '1px solid #fcc'
-          }}>
-            {error}
+        {serverError && (
+          <div className="alert alert-error">
+            <span className="alert-icon">⚠️</span>
+            {serverError}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '0.5rem',
-              color: '#555'
-            }}>
-              Username:
+        <form onSubmit={handleSubmit} className="login-form">
+          <div className="form-group">
+            <label htmlFor="username" className="form-label">
+              Username
             </label>
             <input
+              id="username"
+              name="username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem'
-              }}
-              required
+              value={formData.username}
+              onChange={handleChange}
+              className={`form-input ${errors.username ? 'input-error' : ''}`}
+              placeholder="Masukkan username"
+              autoComplete="username"
             />
+            {errors.username && (
+              <span className="error-message">{errors.username}</span>
+            )}
           </div>
 
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '0.5rem',
-              color: '#555'
-            }}>
-              Password:
+          <div className="form-group">
+            <label htmlFor="password" className="form-label">
+              Password
             </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '1rem'
-              }}
-              required
-            />
+            <div className="password-input-container">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                value={formData.password}
+                onChange={handleChange}
+                className={`form-input ${errors.password ? 'input-error' : ''}`}
+                placeholder="Masukkan password"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={togglePasswordVisibility}
+                aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+              >
+                {showPassword ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </div>
+            {errors.password && (
+              <span className="error-message">{errors.password}</span>
+            )}
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '1rem',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1
-            }}
+            className={`btn btn-primary ${loading ? 'btn-loading' : ''}`}
           >
-            {loading ? 'Loading...' : 'Login'}
+            {loading ? (
+              <>
+                <span className="spinner"></span>
+                Memproses...
+              </>
+            ) : (
+              'Login'
+            )}
           </button>
         </form>
+
+        <div className="login-footer">
+          <p className="login-info">
+            <strong>Kredensial default:</strong><br />
+            Username: admin<br />
+            Password: 1234admin
+          </p>
+        </div>
       </div>
     </div>
   );
