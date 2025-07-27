@@ -5,7 +5,7 @@ import axios from 'axios';
 const DatabaseConnector = () => {
   // State untuk kredensial database
   const [credentials, setCredentials] = useState({
-    host: 'localhost',
+    host: '',
     username: '',
     password: '',
     database: ''
@@ -43,7 +43,7 @@ const DatabaseConnector = () => {
   // Load connection profiles
   const loadProfiles = async () => {
     try {
-      const response = await axios.post('http://localhost:8000/api/konek.php', {
+      const response = await axios.post('/api/konek.php', {
         action: 'get_profiles'
       });
       
@@ -64,7 +64,7 @@ const DatabaseConnector = () => {
     setConnectionStatus(null);
     
     try {
-      const response = await axios.post('http://localhost:8000/api/konek.php', {
+      const response = await axios.post('/api/konek.php', {
         action: 'test_connection',
         host: credentials.host,
         username: credentials.username,
@@ -98,7 +98,7 @@ const DatabaseConnector = () => {
     setLoading(true);
     
     try {
-      const response = await axios.post('http://localhost:8000/api/konek.php', {
+      const response = await axios.post('/api/konek.php', {
         action: 'save_profile',
         profile_name: profileName,
         host: credentials.host,
@@ -136,7 +136,7 @@ const DatabaseConnector = () => {
   const deleteProfile = async (profileName) => {
     if (window.confirm('Are you sure you want to delete this profile?')) {
       try {
-        const response = await axios.post('http://localhost:8000/api/konek.php', {
+        const response = await axios.post('/api/konek.php', {
           action: 'delete_profile',
           profile_name: profileName
         });
@@ -161,7 +161,7 @@ const DatabaseConnector = () => {
     setQueryResult(null);
     
     try {
-      const response = await axios.post('http://localhost:8000/api/konek.php', {
+      const response = await axios.post('/api/konek.php', {
         action: 'connect_and_query',
         host: credentials.host,
         username: credentials.username,
@@ -192,7 +192,7 @@ const DatabaseConnector = () => {
     setQueryResult(null);
     
     try {
-      const response = await axios.post('http://localhost:8000/api/konek.php', {
+      const response = await axios.post('/api/konek.php', {
         action: 'get_structure',
         host: credentials.host,
         username: credentials.username,
