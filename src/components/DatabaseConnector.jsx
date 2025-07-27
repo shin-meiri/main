@@ -25,7 +25,7 @@ const DatabaseConnector = () => {
   const [query, setQuery] = useState('SELECT VERSION() as mysql_version');
   const [activeTab, setActiveTab] = useState('connection');
 
-  // Load current connection dan profiles
+  // Load current connection
   const loadCurrentConnection = useCallback(async () => {
     try {
       const response = await axios.post(apiUrl, {
@@ -45,6 +45,7 @@ const DatabaseConnector = () => {
     }
   }, [apiUrl]);
 
+  // Load connection profiles
   const loadProfiles = useCallback(async () => {
     try {
       const response = await axios.post(apiUrl, {
@@ -63,6 +64,21 @@ const DatabaseConnector = () => {
     }
   }, [apiUrl]);
 
+  // Save current connection
+  const saveCurrentConnection = useCallback(async () => {
+    try {
+      await axios.post(apiUrl, {
+        action: 'save_current',
+        host: credentials.host,
+        username: credentials.username,
+        password: credentials.password,
+        database: credentials.database
+      });
+    } catch (error) {
+      console.error('Error saving current connection:', error);
+    }
+  }, [apiUrl, credentials]);
+
   // Load data saat component mount
   useEffect(() => {
     loadCurrentConnection();
@@ -75,10 +91,10 @@ const DatabaseConnector = () => {
       if (credentials.host || credentials.username || credentials.password || credentials.database) {
         saveCurrentConnection();
       }
-    }, 2000); // Save setelah 2 detik tidak ada perubahan
+    }, 2000);
 
     return () => clearTimeout(saveTimer);
-  }, [credentials]);
+  }, [credentials, saveCurrentConnection]);
 
   // Handle API URL change
   const handleApiUrlChange = (e) => {
@@ -96,21 +112,6 @@ const DatabaseConnector = () => {
   // Handle profile name change
   const handleProfileNameChange = (e) => {
     setProfileName(e.target.value);
-  };
-
-  // Save current connection
-  const saveCurrentConnection = async () => {
-    try {
-      await axios.post(apiUrl, {
-        action: 'save_current',
-        host: credentials.host,
-        username: credentials.username,
-        password: credentials.password,
-        database: credentials.database
-      });
-    } catch (error) {
-      console.error('Error saving current connection:', error);
-    }
   };
 
   // Clear current connection
@@ -133,7 +134,7 @@ const DatabaseConnector = () => {
     }
   };
 
-  // Load connection profiles
+  // Refresh profiles
   const refreshProfiles = async () => {
     await loadProfiles();
   };
