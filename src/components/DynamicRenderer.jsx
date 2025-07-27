@@ -14,6 +14,7 @@ const DynamicRenderer = ({ pageSlug }) => {
       
       // Load pages from JSON
       const pagesResponse = await fetch('/default-data/pages.json');
+      if (!pagesResponse.ok) throw new Error('Failed to load pages data');
       const pages = await pagesResponse.json();
       
       // Find page by slug
@@ -25,10 +26,12 @@ const DynamicRenderer = ({ pageSlug }) => {
       if (page) {
         // Load templates from JSON
         const templatesResponse = await fetch('/default-data/templates.json');
+        if (!templatesResponse.ok) throw new Error('Failed to load templates data');
         const templates = await templatesResponse.json();
         
         // Load settings from JSON
         const settingsResponse = await fetch('/default-data/settings.json');
+        if (!settingsResponse.ok) throw new Error('Failed to load settings data');
         const settings = await settingsResponse.json();
         
         setPageData({
@@ -39,8 +42,11 @@ const DynamicRenderer = ({ pageSlug }) => {
           template_js: templates[0]?.template_js || '',
           settings: settings || {}
         });
+      } else {
+        throw new Error('Default page not found');
       }
     } catch (error) {
+      console.error('Failed to load default data:', error);
       setError('Failed to load default data: ' + error.message);
     }
     
@@ -114,6 +120,7 @@ const DynamicRenderer = ({ pageSlug }) => {
       await loadDefaultData(pageSlug || 'home');
       
     } catch (err) {
+      console.error('Failed to load page:', err);
       setError('Failed to load page: ' + err.message);
       setLoading(false);
     }
