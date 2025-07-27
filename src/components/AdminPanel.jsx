@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AdminPanel = ({ onConnectionSuccess }) => {
-  const [apiUrl, setApiUrl] = useState('http://localhost:8000/api/konek.php');
+  const [apiUrl, setApiUrl] = useState('/api/konek.php');
   const [credentials, setCredentials] = useState({
-    host: 'localhost',
+    host: '',
     username: '',
     password: '',
     database: ''
