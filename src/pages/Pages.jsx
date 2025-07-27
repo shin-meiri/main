@@ -1,5 +1,6 @@
 // /pages/Pages.jsx
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const Pages = () => {
   // State untuk data CRUD
@@ -21,12 +22,11 @@ const Pages = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/dat.php');
-      if (!response.ok) throw new Error('Gagal memuat data');
-      const data = await response.json();
-      setUsers(data);
+      const response = await axios.get('/api/dat.php');
+      setUsers(response.data);
     } catch (err) {
-      setError(err.message);
+      console.error('Error loading data:', err);
+      setError('Gagal memuat data: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -51,36 +51,20 @@ const Pages = () => {
     }
 
     try {
-      let response;
-      
       if (editingId) {
-        // Update data yang ada
-        response = await fetch('/api/dat.php', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: editingId,
-            user: formData.user,
-            password: formData.password
-          })
+        // Update data yang ada (PUT request)
+        await axios.put('/api/dat.php', {
+          id: editingId,
+          user: formData.user,
+          password: formData.password
         });
       } else {
-        // Tambah data baru
-        response = await fetch('/api/dat.php', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            user: formData.user,
-            password: formData.password
-          })
+        // Tambah data baru (POST request)
+        await axios.post('/api/dat.php', {
+          user: formData.user,
+          password: formData.password
         });
       }
-
-      if (!response.ok) throw new Error('Gagal menyimpan data');
       
       // Reset form dan reload data
       setFormData({ id: '', user: '', password: '' });
@@ -88,7 +72,8 @@ const Pages = () => {
       await loadData();
       
     } catch (err) {
-      setError(err.message);
+      console.error('Save error:', err);
+      setError('Gagal menyimpan data: ' + err.message);
     }
   };
 
@@ -106,15 +91,9 @@ const Pages = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
       try {
-        const response = await fetch('/api/dat.php', {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ id: id })
+        await axios.delete('/api/dat.php', {
+          data: { id: id }
         });
-
-        if (!response.ok) throw new Error('Gagal menghapus data');
         
         await loadData(); // Reload data setelah delete
         
@@ -125,7 +104,8 @@ const Pages = () => {
         }
         
       } catch (err) {
-        setError(err.message);
+        console.error('Delete error:', err);
+        setError('Gagal menghapus data: ' + err.message);
       }
     }
   };
