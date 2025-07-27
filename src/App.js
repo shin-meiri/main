@@ -20,40 +20,38 @@ const AppContent = () => {
   if (isAdminRoute) {
     return (
       <div>
-        <nav>
-          <a href="/admin">Admin Panel</a> | 
-          <a href="/admin/pages">Page Manager</a> | 
+        <nav style={{ padding: '10px', backgroundColor: '#f0f0f0' }}>
+          <a href="/admin" style={{ marginRight: '10px' }}>Admin Panel</a> | 
+          <a href="/admin/pages" style={{ marginRight: '10px' }}>Page Manager</a> | 
           <a href="/">View Website</a>
         </nav>
         
-        <Routes>
-          <Route 
-            path="/admin" 
-            element={
-              <AdminPanel onConnectionSuccess={handleConnectionSuccess} />
-            } 
-          />
-          <Route 
-            path="/admin/pages" 
-            element={
-              connection.apiUrl && connection.credentials.host ? (
+        <div style={{ padding: '20px' }}>
+          <Routes>
+            <Route 
+              path="/admin" 
+              element={
+                <AdminPanel onConnectionSuccess={handleConnectionSuccess} />
+              } 
+            />
+            <Route 
+              path="/admin/pages" 
+              element={
                 <PageManager 
                   apiUrl={connection.apiUrl}
                   dbCredentials={connection.credentials}
                 />
-              ) : (
-                <div>Please connect to database first in <a href="/admin">Admin Panel</a></div>
-              )
-            } 
-          />
-        </Routes>
+              } 
+            />
+          </Routes>
+        </div>
       </div>
     );
   }
 
   return (
     <DynamicPage 
-      apiUrl={connection.apiUrl || 'http://localhost:8000/api/konek.php'}
+      apiUrl={connection.apiUrl}
       dbCredentials={connection.credentials}
       pageSlug={pageSlug}
     />
