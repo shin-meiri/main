@@ -11,7 +11,7 @@ const Connect = () => {
   const [tableData, setTableData] = useState([]);
   const [tableColumns, setTableColumns] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('');
-  const [loading, setLoading] = useState({ connection: false, tables: false,  false });
+  const [loading, setLoading] = useState({ connection: false, tables: false, data: false });
   const [currentUser, setCurrentUser] = useState(null);
   const [editingRow, setEditingRow] = useState(null);
   const [editingData, setEditingData] = useState({});
@@ -108,7 +108,7 @@ const Connect = () => {
   const getTableData = async (tableName) => {
     if (!selectedUser || !tableName) return;
 
-    setLoading(prev => ({ ...prev,  true }));
+    setLoading(prev => ({ ...prev, data: true }));
     setSelectedTable(tableName);
     setEditingRow(null);
     setAddingRow(false);
@@ -128,14 +128,14 @@ const Connect = () => {
         setConnectionStatus(`✅ Menampilkan data dari tabel ${tableName}`);
       } else {
         const errorMessage = response.data?.error || 'Unknown error';
-        setConnectionStatus(`❌ Gagal mengambil  ${errorMessage}`);
+        setConnectionStatus(`❌ Gagal mengambil data: ${errorMessage}`);
       }
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
-      setConnectionStatus(`❌ Error mengambil  ${errorMessage}`);
+      setConnectionStatus(`❌ Error mengambil data: ${errorMessage}`);
       console.error('getTableData error:', err);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
 
@@ -154,7 +154,7 @@ const Connect = () => {
   const saveEditedRow = async () => {
     if (editingRow === null || !selectedUser || !selectedTable) return;
 
-    setLoading(prev => ({ ...prev,  true }));
+    setLoading(prev => ({ ...prev, data: true }));
 
     try {
       const response = await axios.post('/api/update-row.php', {
@@ -177,9 +177,9 @@ const Connect = () => {
         setConnectionStatus(`❌ Gagal mengupdate data: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengupdate  ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error mengupdate data: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
 
@@ -215,7 +215,7 @@ const Connect = () => {
         username: selectedUser.username,
         password: selectedUser.password,
         table: selectedTable,
-         addingData
+        data: addingData
       });
 
       if (response.data.success) {
@@ -229,7 +229,7 @@ const Connect = () => {
     } catch (err) {
       setConnectionStatus(`❌ Error menambahkan data: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
 
@@ -590,7 +590,7 @@ const Connect = () => {
             </div>
           )}
         </div>
-            {/* Section 2: List tables */}
+        {/* Section 2: List tables */}
         {selectedUser && tables.length > 0 && (
           <div style={{ 
             padding: '25px',
@@ -739,6 +739,7 @@ const Connect = () => {
                 </button>
               </div>
             </div>
+            
             {/* Add new row form */}
             {addingRow && (
               <div style={{ 
@@ -944,7 +945,6 @@ const Connect = () => {
                           </button>
                         </td>
                       </tr>
-                      
                       {/* Edit form row - muncul di bawah baris yang diklik */}
                       {editingRow === rowIndex && (
                         <tr>
@@ -1053,6 +1053,7 @@ const Connect = () => {
                 </tbody>
               </table>
             </div>
+            
             {filteredTableData.length === 0 && searchTerm && (
               <div style={{ 
                 textAlign: 'center', 
