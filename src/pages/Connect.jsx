@@ -17,7 +17,6 @@ const Connect = () => {
   const [editingValue, setEditingValue] = useState('');
   const [addingRow, setAddingRow] = useState(false);
   const [addingData, setAddingData] = useState({});
-  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -45,7 +44,7 @@ const Connect = () => {
       );
       setUsers(usersWithDb);
     } catch (err) {
-      console.error('Error fetching ', err);
+      console.error('Error fetching data:', err);
     }
   };
 
@@ -63,13 +62,13 @@ const Connect = () => {
       });
 
       if (response.data.success) {
-        setConnectionStatus(`✅ Koneksi berhasil untuk ${user.username}!`);
+        setConnectionStatus(`Koneksi berhasil untuk ${user.username}!`);
         getTables(user);
       } else {
-        setConnectionStatus(`❌ Koneksi gagal untuk ${user.username}: ${response.data.error}`);
+        setConnectionStatus(`Koneksi gagal untuk ${user.username}: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error untuk ${user.username}: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`Error untuk ${user.username}: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(prev => ({ ...prev, connection: false }));
     }
@@ -90,15 +89,15 @@ const Connect = () => {
       if (response.data.success) {
         setTables(response.data.tables || []);
         setSelectedUser(user);
-        setConnectionStatus(`✅ Ditemukan ${response.data.tables?.length || 0} tabel`);
+        setConnectionStatus(`Ditemukan ${response.data.tables?.length || 0} tabel`);
         setTableData([]);
         setSelectedTable('');
         setTableColumns([]);
       } else {
-        setConnectionStatus(`❌ Gagal mengambil tabel: ${response.data.error}`);
+        setConnectionStatus(`Gagal mengambil tabel: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengambil tabel: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`Error mengambil tabel: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(prev => ({ ...prev, tables: false }));
     }
@@ -125,14 +124,14 @@ const Connect = () => {
       if (response.data && response.data.success) {
         setTableData(response.data.data || []);
         setTableColumns(response.data.columns || []);
-        setConnectionStatus(`✅ Menampilkan data dari tabel ${tableName}`);
+        setConnectionStatus(`Menampilkan data dari tabel ${tableName}`);
       } else {
         const errorMessage = response.data?.error || 'Unknown error';
-        setConnectionStatus(`❌ Gagal mengambil data: ${errorMessage}`);
+        setConnectionStatus(`Gagal mengambil data: ${errorMessage}`);
       }
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
-      setConnectionStatus(`❌ Error mengambil  ${errorMessage}`);
+      setConnectionStatus(`Error mengambil data: ${errorMessage}`);
       console.error('getTableData error:', err);
     } finally {
       setLoading(prev => ({ ...prev, data: false }));
@@ -166,15 +165,15 @@ const Connect = () => {
       });
 
       if (response.data.success) {
-        setConnectionStatus('✅ Data berhasil diupdate!');
+        setConnectionStatus('Data berhasil diupdate!');
         getTableData(selectedTable);
         setEditingCell(null);
         setEditingValue('');
       } else {
-        setConnectionStatus(`❌ Gagal mengupdate data: ${response.data.error}`);
+        setConnectionStatus(`Gagal mengupdate data: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengupdate  ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`Error mengupdate data: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(prev => ({ ...prev, data: false }));
     }
@@ -216,15 +215,15 @@ const Connect = () => {
       });
 
       if (response.data.success) {
-        setConnectionStatus('✅ Data berhasil ditambahkan!');
+        setConnectionStatus('Data berhasil ditambahkan!');
         getTableData(selectedTable);
         setAddingRow(false);
         setAddingData({});
       } else {
-        setConnectionStatus(`❌ Gagal menambahkan data: ${response.data.error}`);
+        setConnectionStatus(`Gagal menambahkan data: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error menambahkan data: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`Error menambahkan data: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(prev => ({ ...prev, data: false }));
     }
@@ -243,14 +242,6 @@ const Connect = () => {
       [field]: value
     }));
   };
-
-  // Filter table data based on search term
-  const filteredTableData = tableData.filter(row => {
-    if (!searchTerm) return true;
-    return Object.values(row).some(value => 
-      value !== null && String(value).toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
 
   // Logout function
   const handleLogout = () => {
@@ -271,306 +262,332 @@ const Connect = () => {
 
   return (
     <div style={{ 
-      color: '#e0e0e0', 
-      backgroundColor: '#1a1a2e',
+      color: 'white', 
+      backgroundColor: '#2d2d2d',
       minHeight: '100vh',
       padding: '20px',
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+      fontFamily: 'Arial, sans-serif'
     }}>
-      {/* Animated Background */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-        zIndex: -1,
-        opacity: 0.9
-      }}></div>
-
       {/* Header */}
       <div style={{ 
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '30px',
-        padding: '20px',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: '15px',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+        padding: '15px',
+        backgroundColor: '#404040',
+        borderRadius: '8px'
       }}>
-        <div style={{ 
-          fontSize: '2.5rem',
-          fontWeight: 'bold',
-          background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-        }}>
-          🚀 MySQL Database Manager
+        <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>
+          MySQL Database Manager
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '16px', color: '#a0a0c0' }}>
-            👤 Welcome, <strong style={{ color: '#4ecdc4' }}>{currentUser.username}</strong>
-          </span>
+          <span>Welcome, {currentUser.username}</span>
           <button
             onClick={goToMainPage}
             style={{
-              padding: '10px 20px',
-              backgroundColor: 'rgba(78, 205, 196, 0.2)',
-              color: '#4ecdc4',
-              border: '1px solid #4ecdc4',
-              borderRadius: '25px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(5px)'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
-              e.target.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
-              e.target.style.transform = 'translateY(0)';
+              padding: '8px 15px',
+              backgroundColor: '#555',
+              color: 'white',
+              border: '1px solid #777',
+              borderRadius: '4px',
+              cursor: 'pointer'
             }}
           >
-            🏠 Main Page
+            Main Page
           </button>
           <button
             onClick={handleLogout}
             style={{
-              padding: '10px 20px',
-              backgroundColor: 'rgba(255, 107, 107, 0.2)',
-              color: '#ff6b6b',
-              border: '1px solid #ff6b6b',
-              borderRadius: '25px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(5px)'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.3)';
-              e.target.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.2)';
-              e.target.style.transform = 'translateY(0)';
+              padding: '8px 15px',
+              backgroundColor: '#777',
+              color: 'white',
+              border: '1px solid #999',
+              borderRadius: '4px',
+              cursor: 'pointer'
             }}
           >
-            🔒 Logout
+            Logout
           </button>
         </div>
       </div>
 
-      <div style={{ 
-        maxWidth: '1400px', 
-        margin: '0 auto',
-        padding: '20px'
-      }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         {/* Connection Status */}
         {connectionStatus && (
           <div style={{
-            padding: '15px 20px',
-            backgroundColor: connectionStatus.includes('✅') ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
-            border: `1px solid ${connectionStatus.includes('✅') ? '#4CAF50' : '#f44336'}`,
-            borderRadius: '10px',
-            marginBottom: '25px',
-            textAlign: 'center',
-            fontWeight: 'bold',
-            fontSize: '16px',
-            backdropFilter: 'blur(5px)',
-            animation: 'fadeIn 0.5s ease-in'
+            padding: '12px',
+            backgroundColor: connectionStatus.includes('berhasil') ? '#2d5a2d' : '#5a2d2d',
+            border: `1px solid ${connectionStatus.includes('berhasil') ? '#4CAF50' : '#f44336'}`,
+            borderRadius: '4px',
+            marginBottom: '20px',
+            textAlign: 'center'
           }}>
             {connectionStatus}
           </div>
         )}
 
-        {/* Dashboard Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '20px',
-          marginBottom: '30px'
-        }}>
-          <div style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            padding: '20px',
-            borderRadius: '15px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            textAlign: 'center',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>👥</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#4ecdc4' }}>{users.length}</div>
-            <div style={{ color: '#a0a0c0' }}>Database Users</div>
-          </div>
-          
-          <div style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            padding: '20px',
-            borderRadius: '15px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            textAlign: 'center',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🗄️</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ff6b6b' }}>{tables.length}</div>
-            <div style={{ color: '#a0a0c0' }}>Tables</div>
-          </div>
-          
-          <div style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            padding: '20px',
-            borderRadius: '15px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            textAlign: 'center',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>📊</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ffd93d' }}>{tableData.length}</div>
-            <div style={{ color: '#a0a0c0' }}>Data Rows</div>
-          </div>
-        </div>
-
         {/* Section 1: List dat.json with test connection */}
         <div style={{ 
-          padding: '25px',
-          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '15px',
+          padding: '20px',
+          border: '1px solid #555',
+          borderRadius: '8px',
           marginBottom: '30px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)'
+          backgroundColor: '#333'
         }}>
-          <h2 style={{ 
-            textAlign: 'center', 
-            marginBottom: '25px',
-            color: '#4ecdc4',
-            fontSize: '1.8rem',
-            fontWeight: 'bold'
-          }}>
-            📋 Database Connections
-          </h2>
+          <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Database Connections</h2>
           
           {users.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              color: '#a0a0c0',
-              padding: '40px',
-              backgroundColor: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '10px'
-            }}>
-              <div style={{ fontSize: '3rem', marginBottom: '15px' }}>📭</div>
-              <div style={{ fontSize: '1.2rem' }}>Tidak ada user dengan konfigurasi database</div>
-            </div>
+            <p style={{ textAlign: 'center', color: '#aaa' }}>Tidak ada user dengan konfigurasi database</p>
           ) : (
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-              gap: '20px' 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+              gap: '15px' 
             }}>
               {users.map(user => (
                 <div 
                   key={user.id}
                   style={{
-                    padding: '20px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    position: 'relative',
-                    transition: 'all 0.3s ease',
-                    backdropFilter: 'blur(5px)'
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.transform = 'translateY(-5px)';
-                    e.target.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.3)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = 'none';
+                    padding: '15px',
+                    backgroundColor: '#444',
+                    border: '1px solid #666',
+                    borderRadius: '6px'
                   }}
                 >
-                  <div style={{ marginBottom: '15px' }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      marginBottom: '10px' 
-                    }}>
-                      <div style={{ 
-                        width: '40px', 
-                        height: '40px', 
-                        backgroundColor: '#4ecdc4',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginRight: '15px',
-                        fontWeight: 'bold'
-                      }}>
-                        {user.username.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' }}>
-                          {user.username}
-                        </div>
-                        <div style={{ fontSize: '0.9rem', color: '#a0a0c0' }}>
-                          Database User
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '10px',
-                      marginTop: '15px'
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '0.8rem', color: '#a0a0c0', marginBottom: '3px' }}>
-                          🌐 Host
-                        </div>
-                        <div style={{ color: '#fff', fontSize: '0.9rem' }}>{user.host}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.8rem', color: '#a0a0c0', marginBottom: '3px' }}>
-                          🗄️ Database
-                        </div>
-                        <div style={{ color: '#fff', fontSize: '0.9rem' }}>{user.dbname}</div>
-                      </div>
-                    </div>
-                  </div>
-                  
+                  <div><strong>Username:</strong> {user.username}</div>
+                  <div><strong>Host:</strong> {user.host}</div>
+                  <div><strong>Database:</strong> {user.dbname}</div>
                   <button
                     onClick={() => testConnection(user)}
                     disabled={loading.connection}
                     style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: loading.connection ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
-                      color: loading.connection ? '#888' : '#fff',
+                      marginTop: '10px',
+                      padding: '8px 15px',
+                      backgroundColor: loading.connection ? '#555' : '#666',
+                      color: 'white',
                       border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
+                      borderRadius: '4px',
                       cursor: loading.connection ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.3s ease',
-                      background: loading.connection ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(45deg, #ff6b6b, #4ecdc4)'
-                    }}
-                    onMouseOver={(e) => {
-                      if (!loading.connection) {
-                        e.target.style.transform = 'scale(1.02)';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (!loading.connection) {
-                        e.target.style.transform = 'scale(1)';
-                      }
+                      width: '100%'
                     }}
                   >
-                  
+                    {loading.connection ? 'Testing...' : 'Test Connection'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section 2: List tables */}
+        {selectedUser && tables.length > 0 && (
+          <div style={{ 
+            padding: '20px',
+            border: '1px solid #555',
+            borderRadius: '8px',
+            marginBottom: '30px',
+            backgroundColor: '#333'
+          }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
+              Tables in {selectedUser.dbname}
+            </h2>
+            
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
+              gap: '10px' 
+            }}>
+              {tables.map((table, index) => (
+                <button
+                  key={index}
+                  onClick={() => getTableData(table)}
+                  disabled={loading.data && selectedTable === table}
+                  style={{
+                    padding: '10px',
+                    backgroundColor: selectedTable === table ? '#555' : '#444',
+                    color: 'white',
+                    border: selectedTable === table ? '2px solid #4CAF50' : '1px solid #666',
+                    borderRadius: '4px',
+                    cursor: loading.data && selectedTable === table ? 'not-allowed' : 'pointer',
+                    textAlign: 'center'
+                  }}
+                >
+                  {loading.data && selectedTable === table ? 'Loading...' : table}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Section 3: Table Data */}
+        {tableData.length > 0 && (
+          <div style={{ 
+            padding: '20px',
+            border: '1px solid #555',
+            borderRadius: '8px',
+            backgroundColor: '#333'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ margin: 0 }}>
+                Data from table: {selectedTable}
+              </h2>
+              <button
+                onClick={startAdding}
+                disabled={addingRow || editingCell !== null}
+                style={{
+                  padding: '8px 15px',
+                  backgroundColor: '#666',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: addingRow || editingCell !== null ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Add New Row
+              </button>
+            </div>
+            
+            {/* Add new row form */}
+            {addingRow && (
+              <div style={{ 
+                marginBottom: '20px',
+                padding: '15px',
+                backgroundColor: '#444',
+                border: '1px solid #666',
+                borderRadius: '6px'
+              }}>
+                <h3 style={{ margin: '0 0 15px 0' }}>Add New Row</h3>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
+                  gap: '10px',
+                  marginBottom: '15px'
+                }}>
+                  {Object.keys(addingData).map((field) => (
+                    <div key={field}>
+                      <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px' }}>
+                        {field}
+                      </label>
+                      <input
+                        type="text"
+                        value={addingData[field]}
+                        onChange={(e) => handleAddInputChange(field, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          backgroundColor: '#555',
+                          color: 'white',
+                          border: '1px solid #777',
+                          borderRadius: '4px',
+                          fontSize: '12px'
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={saveNewRow}
+                    disabled={loading.data}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: loading.data ? '#555' : '#4CAF50',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: loading.data ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {loading.data ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={cancelAdd}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#777',
+                      color: 'white',
+                      border: '1px solid #999',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            <div style={{ 
+              overflowX: 'auto',
+              maxHeight: '500px',
+              overflowY: 'auto'
+            }}>
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                color: 'white',
+                backgroundColor: '#444'
+              }}>
+                <thead>
+                  <tr>
+                    {tableColumns.map((column, index) => (
+                      <th 
+                        key={index}
+                        style={{
+                          border: '1px solid #666',
+                          padding: '10px',
+                          backgroundColor: '#555',
+                          textAlign: 'left'
+                        }}
+                      >
+                        {column}
+                      </th>
+                    ))}
+                    <th 
+                      style={{
+                        border: '1px solid #666',
+                        padding: '10px',
+                        backgroundColor: '#555',
+                        textAlign: 'center'
+                      }}
+                    >
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableData.map((row, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {tableColumns.map((column, cellIndex) => (
+                        <td 
+                          key={cellIndex}
+                          onClick={() => startEditingCell(rowIndex, column, row[column])}
+                          style={{
+                            border: '1px solid #666',
+                            padding: '8px',
+                            backgroundColor: rowIndex % 2 === 0 ? '#444' : '#4a4a4a',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {editingCell && 
+                           editingCell.rowIndex === rowIndex && 
+                           editingCell.columnName === column ? (
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                              <input
+                                type="text"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                autoFocus
+                                style={{
+                                  flex: 1,
+                                  padding: '4px',
+                                  backgroundColor: '#555',
+                                  color: 'white',
+                                  border: '1px solid #4CAF50',
+         
