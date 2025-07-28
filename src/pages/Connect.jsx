@@ -1,5 +1,5 @@
 // src/pages/Connect.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,7 +8,6 @@ const Connect = () => {
   const [selectedUser, setSelectedUser] = useState('');
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState('');
-  const [connectionStatus, setConnectionStatus] = useState('');
   const [testResult, setTestResult] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -25,13 +24,7 @@ const Connect = () => {
   }, [navigate]);
 
   // Load data user dari API
-  useEffect(() => {
-    if (currentUser) {
-      loadUserData();
-    }
-  }, [currentUser]);
-
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     try {
       const response = await axios.get('/api/dat.json');
       const validUsers = (response.data.users || []).filter(user => 
@@ -46,7 +39,13 @@ const Connect = () => {
     } catch (err) {
       console.error('Error loading user data:', err);
     }
-  };
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadUserData();
+    }
+  }, [currentUser, loadUserData]);
 
   // Handle perubahan user selection
   const handleUserChange = (userId) => {
@@ -54,12 +53,6 @@ const Connect = () => {
     setSelectedTable('');
     setTables([]);
     setTestResult('');
-    
-    // Reset connection status
-    const selectedUserData = users.find(user => user.id.toString() === userId);
-    if (selectedUserData) {
-      setConnectionStatus(`Selected: ${selectedUserData.username}@${selectedUserData.host}/${selectedUserData.dbname}`);
-    }
   };
 
   // Test connection ke database
