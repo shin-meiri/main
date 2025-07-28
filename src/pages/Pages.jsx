@@ -8,6 +8,8 @@ const Pages = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newUser, setNewUser] = useState({ username: '', password: '' });
+  const [editingUser, setEditingUser] = useState(null);
+  const [showPasswords, setShowPasswords] = useState({});
 
   // Fungsi untuk mengambil data dari API
   const fetchData = async () => {
@@ -26,6 +28,14 @@ const Pages = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Fungsi untuk toggle visibility password
+  const togglePasswordVisibility = (userId) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
+  };
 
   // Fungsi untuk menambah user baru dengan auto increment ID
   const handleAddUser = async () => {
@@ -56,6 +66,49 @@ const Pages = () => {
         fetchData();
         // Reset form
         setNewUser({ username: '', password: '' });
+        setEditingUser(null);
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  // Fungsi untuk mengedit user
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setNewUser({
+      username: user.username,
+      password: user.password
+    });
+  };
+
+  // Fungsi untuk update user yang sudah ada
+  const handleUpdateUser = async () => {
+    if (!newUser.username || !newUser.password || !editingUser) {
+      alert('Username dan Password harus diisi!');
+      return;
+    }
+
+    try {
+      // Update user yang diedit
+      const updatedUsers = users.map(user => 
+        user.id === editingUser.id 
+          ? { ...user, username: newUser.username, password: newUser.password }
+          : user
+      );
+
+      // Kirim data yang sudah diperbarui ke API
+      const response = await axios.post('/api/dat.php', {
+        message: 'welcome',
+        users: updatedUsers
+      });
+
+      if (response.data.status === 'success') {
+        // Refresh data setelah berhasil mengupdate
+        fetchData();
+        // Reset form
+        setNewUser({ username: '', password: '' });
+        setEditingUser(null);
       }
     } catch (err) {
       setError(err.message);
@@ -78,6 +131,11 @@ const Pages = () => {
         if (response.data.status === 'success') {
           // Refresh data setelah berhasil menghapus
           fetchData();
+          // Jika sedang mengedit user yang dihapus, reset form
+          if (editingUser && editingUser.id === userId) {
+            setNewUser({ username: '', password: '' });
+            setEditingUser(null);
+          }
         }
       } catch (err) {
         setError(err.message);
@@ -97,7 +155,17 @@ const Pages = () => {
   // Fungsi untuk handle submit form
   const handleSubmit = (e) => {
     e.preventDefault();
-    handleAddUser();
+    if (editingUser) {
+      handleUpdateUser();
+    } else {
+      handleAddUser();
+    }
+  };
+
+  // Fungsi untuk cancel edit
+  const handleCancelEdit = () => {
+    setNewUser({ username: '', password: '' });
+    setEditingUser(null);
   };
 
   if (loading) return <div style={{ color: 'pink', backgroundColor: 'black', padding: '20px' }}>Loading...</div>;
@@ -121,7 +189,7 @@ const Pages = () => {
         {data?.message || 'welcome'}
       </div>
 
-      {/* Form untuk menambah user */}
+      {/* Form untuk menambah/edit user */}
       <div style={{ 
         maxWidth: '500px', 
         margin: '0 auto 30px auto',
@@ -129,7 +197,9 @@ const Pages = () => {
         border: '1px solid pink',
         borderRadius: '8px'
       }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Tambah User Baru</h2>
+        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
+          {editingUser ? 'Edit User' : 'Tambah User Baru'}
+        </h2>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <div>
             <label style={{ display: 'block', marginBottom: '5px' }}>Username:</label>
@@ -151,37 +221,61 @@ const Pages = () => {
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: '5px' }}>Password:</label>
-            <input
-              type="password"
-              name="password"
-              value={newUser.password}
-              onChange={handleInputChange}
-              style={{
-                width: '100%',
-                padding: '10px',
-                backgroundColor: '#333',
-                color: 'pink',
-                border: '1px solid #555',
-                borderRadius: '4px'
-              }}
-              placeholder="Masukkan password"
-            />
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="password"
+                name="password"
+                value={newUser.password}
+                onChange={handleInputChange}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  backgroundColor: '#333',
+                  color: 'pink',
+                  border: '1px solid #555',
+                  borderRadius: '4px'
+                }}
+                placeholder="Masukkan password"
+              />
+            </div>
           </div>
-          <button
-            type="submit"
-            style={{
-              padding: '12px',
-              backgroundColor: 'pink',
-              color: 'black',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }}
-          >
-            Save User
-          </button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              type="submit"
+              style={{
+                flex: 1,
+                padding: '12px',
+                backgroundColor: 'pink',
+                color: 'black',
+                border: 'none',
+                borderRadius: '4px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              {editingUser ? '💾 Update' : 'Save User'}
+            </button>
+            {editingUser && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#555',
+                  color: 'pink',
+                  border: '1px solid pink',
+                  borderRadius: '4px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -203,19 +297,46 @@ const Pages = () => {
             {users.map(user => (
               <div 
                 key={user.id}
+                onClick={() => handleEditUser(user)}
                 style={{
                   padding: '15px',
-                  backgroundColor: '#222',
-                  border: '1px solid #444',
+                  backgroundColor: editingUser?.id === user.id ? '#444' : '#222',
+                  border: editingUser?.id === user.id ? '2px solid pink' : '1px solid #444',
                   borderRadius: '6px',
-                  position: 'relative'
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
                 }}
               >
                 <div><strong>ID:</strong> {user.id}</div>
                 <div><strong>Username:</strong> {user.username}</div>
-                <div><strong>Password:</strong> {user.password}</div>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <strong>Password:</strong>
+                  <span style={{ marginLeft: '5px' }}>
+                    {showPasswords[user.id] ? user.password : '•'.repeat(user.password.length)}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      togglePasswordVisibility(user.id);
+                    }}
+                    style={{
+                      marginLeft: '10px',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: 'pink',
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                  >
+                    {showPasswords[user.id] ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
                 <button
-                  onClick={() => handleDeleteUser(user.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteUser(user.id);
+                  }}
                   style={{
                     position: 'absolute',
                     top: '10px',
