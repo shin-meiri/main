@@ -9,6 +9,7 @@ const Connect = () => {
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState({});
+  const [selectedTables, setSelectedTables] = useState({});
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -52,9 +53,9 @@ const Connect = () => {
     navigate('/');
   };
 
-  // Fungsi untuk test koneksi database (simulasi)
+  // Fungsi untuk test koneksi database
   const testConnection = (user) => {
-    // Simulasi test koneksi - dalam aplikasi nyata ini akan memanggil API
+    // Simulasi test koneksi
     setConnectionStatus(prev => ({
       ...prev,
       [user.id]: 'Testing...'
@@ -66,7 +67,7 @@ const Connect = () => {
       const isSuccess = Math.random() > 0.3; // 70% success rate
       setConnectionStatus(prev => ({
         ...prev,
-        [user.id]: isSuccess ? 'Connected' : 'Failed'
+        [user.id]: isSuccess ? 'Connected ✅' : 'Failed ❌'
       }));
 
       // Reset status setelah beberapa detik
@@ -75,8 +76,26 @@ const Connect = () => {
           ...prev,
           [user.id]: ''
         }));
-      }, 3000);
+      }, 5000);
     }, 1500);
+  };
+
+  // Fungsi untuk handle perubahan tabel dropdown
+  const handleTableChange = (userId, value) => {
+    setSelectedTables(prev => ({
+      ...prev,
+      [userId]: value
+    }));
+  };
+
+  // Fungsi untuk mendapatkan daftar tabel (simulasi)
+  const getTableList = (userId) => {
+    // Simulasi daftar tabel
+    const tables = [
+      'users', 'products', 'orders', 'customers', 
+      'categories', 'suppliers', 'employees', 'invoices'
+    ];
+    return tables;
   };
 
   // Jika belum login, jangan tampilkan konten
@@ -173,19 +192,6 @@ const Connect = () => {
         </div>
       </div>
 
-      {/* Welcome Message */}
-      <div style={{ 
-        textAlign: 'center', 
-        fontSize: '1.5rem', 
-        marginBottom: '30px',
-        padding: '20px',
-        backgroundColor: '#222',
-        border: '1px solid #444',
-        borderRadius: '8px'
-      }}>
-        {data?.message || 'Welcome to Database Connections'}
-      </div>
-
       {/* Database Connections */}
       <div>
         <h2 style={{ 
@@ -226,16 +232,19 @@ const Connect = () => {
                     <button
                       onClick={() => testConnection(user)}
                       style={{
-                        padding: '5px 10px',
+                        padding: '8px 12px',
                         backgroundColor: '#444',
                         color: 'pink',
                         border: '1px solid pink',
                         borderRadius: '4px',
                         fontSize: '12px',
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px'
                       }}
                     >
-                      Test Connection
+                      🔁 Test Connection
                     </button>
                   </div>
                 </div>
@@ -243,16 +252,17 @@ const Connect = () => {
                 {/* Connection Status */}
                 {connectionStatus[user.id] && (
                   <div style={{
-                    padding: '8px',
+                    padding: '10px',
                     marginBottom: '15px',
-                    backgroundColor: connectionStatus[user.id] === 'Connected' ? '#2d5a2d' : 
-                                   connectionStatus[user.id] === 'Failed' ? '#7a2d2d' : '#2d4a7a',
+                    backgroundColor: connectionStatus[user.id].includes('Connected') ? '#2d5a2d' : 
+                                   connectionStatus[user.id].includes('Failed') ? '#7a2d2d' : '#2d4a7a',
                     border: '1px solid',
-                    borderColor: connectionStatus[user.id] === 'Connected' ? '#4caf50' : 
-                                connectionStatus[user.id] === 'Failed' ? '#f44336' : '#2196f3',
+                    borderColor: connectionStatus[user.id].includes('Connected') ? '#4caf50' : 
+                                connectionStatus[user.id].includes('Failed') ? '#f44336' : '#2196f3',
                     borderRadius: '4px',
                     textAlign: 'center',
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    fontWeight: 'bold'
                   }}>
                     {connectionStatus[user.id]}
                   </div>
@@ -261,7 +271,7 @@ const Connect = () => {
                 {/* Connection Details */}
                 <div style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: '120px 1fr', 
+                  gridTemplateColumns: '100px 1fr', 
                   gap: '10px',
                   marginBottom: '15px'
                 }}>
@@ -273,13 +283,31 @@ const Connect = () => {
                   
                   <div><strong>Database:</strong></div>
                   <div>{user.dbname}</div>
-                  
-                  {user.tabel && (
-                    <>
-                      <div><strong>Table:</strong></div>
-                      <div>{user.tabel}</div>
-                    </>
-                  )}
+                </div>
+
+                {/* Table Selection */}
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'block', marginBottom: '5px' }}>
+                    <strong>Select Table:</strong>
+                  </label>
+                  <select
+                    value={selectedTables[user.id] || (user.tabel || '')}
+                    onChange={(e) => handleTableChange(user.id, e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      backgroundColor: '#333',
+                      color: 'pink',
+                      border: '1px solid #555',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  >
+                    <option value="">-- Select a table --</option>
+                    {getTableList(user.id).map((table, index) => (
+                      <option key={index} value={table}>{table}</option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* MySQL Connection String */}
@@ -296,15 +324,15 @@ const Connect = () => {
                   <div style={{ marginTop: '5px' }}>
                     mysql -h {user.host} -u {user.username} -p {user.dbname}
                   </div>
-                  {user.tabel && (
+                  {selectedTables[user.id] && (
                     <div style={{ marginTop: '5px' }}>
-                      Table: {user.tabel}
+                      Selected Table: {selectedTables[user.id]}
                     </div>
                   )}
                 </div>
 
-                {/* Table Information (simulasi) */}
-                {user.tabel && (
+                {/* Table Information */}
+                {selectedTables[user.id] && (
                   <div style={{ 
                     marginTop: '15px',
                     padding: '10px',
@@ -312,12 +340,14 @@ const Connect = () => {
                     border: '1px solid #444',
                     borderRadius: '4px'
                   }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: 'pink' }}>Table Structure</h4>
+                    <h4 style={{ margin: '0 0 10px 0', color: 'pink' }}>
+                      Table: {selectedTables[user.id]}
+                    </h4>
                     <div style={{ fontSize: '12px' }}>
-                      <div><strong>Table Name:</strong> {user.tabel}</div>
                       <div><strong>Engine:</strong> InnoDB</div>
                       <div><strong>Rows:</strong> ~{(Math.floor(Math.random() * 1000) + 100).toLocaleString()}</div>
                       <div><strong>Size:</strong> {(Math.random() * 10 + 1).toFixed(2)} MB</div>
+                      <div><strong>Collation:</strong> utf8_general_ci</div>
                     </div>
                   </div>
                 )}
