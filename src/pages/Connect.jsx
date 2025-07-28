@@ -11,10 +11,10 @@ const Connect = () => {
   const [tableData, setTableData] = useState([]);
   const [tableColumns, setTableColumns] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('');
-  const [loading, setLoading] = useState({ connection: false, tables: false, data: false });
+  const [loading, setLoading] = useState({ connection: false, tables: false,  false });
   const [currentUser, setCurrentUser] = useState(null);
-  const [editingCell, setEditingCell] = useState(null);
-  const [editingValue, setEditingValue] = useState('');
+  const [editingRow, setEditingRow] = useState(null);
+  const [editingData, setEditingData] = useState({});
   const [addingRow, setAddingRow] = useState(false);
   const [addingData, setAddingData] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +45,7 @@ const Connect = () => {
       );
       setUsers(usersWithDb);
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error('Error fetching ', err);
     }
   };
 
@@ -108,9 +108,9 @@ const Connect = () => {
   const getTableData = async (tableName) => {
     if (!selectedUser || !tableName) return;
 
-    setLoading(prev => ({ ...prev, data: true }));
+    setLoading(prev => ({ ...prev,  true }));
     setSelectedTable(tableName);
-    setEditingCell(null);
+    setEditingRow(null);
     setAddingRow(false);
 
     try {
@@ -128,62 +128,65 @@ const Connect = () => {
         setConnectionStatus(`✅ Menampilkan data dari tabel ${tableName}`);
       } else {
         const errorMessage = response.data?.error || 'Unknown error';
-        setConnectionStatus(`❌ Gagal mengambil data: ${errorMessage}`);
+        setConnectionStatus(`❌ Gagal mengambil  ${errorMessage}`);
       }
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
-      setConnectionStatus(`❌ Error mengambil data: ${errorMessage}`);
+      setConnectionStatus(`❌ Error mengambil  ${errorMessage}`);
       console.error('getTableData error:', err);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
-  // Start editing cell
-  const startEditingCell = (rowIndex, columnName, currentValue) => {
-    setEditingCell({ rowIndex, columnName });
-    setEditingValue(currentValue !== null ? String(currentValue) : '');
+  // Start editing row
+  const startEditingRow = (rowIndex, rowData) => {
+    setEditingRow(rowIndex);
+    // Inisialisasi editing data dengan nilai dari row
+    const editData = {};
+    tableColumns.forEach(column => {
+      editData[column] = rowData[column] !== null ? String(rowData[column]) : '';
+    });
+    setEditingData(editData);
   };
 
-  // Save edited cell
-  const saveEditedCell = async () => {
-    if (!editingCell || !selectedUser || !selectedTable) return;
+  // Save edited row
+  const saveEditedRow = async () => {
+    if (editingRow === null || !selectedUser || !selectedTable) return;
 
-    setLoading(prev => ({ ...prev, data: true }));
+    setLoading(prev => ({ ...prev,  true }));
 
     try {
-      const response = await axios.post('/api/update-cell.php', {
+      const response = await axios.post('/api/update-row.php', {
         host: selectedUser.host,
         dbname: selectedUser.dbname,
         username: selectedUser.username,
         password: selectedUser.password,
         table: selectedTable,
-        rowIndex: editingCell.rowIndex,
-        columnName: editingCell.columnName,
-        value: editingValue,
+        data: editingData,
         primaryKey: tableColumns[0],
-        primaryKeyValue: tableData[editingCell.rowIndex][tableColumns[0]]
+        primaryKeyValue: tableData[editingRow][tableColumns[0]]
       });
 
       if (response.data.success) {
         setConnectionStatus('✅ Data berhasil diupdate!');
         getTableData(selectedTable);
-        setEditingCell(null);
-        setEditingValue('');
+        setEditingRow(null);
+        setEditingData({});
       } else {
         setConnectionStatus(`❌ Gagal mengupdate data: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengupdate data: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error mengupdate  ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
   // Cancel editing
   const cancelEditing = () => {
-    setEditingCell(null);
-    setEditingValue('');
+    setEditingRow(null);
+    setEditingData({});
   };
 
   // Start adding new row
@@ -212,7 +215,7 @@ const Connect = () => {
         username: selectedUser.username,
         password: selectedUser.password,
         table: selectedTable,
-        data: addingData
+         addingData
       });
 
       if (response.data.success) {
@@ -226,7 +229,7 @@ const Connect = () => {
     } catch (err) {
       setConnectionStatus(`❌ Error menambahkan data: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
@@ -234,6 +237,14 @@ const Connect = () => {
   const cancelAdd = () => {
     setAddingRow(false);
     setAddingData({});
+  };
+
+  // Handle input change for editing
+  const handleEditInputChange = (field, value) => {
+    setEditingData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   // Handle input change for adding
@@ -579,8 +590,7 @@ const Connect = () => {
             </div>
           )}
         </div>
-
-        {/* Section 2: List tables */}
+            {/* Section 2: List tables */}
         {selectedUser && tables.length > 0 && (
           <div style={{ 
             padding: '25px',
@@ -697,7 +707,7 @@ const Connect = () => {
                 
                 <button
                   onClick={startAdding}
-                  disabled={addingRow || editingCell !== null}
+                  disabled={addingRow || editingRow !== null}
                   style={{
                     padding: '12px 20px',
                     backgroundColor: 'rgba(78, 205, 196, 0.2)',
@@ -706,20 +716,20 @@ const Connect = () => {
                     borderRadius: '25px',
                     fontSize: '14px',
                     fontWeight: 'bold',
-                    cursor: addingRow || editingCell !== null ? 'not-allowed' : 'pointer',
+                    cursor: addingRow || editingRow !== null ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
                     transition: 'all 0.3s ease'
                   }}
                   onMouseOver={(e) => {
-                    if (!(addingRow || editingCell !== null)) {
+                    if (!(addingRow || editingRow !== null)) {
                       e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
                       e.target.style.transform = 'translateY(-2px)';
                     }
                   }}
                   onMouseOut={(e) => {
-                    if (!(addingRow || editingCell !== null)) {
+                    if (!(addingRow || editingRow !== null)) {
                       e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
                       e.target.style.transform = 'translateY(0)';
                     }
@@ -729,7 +739,6 @@ const Connect = () => {
                 </button>
               </div>
             </div>
-            
             {/* Add new row form */}
             {addingRow && (
               <div style={{ 
@@ -875,128 +884,175 @@ const Connect = () => {
                 </thead>
                 <tbody>
                   {filteredTableData.map((row, rowIndex) => (
-                    <tr 
-                      key={rowIndex}
-                      style={{
-                        backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
-                        transition: 'background-color 0.2s ease'
-                      }}
-                      onMouseOver={(e) => {
-                        e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.1)';
-                      }}
-                      onMouseOut={(e) => {
-                        e.target.style.backgroundColor = rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)';
-                      }}
-                    >
-                      {tableColumns.map((column, cellIndex) => (
-                        <td 
-                          key={cellIndex}
-                          onClick={() => startEditingCell(rowIndex, column, row[column])}
-                          style={{
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            padding: '12px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          {editingCell && 
-                           editingCell.rowIndex === rowIndex && 
-                           editingCell.columnName === column ? (
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                              <input
-                                type="text"
-                                value={editingValue}
-                                onChange={(e) => setEditingValue(e.target.value)}
-                                autoFocus
-                                style={{
-                                  flex: 1,
-                                  padding: '8px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  color: '#fff',
-                                  border: '1px solid #4ecdc4',
-                                  borderRadius: '6px',
-                                  fontSize: '13px'
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    saveEditedCell();
-                                  } else if (e.key === 'Escape') {
-                                    cancelEditing();
-                                  }
-                                }}
-                              />
-                              <button
-                                onClick={saveEditedCell}
-                                disabled={loading.data}
-                                style={{
-                                  padding: '6px 12px',
-                                  backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
-                                  color: loading.data ? '#888' : '#4CAF50',
-                                  border: '1px solid #4CAF50',
-                                  borderRadius: '20px',
-                                  fontSize: '11px',
-                                  cursor: loading.data ? 'not-allowed' : 'pointer'
-                                }}
-                              >
-                                ✓
-                              </button>
-                              <button
-                                onClick={cancelEditing}
-                                style={{
-                                  padding: '6px 12px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  color: '#ff6b6b',
-                                  border: '1px solid #ff6b6b',
-                                  borderRadius: '20px',
-                                  fontSize: '11px',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          ) : (
+                    <React.Fragment key={rowIndex}>
+                      <tr 
+                        style={{
+                          backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
+                          transition: 'background-color 0.2s ease',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => startEditingRow(rowIndex, row)}
+                        onMouseOver={(e) => {
+                          e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.1)';
+                        }}
+                        onMouseOut={(e) => {
+                          e.target.style.backgroundColor = rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)';
+                        }}
+                      >
+                        {tableColumns.map((column, cellIndex) => (
+                          <td 
+                            key={cellIndex}
+                            style={{
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              padding: '12px',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
                             <div style={{ 
                               display: 'flex', 
                               alignItems: 'center', 
                               gap: '8px' 
                             }}>
-                              <span>✏️</span>
+                              <span>📋</span>
                               <span>{row[column] !== null ? String(row[column]) : 'NULL'}</span>
                             </div>
-                          )}
-                        </td>
-                      ))}
-                      <td 
-                        style={{
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          padding: '12px',
-                          textAlign: 'center'
-                        }}
-                      >
-                        <button
-                          onClick={() => {
-                            // Bisa tambahkan aksi lain di sini
-                          }}
+                          </td>
+                        ))}
+                        <td 
                           style={{
-                            padding: '6px 12px',
-                            backgroundColor: 'rgba(255, 217, 61, 0.2)',
-                            color: '#ffd93d',
-                            border: '1px solid #ffd93d',
-                            borderRadius: '20px',
-                            fontSize: '11px',
-                            cursor: 'pointer'
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            padding: '12px',
+                            textAlign: 'center'
                           }}
                         >
-                          📋 View
-                        </button>
-                      </td>
-                    </tr>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEditingRow(rowIndex, row);
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                              color: '#4ecdc4',
+                              border: '1px solid #4ecdc4',
+                              borderRadius: '20px',
+                              fontSize: '11px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✏️ Edit
+                          </button>
+                        </td>
+                      </tr>
+                      
+                      {/* Edit form row - muncul di bawah baris yang diklik */}
+                      {editingRow === rowIndex && (
+                        <tr>
+                          <td 
+                            colSpan={tableColumns.length + 1}
+                            style={{
+                              padding: '0',
+                              border: '1px solid rgba(255, 217, 61, 0.5)',
+                              backgroundColor: 'rgba(255, 217, 61, 0.1)'
+                            }}
+                          >
+                            <div style={{ 
+                              padding: '20px',
+                              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                              borderRadius: '0 0 8px 8px'
+                            }}>
+                              <h4 style={{ 
+                                margin: '0 0 15px 0',
+                                color: '#ffd93d',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px'
+                              }}>
+                                🛠️ Edit Record
+                              </h4>
+                              <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
+                                gap: '15px',
+                                marginBottom: '20px'
+                              }}>
+                                {tableColumns.map((column) => (
+                                  <div key={column}>
+                                    <label style={{ 
+                                      display: 'block', 
+                                      fontSize: '11px', 
+                                      marginBottom: '5px',
+                                      color: '#a0a0c0'
+                                    }}>
+                                      {column}
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={editingData[column] || ''}
+                                      onChange={(e) => handleEditInputChange(column, e.target.value)}
+                                      style={{
+                                        width: '100%',
+                                        padding: '8px',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        color: '#fff',
+                                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                                        borderRadius: '6px',
+                                        fontSize: '13px'
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    saveEditedRow();
+                                  }}
+                                  disabled={loading.data}
+                                  style={{
+                                    padding: '8px 16px',
+                                    backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
+                                    color: loading.data ? '#888' : '#4CAF50',
+                                    border: '1px solid #4CAF50',
+                                    borderRadius: '20px',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    cursor: loading.data ? 'not-allowed' : 'pointer',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                >
+                                  {loading.data ? '💾 Saving...' : '💾 Save Changes'}
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    cancelEditing();
+                                  }}
+                                  style={{
+                                    padding: '8px 16px',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    color: '#ff6b6b',
+                                    border: '1px solid #ff6b6b',
+                                    borderRadius: '20px',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s ease'
+                                  }}
+                                >
+                                  ❌ Cancel
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
             </div>
-            
             {filteredTableData.length === 0 && searchTerm && (
               <div style={{ 
                 textAlign: 'center', 
