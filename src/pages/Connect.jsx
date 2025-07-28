@@ -1,7 +1,3 @@
-Ada syntax error di kode. Mari saya perbaiki:
-
-### 1. File `src/pages/Connect.jsx` (diperbaiki)
-```jsx
 // src/pages/Connect.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -48,7 +44,7 @@ const Connect = () => {
       );
       setUsers(usersWithDb);
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error('Error fetching ', err);
     }
   };
 
@@ -133,14 +129,14 @@ const Connect = () => {
         setConnectionStatus(`✅ Menampilkan data dari tabel ${tableName}`);
       } else {
         const errorMessage = response.data?.error || 'Unknown error';
-        setConnectionStatus(`❌ Gagal mengambil data: ${errorMessage}`);
+        setConnectionStatus(`❌ Gagal mengambil  ${errorMessage}`);
       }
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
-      setConnectionStatus(`❌ Error mengambil data: ${errorMessage}`);
+      setConnectionStatus(`❌ Error mengambil  ${errorMessage}`);
       console.error('getTableData error:', err);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
@@ -154,7 +150,7 @@ const Connect = () => {
   const saveEditedCell = async () => {
     if (!editingCell || !selectedUser || !selectedTable) return;
 
-    setLoading(prev => ({ ...prev, data: true }));
+    setLoading(prev => ({ ...prev,  true }));
 
     try {
       const response = await axios.post('/api/update-cell.php', {
@@ -177,12 +173,12 @@ const Connect = () => {
         setEditingCell(null);
         setEditingValue('');
       } else {
-        setConnectionStatus(`❌ Gagal mengupdate data: ${response.data.error}`);
+        setConnectionStatus(`❌ Gagal mengupdate  ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengupdate data: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error mengupdate  ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
@@ -218,7 +214,7 @@ const Connect = () => {
         username: selectedUser.username,
         password: selectedUser.password,
         table: selectedTable,
-        data: addingData
+         addingData
       });
 
       if (response.data.success) {
@@ -231,9 +227,9 @@ const Connect = () => {
         setConnectionStatus(`❌ Gagal menambahkan data: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error menambahkan data: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error menambahkan  ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
@@ -596,4 +592,7 @@ const Connect = () => {
                               <input
                                 type="text"
                                 value={editingValue}
-                                on
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                autoFocus
+                                style={{
+                           
