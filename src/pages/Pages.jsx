@@ -8,16 +8,17 @@ const Pages = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [newUser, setNewUser] = useState({ username: '', password: '' });
-  const [editingUser, setEditingUser] = useState(null);
-  const [showPasswords, setShowPasswords] = useState({});
-  const [currentUser, setCurrentUser] = useState(null);
-  const [showDbConfig, setShowDbConfig] = useState(false);
-  const [dbConfig, setDbConfig] = useState({
+  const [newUser, setNewUser] = useState({ 
+    username: '', 
+    password: '',
     host: '',
     dbname: '',
     tabel: ''
   });
+  const [editingUser, setEditingUser] = useState(null);
+  const [showPasswords, setShowPasswords] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showDbFields, setShowDbFields] = useState(false);
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -36,12 +37,6 @@ const Pages = () => {
       const response = await axios.get('/api/dat.json');
       setData(response.data);
       setUsers(response.data.users || []);
-      
-      // Set db config jika ada
-      if (response.data.dbConfig) {
-        setDbConfig(response.data.dbConfig);
-      }
-      
       setLoading(false);
     } catch (err) {
       setError(err.message);
@@ -71,36 +66,6 @@ const Pages = () => {
     }));
   };
 
-  // Fungsi untuk handle db config change
-  const handleDbConfigChange = (e) => {
-    const { name, value } = e.target;
-    setDbConfig(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // Fungsi untuk save db config
-  const handleSaveDbConfig = async () => {
-    try {
-      // Kirim data ke API termasuk db config
-      const response = await axios.post('/api/dat.php', {
-        message: data?.message || 'welcome',
-        users: users,
-        dbConfig: dbConfig
-      });
-
-      if (response.data.status === 'success') {
-        // Refresh data setelah berhasil menyimpan
-        fetchData();
-        alert('Database configuration saved successfully!');
-      }
-    } catch (err) {
-      setError(err.message);
-      alert('Failed to save database configuration!');
-    }
-  };
-
   // Fungsi untuk menambah user baru dengan auto increment ID
   const handleAddUser = async () => {
     if (!newUser.username || !newUser.password) {
@@ -116,22 +81,31 @@ const Pages = () => {
       const userToAdd = {
         id: newId,
         username: newUser.username,
-        password: newUser.password
+        password: newUser.password,
+        host: newUser.host || '',
+        dbname: newUser.dbname || '',
+        tabel: newUser.tabel || ''
       };
 
       // Kirim data ke API
       const response = await axios.post('/api/dat.php', {
-        message: data?.message || 'welcome',
-        users: [...users, userToAdd],
-        dbConfig: dbConfig
+        message: 'welcome',
+        users: [...users, userToAdd]
       });
 
       if (response.data.status === 'success') {
         // Refresh data setelah berhasil menyimpan
         fetchData();
         // Reset form
-        setNewUser({ username: '', password: '' });
+        setNewUser({ 
+          username: '', 
+          password: '',
+          host: '',
+          dbname: '',
+          tabel: ''
+        });
         setEditingUser(null);
+        setShowDbFields(false);
       }
     } catch (err) {
       setError(err.message);
@@ -143,8 +117,15 @@ const Pages = () => {
     setEditingUser(user);
     setNewUser({
       username: user.username,
-      password: user.password
+      password: user.password,
+      host: user.host || '',
+      dbname: user.dbname || '',
+      tabel: user.tabel || ''
     });
+    // Tampilkan field DB jika ada data DB
+    if (user.host || user.dbname || user.tabel) {
+      setShowDbFields(true);
+    }
   };
 
   // Fungsi untuk update user yang sudah ada
@@ -158,23 +139,36 @@ const Pages = () => {
       // Update user yang diedit
       const updatedUsers = users.map(user => 
         user.id === editingUser.id 
-          ? { ...user, username: newUser.username, password: newUser.password }
+          ? { 
+              ...user, 
+              username: newUser.username, 
+              password: newUser.password,
+              host: newUser.host || '',
+              dbname: newUser.dbname || '',
+              tabel: newUser.tabel || ''
+            }
           : user
       );
 
       // Kirim data yang sudah diperbarui ke API
       const response = await axios.post('/api/dat.php', {
-        message: data?.message || 'welcome',
-        users: updatedUsers,
-        dbConfig: dbConfig
+        message: 'welcome',
+        users: updatedUsers
       });
 
       if (response.data.status === 'success') {
         // Refresh data setelah berhasil mengupdate
         fetchData();
         // Reset form
-        setNewUser({ username: '', password: '' });
+        setNewUser({ 
+          username: '', 
+          password: '',
+          host: '',
+          dbname: '',
+          tabel: ''
+        });
         setEditingUser(null);
+        setShowDbFields(false);
       }
     } catch (err) {
       setError(err.message);
@@ -190,9 +184,8 @@ const Pages = () => {
         
         // Kirim data yang sudah diperbarui ke API
         const response = await axios.post('/api/dat.php', {
-          message: data?.message || 'welcome',
-          users: updatedUsers,
-          dbConfig: dbConfig
+          message: 'welcome',
+          users: updatedUsers
         });
 
         if (response.data.status === 'success') {
@@ -200,8 +193,15 @@ const Pages = () => {
           fetchData();
           // Jika sedang mengedit user yang dihapus, reset form
           if (editingUser && editingUser.id === userId) {
-            setNewUser({ username: '', password: '' });
+            setNewUser({ 
+              username: '', 
+              password: '',
+              host: '',
+              dbname: '',
+              tabel: ''
+            });
             setEditingUser(null);
+            setShowDbFields(false);
           }
         }
       } catch (err) {
@@ -231,8 +231,15 @@ const Pages = () => {
 
   // Fungsi untuk cancel edit
   const handleCancelEdit = () => {
-    setNewUser({ username: '', password: '' });
+    setNewUser({ 
+      username: '', 
+      password: '',
+      host: '',
+      dbname: '',
+      tabel: ''
+    });
     setEditingUser(null);
+    setShowDbFields(false);
   };
 
   // Jika belum login, jangan tampilkan konten
@@ -286,123 +293,9 @@ const Pages = () => {
         </div>
       </div>
 
-      {/* Database Configuration Section */}
-      <div style={{ 
-        maxWidth: '800px', 
-        margin: '0 auto 20px auto',
-        padding: '15px',
-        border: '1px solid #555',
-        borderRadius: '6px',
-        backgroundColor: '#1a1a1a'
-      }}>
-        <div 
-          onClick={() => setShowDbConfig(!showDbConfig)}
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            cursor: 'pointer',
-            padding: '10px 0'
-          }}
-        >
-          <h3 style={{ margin: 0, color: 'pink' }}>Database Configuration (Opsional) 🔽</h3>
-          <span style={{ fontSize: '12px', color: '#888' }}>
-            {showDbConfig ? '▲' : '▼'}
-          </span>
-        </div>
-        
-        {showDbConfig && (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '15px',
-            marginTop: '15px',
-            padding: '15px',
-            border: '1px dashed #444',
-            borderRadius: '4px'
-          }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>Host:</label>
-              <input
-                type="text"
-                name="host"
-                value={dbConfig.host}
-                onChange={handleDbConfigChange}
-                placeholder="localhost"
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  backgroundColor: '#333',
-                  color: 'pink',
-                  border: '1px solid #555',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>Database Name:</label>
-              <input
-                type="text"
-                name="dbname"
-                value={dbConfig.dbname}
-                onChange={handleDbConfigChange}
-                placeholder="my_database"
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  backgroundColor: '#333',
-                  color: 'pink',
-                  border: '1px solid #555',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '5px', fontSize: '14px' }}>Tabel:</label>
-              <input
-                type="text"
-                name="tabel"
-                value={dbConfig.tabel}
-                onChange={handleDbConfigChange}
-                placeholder="users"
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  backgroundColor: '#333',
-                  color: 'pink',
-                  border: '1px solid #555',
-                  borderRadius: '4px',
-                  fontSize: '14px'
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-              <button
-                onClick={handleSaveDbConfig}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: 'pink',
-                  color: 'black',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  height: '36px'
-                }}
-              >
-                Save DB Config
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Form untuk menambah/edit user */}
       <div style={{ 
-        maxWidth: '500px', 
+        maxWidth: '600px', 
         margin: '0 auto 30px auto',
         padding: '20px',
         border: '1px solid pink',
@@ -432,24 +325,103 @@ const Pages = () => {
           </div>
           <div>
             <label style={{ display: 'block', marginBottom: '5px' }}>Password:</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input
-                type="password"
-                name="password"
-                value={newUser.password}
-                onChange={handleInputChange}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  backgroundColor: '#333',
-                  color: 'pink',
-                  border: '1px solid #555',
-                  borderRadius: '4px'
-                }}
-                placeholder="Masukkan password"
-              />
-            </div>
+            <input
+              type="password"
+              name="password"
+              value={newUser.password}
+              onChange={handleInputChange}
+              style={{
+                width: '100%',
+                padding: '10px',
+                backgroundColor: '#333',
+                color: 'pink',
+                border: '1px solid #555',
+                borderRadius: '4px'
+              }}
+              placeholder="Masukkan password"
+            />
           </div>
+
+          {/* Toggle untuk field database */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowDbFields(!showDbFields)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'pink',
+                cursor: 'pointer',
+                textAlign: 'left',
+                padding: '5px 0',
+                fontSize: '14px',
+                textDecoration: 'underline'
+              }}
+            >
+              {showDbFields ? '▼ Sembunyikan Database Fields' : '▶ Tambah Database Fields (Opsional)'}
+            </button>
+          </div>
+
+          {/* Field database (opsional) */}
+          {showDbFields && (
+            <>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px' }}>Host:</label>
+                <input
+                  type="text"
+                  name="host"
+                  value={newUser.host}
+                  onChange={handleInputChange}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: '#333',
+                    color: 'pink',
+                    border: '1px solid #555',
+                    borderRadius: '4px'
+                  }}
+                  placeholder="localhost"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px' }}>Database Name:</label>
+                <input
+                  type="text"
+                  name="dbname"
+                  value={newUser.dbname}
+                  onChange={handleInputChange}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: '#333',
+                    color: 'pink',
+                    border: '1px solid #555',
+                    borderRadius: '4px'
+                  }}
+                  placeholder="nama_database"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px' }}>Tabel:</label>
+                <input
+                  type="text"
+                  name="tabel"
+                  value={newUser.tabel}
+                  onChange={handleInputChange}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: '#333',
+                    color: 'pink',
+                    border: '1px solid #555',
+                    borderRadius: '4px'
+                  }}
+                  placeholder="nama_tabel"
+                />
+              </div>
+            </>
+          )}
+
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
               type="submit"
@@ -492,7 +464,7 @@ const Pages = () => {
 
       {/* Daftar user yang sudah ada */}
       <div style={{ 
-        maxWidth: '800px', 
+        maxWidth: '1000px', 
         margin: '0 auto',
         padding: '20px'
       }}>
@@ -502,7 +474,7 @@ const Pages = () => {
         ) : (
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
             gap: '15px' 
           }}>
             {users.map(user => (
@@ -543,6 +515,18 @@ const Pages = () => {
                     {showPasswords[user.id] ? '👁️' : '👁️‍🗨️'}
                   </button>
                 </div>
+                
+                {/* Tampilkan field database jika ada data */}
+                {user.host && (
+                  <div><strong>Host:</strong> {user.host}</div>
+                )}
+                {user.dbname && (
+                  <div><strong>DB Name:</strong> {user.dbname}</div>
+                )}
+                {user.tabel && (
+                  <div><strong>Tabel:</strong> {user.tabel}</div>
+                )}
+
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
