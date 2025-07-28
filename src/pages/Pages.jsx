@@ -1,406 +1,173 @@
-// /pages/Pages.jsx
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const Pages = () => {
-  // State untuk data CRUD
   const [users, setUsers] = useState([]);
-  const [formData, setFormData] = useState({
-    id: '',
-    user: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ user: '', password: '' });
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState('');
 
-  // Load data dari API saat komponen pertama kali dimuat
+  // Load data dari API
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
     try {
-      setLoading(true);
-      const response = await axios.get('/api/dat.php');
+      const response = await axios.get('/api/users.php');
       setUsers(response.data);
+      setError('');
     } catch (err) {
-      console.error('Error loading ', err);
-      setError('Gagal memuat  ' + (err.response?.data?.error || err.message));
+      setError('Gagal memuat data');
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle perubahan input
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+  const getNextId = () => {
+    return users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
   };
 
-  // Handle submit form (tambah/edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.user || !formData.password) {
-      alert('User dan Password harus diisi!');
+    if (!formData.user.trim() || !formData.password.trim()) {
+      setError('Username dan Password tidak boleh kosong');
       return;
     }
 
     try {
-      if (editingId) {
-        // Update data yang ada (PUT request)
-        await axios.put('/api/dat.php', {
-          id: editingId,
-          user: formData.user,
-          password: formData.password
-        });
-      } else {
-        // Tambah data baru (POST request)
-        await axios.post('/api/dat.php', {
-          user: formData.user,
-          password: formData.password
-        });
-      }
-      
-      // Reset form dan reload data
-      setFormData({ id: '', user: '', password: '' });
+      const userData = {
+        id: editingId || getNextId(),
+        user: formData.user.trim(),
+        password: formData.password.trim(),
+        action: editingId ? 'update' : 'create'
+      };
+
+      await axios.post('/api/users.php', userData);
+      await loadData(); // Reload data
+      setFormData({ user: '', password: '' });
       setEditingId(null);
-      await loadData();
-      
+      setError('');
     } catch (err) {
-      console.error('Save error:', err);
-      setError('Gagal menyimpan  ' + (err.response?.data?.error || err.message));
+      setError('Gagal menyimpan data');
     }
   };
 
-  // Handle edit
   const handleEdit = (user) => {
-    setFormData({
-      id: user.id,
-      user: user.user,
-      password: user.password
-    });
+    setFormData({ user: user.user, password: user.password });
     setEditingId(user.id);
+    setError('');
   };
 
-  // Handle delete - SOLUSI ALTERNATIF UNTUK MENGATASI NETWORK ERROR
   const handleDelete = async (id) => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+    if (users.length <= 1) {
+      setError('Tidak bisa menghapus user terakhir');
+      return;
+    }
+    
+    if (window.confirm('Yakin ingin menghapus user ini?')) {
       try {
-        // SOLUSI 1: Gunakan POST dengan parameter action=delete
-        const response = await axios.post(`/api/dat.php?action=delete&id=${id}`, {
-          id: id
-        });
-        
-        if (response.data.message) {
-          // Berhasil dihapus
-          await loadData();
-          
-          // Reset form jika sedang edit data yang dihapus
-          if (editingId === id) {
-            setFormData({ id: '', user: '', password: '' });
-            setEditingId(null);
-          }
-        } else {
-          throw new Error(response.data.error || 'Gagal menghapus data');
+        await axios.post('/api/users.php', { id, action: 'delete' });
+        await loadData(); // Reload data
+        if (editingId === id) {
+          setFormData({ user: '', password: '' });
+          setEditingId(null);
         }
-        
+        setError('');
       } catch (err) {
-        console.error('Delete error:', err);
-        
-        // SOLUSI 2: Fallback ke fetch API
-        try {
-          const response = await fetch(`/api/dat.php?action=delete&id=${id}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ id: id })
-          });
-          
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Gagal menghapus data');
-          }
-          
-          await loadData();
-          
-          if (editingId === id) {
-            setFormData({ id: '', user: '', password: '' });
-            setEditingId(null);
-          }
-          
-        } catch (fetchErr) {
-          console.error('Fetch delete error:', fetchErr);
-          setError('Gagal menghapus  ' + fetchErr.message);
-        }
+        setError('Gagal menghapus data');
       }
     }
   };
 
-  // Handle cancel edit
   const handleCancel = () => {
-    setFormData({ id: '', user: '', password: '' });
+    setFormData({ user: '', password: '' });
     setEditingId(null);
+    setError('');
   };
 
-  if (loading) return (
-    <div style={{ 
-      backgroundColor: 'black', 
-      minHeight: '100vh', 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center',
-      color: 'white'
-    }}>
-      Loading...
-    </div>
-  );
-
-  if (error) return (
-    <div style={{ 
-      backgroundColor: 'black', 
-      minHeight: '100vh', 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center',
-      color: 'red'
-    }}>
-      Error: {error}
-    </div>
-  );
+  if (loading) return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
 
   return (
-    <div style={{
-      backgroundColor: 'black',
-      minHeight: '100vh',
-      color: 'white',
-      padding: '20px'
-    }}>
-      <div style={{
-        maxWidth: '800px',
-        margin: '0 auto',
-        padding: '20px'
-      }}>
-        {/* Header Welcome */}
-        <div style={{
-          textAlign: 'center',
-          marginBottom: '30px',
-          padding: '20px',
-          backgroundColor: '#333',
-          borderRadius: '10px'
-        }}>
-          <h1 style={{
-            color: 'pink',
-            fontSize: '2.5rem',
-            margin: '0'
-          }}>
-            Welcome
-          </h1>
-          <p style={{ color: '#ccc', marginTop: '10px' }}>
-            CRUD User Management System
-          </p>
+    <div style={{ padding: '20px', maxWidth: '1000px', margin: '0 auto', fontFamily: 'Arial, sans-serif' }}>
+      <h1 style={{ textAlign: 'center', color: '#333', marginBottom: '30px' }}>User Management</h1>
+      
+      {error && (
+        <div style={{ backgroundColor: '#f8d7da', color: '#721c24', padding: '10px', borderRadius: '4px', marginBottom: '15px' }}>
+          {error}
         </div>
-
-        {/* Form Input */}
-        <div style={{
-          backgroundColor: '#222',
-          padding: '20px',
-          borderRadius: '10px',
-          marginBottom: '30px'
-        }}>
-          <h2 style={{ color: 'pink', marginBottom: '20px' }}>
-            {editingId ? 'Edit User' : 'Tambah User Baru'}
-          </h2>
-          
-          <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Username:
-              </label>
-              <input
-                type="text"
-                name="user"
-                value={formData.user}
-                onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: '#444',
-                  border: '1px solid #666',
-                  borderRadius: '5px',
-                  color: 'white'
-                }}
-                placeholder="Masukkan username"
-              />
-            </div>
-            
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', marginBottom: '5px' }}>
-                Password:
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  backgroundColor: '#444',
-                  border: '1px solid #666',
-                  borderRadius: '5px',
-                  color: 'white'
-                }}
-                placeholder="Masukkan password"
-              />
-            </div>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                type="submit"
-                style={{
-                  backgroundColor: 'pink',
-                  color: 'black',
-                  border: 'none',
-                  padding: '10px 20px',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold'
-                }}
-              >
-                {editingId ? 'Update' : 'Tambah'}
-              </button>
-              
-              {editingId && (
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  style={{
-                    backgroundColor: '#666',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 20px',
-                    borderRadius: '5px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Batal
-                </button>
-              )}
-            </div>
-          </form>
-        </div>
-
-        {/* Tabel Data */}
-        <div style={{
-          backgroundColor: '#222',
-          padding: '20px',
-          borderRadius: '10px'
-        }}>
-          <h2 style={{ color: 'pink', marginBottom: '20px' }}>
-            Daftar Users ({users.length})
-          </h2>
-          
-          {users.length === 0 ? (
-            <p style={{ textAlign: 'center', color: '#ccc' }}>
-              Tidak ada data user
-            </p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                backgroundColor: '#333'
-              }}>
-                <thead>
-                  <tr>
-                    <th style={{ 
-                      border: '1px solid #555', 
-                      padding: '12px', 
-                      textAlign: 'left' 
-                    }}>ID</th>
-                    <th style={{ 
-                      border: '1px solid #555', 
-                      padding: '12px', 
-                      textAlign: 'left' 
-                    }}>Username</th>
-                    <th style={{ 
-                      border: '1px solid #555', 
-                      padding: '12px', 
-                      textAlign: 'left' 
-                    }}>Password</th>
-                    <th style={{ 
-                      border: '1px solid #555', 
-                      padding: '12px', 
-                      textAlign: 'center' 
-                    }}>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id}>
-                      <td style={{ 
-                        border: '1px solid #555', 
-                        padding: '12px' 
-                      }}>
-                        {user.id}
-                      </td>
-                      <td style={{ 
-                        border: '1px solid #555', 
-                        padding: '12px' 
-                      }}>
-                        {user.user}
-                      </td>
-                      <td style={{ 
-                        border: '1px solid #555', 
-                        padding: '12px' 
-                      }}>
-                        ••••••••
-                      </td>
-                      <td style={{ 
-                        border: '1px solid #555', 
-                        padding: '12px', 
-                        textAlign: 'center' 
-                      }}>
-                        <button
-                          onClick={() => handleEdit(user)}
-                          style={{
-                            backgroundColor: '#4CAF50',
-                            color: 'white',
-                            border: 'none',
-                            padding: '5px 10px',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            marginRight: '5px'
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          style={{
-                            backgroundColor: '#f44336',
-                            color: 'white',
-                            border: 'none',
-                            padding: '5px 10px',
-                            borderRadius: '3px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Hapus
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+      )}
+      
+      <div style={{ backgroundColor: '#f5f5f5', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+        <h2 style={{ color: '#555', marginBottom: '15px' }}>{editingId ? 'Edit User' : 'Add New User'}</h2>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <input
+            type="text"
+            value={formData.user}
+            onChange={(e) => setFormData({...formData, user: e.target.value})}
+            placeholder="Username"
+            style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', flex: 1, minWidth: '150px' }}
+            required
+          />
+          <input
+            type="password"
+            value={formData.password}
+            onChange={(e) => setFormData({...formData, password: e.target.value})}
+            placeholder="Password"
+            style={{ padding: '10px', border: '1px solid #ddd', borderRadius: '4px', flex: 1, minWidth: '150px' }}
+            required
+          />
+          <button type="submit" style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            {editingId ? 'Update' : 'Add'}
+          </button>
+          {editingId && (
+            <button type="button" onClick={handleCancel} style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+              Cancel
+            </button>
           )}
+        </form>
+      </div>
+
+      <div style={{ backgroundColor: 'white', border: '1px solid #ddd', borderRadius: '8px', overflow: 'hidden' }}>
+        <h2 style={{ backgroundColor: '#007bff', color: 'white', margin: 0, padding: '15px', fontSize: '18px' }}>
+          Users List ({users.length})
+        </h2>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f8f9fa' }}>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>ID</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Username</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Password</th>
+                <th style={{ padding: '12px', textAlign: 'left', borderBottom: '2px solid #ddd' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((user) => (
+                <tr key={user.id} style={{ borderBottom: '1px solid #eee' }}>
+                  <td style={{ padding: '12px' }}>{user.id}</td>
+                  <td style={{ padding: '12px' }}>{user.user}</td>
+                  <td style={{ padding: '12px' }}>••••••••</td>
+                  <td style={{ padding: '12px' }}>
+                    <button 
+                      onClick={() => handleEdit(user)}
+                      style={{ padding: '6px 12px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '5px' }}
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(user.id)}
+                      disabled={users.length <= 1}
+                      style={{ padding: '6px 12px', backgroundColor: users.length <= 1 ? '#dc3545' : '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: users.length <= 1 ? 'not-allowed' : 'pointer', opacity: users.length <= 1 ? 0.5 : 1 }}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
