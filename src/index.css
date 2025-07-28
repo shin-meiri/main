@@ -26,3 +26,19 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: pink;
 }
+
+/* Animasi untuk collapsible section */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-down {
+  animation: slideDown 0.3s ease-out;
+}
