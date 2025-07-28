@@ -13,8 +13,8 @@ const Connect = () => {
   const [connectionStatus, setConnectionStatus] = useState('');
   const [loading, setLoading] = useState({ connection: false, tables: false, data: false });
   const [currentUser, setCurrentUser] = useState(null);
-  const [editingRow, setEditingRow] = useState(null);
-  const [editingData, setEditingData] = useState({});
+  const [editingCell, setEditingCell] = useState(null); // {rowIndex, columnName}
+  const [editingValue, setEditingValue] = useState('');
   const [addingRow, setAddingRow] = useState(false);
   const [addingData, setAddingData] = useState({});
   const navigate = useNavigate();
@@ -44,7 +44,7 @@ const Connect = () => {
       );
       setUsers(usersWithDb);
     } catch (err) {
-      console.error('Error fetching data:', err);
+      console.error('Error fetching ', err);
     }
   };
 
@@ -111,7 +111,7 @@ const Connect = () => {
 
     setLoading(prev => ({ ...prev, data: true }));
     setSelectedTable(tableName);
-    setEditingRow(null);
+    setEditingCell(null);
     setAddingRow(false);
 
     try {
@@ -123,107 +123,78 @@ const Connect = () => {
         table: tableName
       });
 
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         setTableData(response.data.data || []);
         setTableColumns(response.data.columns || []);
         setConnectionStatus(`✅ Menampilkan data dari tabel ${tableName}`);
       } else {
-        setConnectionStatus(`❌ Gagal mengambil data: ${response.data.error}`);
+        const errorMessage = response.data?.error || 'Unknown error';
+        setConnectionStatus(`❌ Gagal mengambil  ${errorMessage}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengambil data: ${err.response?.data?.error || err.message}`);
+      const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
+      setConnectionStatus(`❌ Error mengambil  ${errorMessage}`);
+      console.error('getTableData error:', err);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
-  // Get table structure for add/edit
-  const getTableStructure = async (tableName) => {
-    if (!selectedUser || !tableName) return [];
-
-    try {
-      const response = await axios.post('/api/get-table-structure.php', {
-        host: selectedUser.host,
-        dbname: selectedUser.dbname,
-        username: selectedUser.username,
-        password: selectedUser.password,
-        table: tableName
-      });
-
-      if (response.data.success) {
-        return response.data.columns || [];
-      }
-    } catch (err) {
-      console.error('Error getting table structure:', err);
-    }
-    return [];
+  // Start editing cell
+  const startEditingCell = (rowIndex, columnName, currentValue) => {
+    setEditingCell({ rowIndex, columnName });
+    setEditingValue(currentValue !== null ? String(currentValue) : '');
   };
 
-  // Start editing a row
-  const startEditing = async (row, rowIndex) => {
-    if (!selectedTable) return;
+  // Save edited cell
+  const saveEditedCell = async () => {
+    if (!editingCell || !selectedUser || !selectedTable) return;
 
-    const columns = await getTableStructure(selectedTable);
-    const rowData = {};
-    
-    // Inisialisasi data editing dengan nilai dari row
-    columns.forEach(col => {
-      rowData[col.Field] = row[col.Field] !== null ? row[col.Field] : '';
-    });
-
-    setEditingRow(rowIndex);
-    setEditingData(rowData);
-  };
-
-  // Save edited row
-  const saveEdit = async () => {
-    if (!selectedUser || !selectedTable || editingRow === null) return;
-
-    setLoading(prev => ({ ...prev, data: true }));
+    setLoading(prev => ({ ...prev,  true }));
 
     try {
-      const response = await axios.post('/api/update-row.php', {
+      const response = await axios.post('/api/update-cell.php', {
         host: selectedUser.host,
         dbname: selectedUser.dbname,
         username: selectedUser.username,
         password: selectedUser.password,
         table: selectedTable,
-        data: editingData,
-        primaryKey: tableColumns.find(col => col.Key === 'PRI')?.Field || Object.keys(editingData)[0]
+        rowIndex: editingCell.rowIndex,
+        columnName: editingCell.columnName,
+        value: editingValue,
+        primaryKey: tableColumns[0], // asumsi kolom pertama adalah primary key
+        primaryKeyValue: tableData[editingCell.rowIndex][tableColumns[0]]
       });
 
       if (response.data.success) {
         setConnectionStatus('✅ Data berhasil diupdate!');
         // Refresh table data
         getTableData(selectedTable);
-        setEditingRow(null);
-        setEditingData({});
+        setEditingCell(null);
+        setEditingValue('');
       } else {
-        setConnectionStatus(`❌ Gagal mengupdate data: ${response.data.error}`);
+        setConnectionStatus(`❌ Gagal mengupdate  ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengupdate data: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error mengupdate  ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
   // Cancel editing
-  const cancelEdit = () => {
-    setEditingRow(null);
-    setEditingData({});
+  const cancelEditing = () => {
+    setEditingCell(null);
+    setEditingValue('');
   };
 
   // Start adding new row
-  const startAdding = async () => {
+  const startAdding = () => {
     if (!selectedTable) return;
 
-    const columns = await getTableStructure(selectedTable);
     const newRowData = {};
-    
-    // Inisialisasi data baru dengan nilai kosong
-    columns.forEach(col => {
-      newRowData[col.Field] = '';
+    tableColumns.forEach(col => {
+      newRowData[col] = '';
     });
 
     setAddingRow(true);
@@ -234,7 +205,7 @@ const Connect = () => {
   const saveNewRow = async () => {
     if (!selectedUser || !selectedTable) return;
 
-    setLoading(prev => ({ ...prev, data: true }));
+    setLoading(prev => ({ ...prev,  true }));
 
     try {
       const response = await axios.post('/api/insert-row.php', {
@@ -243,7 +214,7 @@ const Connect = () => {
         username: selectedUser.username,
         password: selectedUser.password,
         table: selectedTable,
-        data: addingData
+         addingData
       });
 
       if (response.data.success) {
@@ -253,12 +224,12 @@ const Connect = () => {
         setAddingRow(false);
         setAddingData({});
       } else {
-        setConnectionStatus(`❌ Gagal menambahkan data: ${response.data.error}`);
+        setConnectionStatus(`❌ Gagal menambahkan  ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error menambahkan data: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error menambahkan  ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
@@ -266,14 +237,6 @@ const Connect = () => {
   const cancelAdd = () => {
     setAddingRow(false);
     setAddingData({});
-  };
-
-  // Handle input change for editing
-  const handleEditInputChange = (field, value) => {
-    setEditingData(prev => ({
-      ...prev,
-      [field]: value
-    }));
   };
 
   // Handle input change for adding
@@ -488,7 +451,7 @@ const Connect = () => {
               </h2>
               <button
                 onClick={startAdding}
-                disabled={addingRow || editingRow !== null}
+                disabled={addingRow || editingCell !== null}
                 style={{
                   padding: '8px 15px',
                   backgroundColor: 'pink',
@@ -496,7 +459,7 @@ const Connect = () => {
                   border: 'none',
                   borderRadius: '4px',
                   fontSize: '14px',
-                  cursor: addingRow || editingRow !== null ? 'not-allowed' : 'pointer',
+                  cursor: addingRow || editingCell !== null ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '5px'
@@ -591,7 +554,7 @@ const Connect = () => {
               }}>
                 <thead>
                   <tr>
-                    {Object.keys(tableData[0] || {}).map((key, index) => (
+                    {tableColumns.map((column, index) => (
                       <th 
                         key={index}
                         style={{
@@ -603,21 +566,33 @@ const Connect = () => {
                           top: 0
                         }}
                       >
-                        {key}
+                        {column}
                       </th>
                     ))}
-                    <th 
-                      style={{
-                        border: '1px solid #444',
-                        padding: '10px',
-                        backgroundColor: '#333',
-                        textAlign: 'center',
-                        position: 'sticky',
-                        top: 0
-                      }}
-                    >
-                      Actions
-                    </th>
                   </tr>
                 </thead>
-           
+                <tbody>
+                  {tableData.map((row, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {tableColumns.map((column, cellIndex) => (
+                        <td 
+                          key={cellIndex}
+                          onClick={() => startEditingCell(rowIndex, column, row[column])}
+                          style={{
+                            border: '1px solid #444',
+                            padding: '8px',
+                            backgroundColor: rowIndex % 2 === 0 ? '#222' : '#2a2a2a',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {editingCell && 
+                           editingCell.rowIndex === rowIndex && 
+                           editingCell.columnName === column ? (
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                              <input
+                                type="text"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                autoFocus
+                                style={{
+                                  fle
