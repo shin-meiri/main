@@ -58,11 +58,6 @@ const Pages = () => {
     navigate('/login');
   };
 
-  // Fungsi untuk ke halaman Connect
-  const handleGoToConnect = () => {
-    navigate('/connect');
-  };
-
   // Fungsi untuk toggle visibility password
   const togglePasswordVisibility = (userId) => {
     setShowPasswords(prev => ({
@@ -247,6 +242,11 @@ const Pages = () => {
     setShowDbFields(false);
   };
 
+  // Navigasi ke halaman Connect
+  const handleGoToConnect = () => {
+    navigate('/connect');
+  };
+
   // Jika belum login, jangan tampilkan konten
   if (!currentUser) {
     return null;
@@ -263,7 +263,7 @@ const Pages = () => {
       padding: '20px',
       fontFamily: 'Arial, sans-serif'
     }}>
-      {/* Header dengan welcome message dan tombol navigasi */}
+      {/* Header dengan welcome message dan tombol logout */}
       <div style={{ 
         display: 'flex',
         justifyContent: 'space-between',
@@ -291,7 +291,7 @@ const Pages = () => {
               fontWeight: 'bold'
             }}
           >
-            View Connections
+            Connect to Database
           </button>
           <span style={{ fontSize: '14px', color: '#aaa' }}>
             Welcome, {currentUser.username}
