@@ -63,38 +63,52 @@ const Login = () => {
 
   return (
     <div style={{ 
-      color: 'pink', 
-      backgroundColor: 'black', 
       minHeight: '100vh',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      padding: '20px',
-      fontFamily: 'Arial, sans-serif'
+      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      padding: '20px'
     }}>
       <div style={{ 
-        maxWidth: '400px', 
         width: '100%',
-        padding: '30px',
-        border: '1px solid pink',
-        borderRadius: '8px',
-        backgroundColor: '#111'
+        maxWidth: '400px',
+        padding: '40px',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderRadius: '15px',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+        backdropFilter: 'blur(10px)'
       }}>
         <div style={{ 
           textAlign: 'center', 
-          fontSize: '2rem', 
           marginBottom: '30px'
         }}>
-          Login
+          <div style={{ 
+            fontSize: '2.5rem',
+            fontWeight: 'bold',
+            background: 'linear-gradient(45deg, #667eea, #764ba2)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '10px'
+          }}>
+            🔐 Login
+          </div>
+          <p style={{ 
+            color: '#666', 
+            fontSize: '1rem' 
+          }}>
+            Masuk ke akun Anda
+          </p>
         </div>
         
         {error && (
           <div style={{
-            backgroundColor: '#ff6b6b',
-            color: 'white',
-            padding: '10px',
-            borderRadius: '4px',
+            backgroundColor: '#fee',
+            color: '#c33',
+            padding: '12px',
+            borderRadius: '8px',
             marginBottom: '20px',
+            border: '1px solid #fcc',
             fontSize: '14px'
           }}>
             {error}
@@ -103,7 +117,14 @@ const Login = () => {
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div>
-            <label style={{ display: 'block', marginBottom: '8px' }}>Username:</label>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '8px',
+              fontWeight: '500',
+              color: '#333'
+            }}>
+              Username
+            </label>
             <input
               type="text"
               name="username"
@@ -111,20 +132,29 @@ const Login = () => {
               onChange={handleInputChange}
               style={{
                 width: '100%',
-                padding: '12px',
-                backgroundColor: '#333',
-                color: 'pink',
-                border: '1px solid #555',
-                borderRadius: '4px',
-                fontSize: '16px'
+                padding: '14px',
+                border: '2px solid #e1e5e9',
+                borderRadius: '10px',
+                fontSize: '16px',
+                transition: 'border-color 0.3s ease',
+                outline: 'none'
               }}
               placeholder="Masukkan username"
               disabled={loading}
+              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
             />
           </div>
           
           <div>
-            <label style={{ display: 'block', marginBottom: '8px' }}>Password:</label>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '8px',
+              fontWeight: '500',
+              color: '#333'
+            }}>
+              Password
+            </label>
             <input
               type="password"
               name="password"
@@ -132,15 +162,17 @@ const Login = () => {
               onChange={handleInputChange}
               style={{
                 width: '100%',
-                padding: '12px',
-                backgroundColor: '#333',
-                color: 'pink',
-                border: '1px solid #555',
-                borderRadius: '4px',
-                fontSize: '16px'
+                padding: '14px',
+                border: '2px solid #e1e5e9',
+                borderRadius: '10px',
+                fontSize: '16px',
+                transition: 'border-color 0.3s ease',
+                outline: 'none'
               }}
               placeholder="Masukkan password"
               disabled={loading}
+              onFocus={(e) => e.target.style.borderColor = '#667eea'}
+              onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
             />
           </div>
           
@@ -148,26 +180,39 @@ const Login = () => {
             type="submit"
             disabled={loading}
             style={{
-              padding: '14px',
-              backgroundColor: loading ? '#555' : 'pink',
-              color: loading ? '#888' : 'black',
+              padding: '16px',
+              backgroundColor: loading ? '#ccc' : 'linear-gradient(45deg, #667eea, #764ba2)',
+              color: loading ? '#888' : 'white',
               border: 'none',
-              borderRadius: '4px',
+              borderRadius: '10px',
               fontSize: '16px',
-              fontWeight: 'bold',
+              fontWeight: '600',
               cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.2s'
+              transition: 'all 0.3s ease',
+              background: loading ? '#ccc' : 'linear-gradient(45deg, #667eea, #764ba2)'
+            }}
+            onMouseOver={(e) => {
+              if (!loading) {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 10px 20px rgba(102, 126, 234, 0.3)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!loading) {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = 'none';
+              }
             }}
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? '🔄 Logging in...' : 'Login'}
           </button>
         </form>
 
         <div style={{ 
           textAlign: 'center', 
-          marginTop: '20px', 
+          marginTop: '25px', 
           fontSize: '14px',
-          color: '#aaa'
+          color: '#888'
         }}>
           <p>Demo login - Gunakan username dan password yang sudah ada</p>
         </div>
