@@ -7,9 +7,10 @@ const Connect = () => {
   const [users, setUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [tables, setTables] = useState([]);
+  const [selectedTable, setSelectedTable] = useState('');
+  const [tableData, setTableData] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('');
-  const [connectionResult, setConnectionResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState({ connection: false, tables: false, data: false });
   const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
 
@@ -42,75 +43,85 @@ const Connect = () => {
     }
   };
 
-  // Handle user selection
-  const handleUserSelect = (user) => {
-    setSelectedUser(user);
-    setTables([]);
-    setConnectionResult(null);
-    setConnectionStatus('');
-  };
-
   // Test connection to MySQL
-  const testConnection = async () => {
-    if (!selectedUser) {
-      setConnectionStatus('Pilih user terlebih dahulu');
-      return;
-    }
-
-    setLoading(true);
-    setConnectionStatus('Menghubungkan...');
+  const testConnection = async (user) => {
+    setLoading(prev => ({ ...prev, connection: true }));
+    setConnectionStatus(`Menguji koneksi untuk ${user.username}...`);
 
     try {
-      // Di sini kita akan membuat API endpoint untuk test koneksi
       const response = await axios.post('/api/test-connection.php', {
-        host: selectedUser.host,
-        dbname: selectedUser.dbname,
-        username: selectedUser.username,
-        password: selectedUser.password
+        host: user.host,
+        dbname: user.dbname,
+        username: user.username,
+        password: user.password
       });
 
       if (response.data.success) {
-        setConnectionResult(response.data);
-        setConnectionStatus('✅ Koneksi berhasil!');
-        setTables(response.data.tables || []);
+        setConnectionStatus(`✅ Koneksi berhasil untuk ${user.username}!`);
+        // Jika berhasil, ambil tabelnya
+        getTables(user);
       } else {
-        setConnectionStatus(`❌ ${response.data.error || 'Koneksi gagal'}`);
+        setConnectionStatus(`❌ Koneksi gagal untuk ${user.username}: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error untuk ${user.username}: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, connection: false }));
     }
   };
 
   // Get tables from selected database
-  const getTables = async () => {
-    if (!selectedUser) {
-      setConnectionStatus('Pilih user terlebih dahulu');
-      return;
-    }
-
-    setLoading(true);
-    setConnectionStatus('Mengambil tabel...');
+  const getTables = async (user) => {
+    setLoading(prev => ({ ...prev, tables: true }));
 
     try {
       const response = await axios.post('/api/get-tables.php', {
-        host: selectedUser.host,
-        dbname: selectedUser.dbname,
-        username: selectedUser.username,
-        password: selectedUser.password
+        host: user.host,
+        dbname: user.dbname,
+        username: user.username,
+        password: user.password
       });
 
       if (response.data.success) {
         setTables(response.data.tables || []);
-        setConnectionStatus('✅ Tabel berhasil diambil!');
+        setSelectedUser(user);
+        setConnectionStatus(`✅ Ditemukan ${response.data.tables?.length || 0} tabel`);
       } else {
-        setConnectionStatus(`❌ ${response.data.error || 'Gagal mengambil tabel'}`);
+        setConnectionStatus(`❌ Gagal mengambil tabel: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error mengambil tabel: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, tables: false }));
+    }
+  };
+
+  // Get table data
+  const getTableData = async (tableName) => {
+    if (!selectedUser || !tableName) return;
+
+    setLoading(prev => ({ ...prev, data: true }));
+    setSelectedTable(tableName);
+
+    try {
+      const response = await axios.post('/api/get-table-data.php', {
+        host: selectedUser.host,
+        dbname: selectedUser.dbname,
+        username: selectedUser.username,
+        password: selectedUser.password,
+        table: tableName
+      });
+
+      if (response.data.success) {
+        setTableData(response.data.data || []);
+        setConnectionStatus(`✅ Menampilkan data dari tabel ${tableName}`);
+      } else {
+        setConnectionStatus(`❌ Gagal mengambil data: ${response.data.error}`);
+      }
+    } catch (err) {
+      setConnectionStatus(`❌ Error mengambil data: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
 
@@ -151,7 +162,7 @@ const Connect = () => {
         <div style={{ 
           fontSize: '2rem' 
         }}>
-          MySQL Connection
+          MySQL Database Manager
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <span style={{ fontSize: '14px', color: '#aaa' }}>
@@ -189,200 +200,187 @@ const Connect = () => {
       </div>
 
       <div style={{ 
-        maxWidth: '800px', 
+        maxWidth: '1200px', 
         margin: '0 auto',
         padding: '20px'
       }}>
-        {/* Connection Form */}
+        {/* Connection Status */}
+        {connectionStatus && (
+          <div style={{
+            padding: '10px',
+            backgroundColor: connectionStatus.includes('✅') ? '#2d5a2d' : '#5a2d2d',
+            border: `1px solid ${connectionStatus.includes('✅') ? '#4CAF50' : '#f44336'}`,
+            borderRadius: '4px',
+            marginBottom: '20px',
+            textAlign: 'center'
+          }}>
+            {connectionStatus}
+          </div>
+        )}
+
+        {/* Section 1: List dat.json with test connection */}
         <div style={{ 
           padding: '20px',
           border: '1px solid pink',
           borderRadius: '8px',
           marginBottom: '30px'
         }}>
-          <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Database Connection</h2>
+          <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>List dat.json</h2>
           
-          {/* User Selection */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '8px' }}>Pilih User Database:</label>
-            <select
-              value={selectedUser?.id || ''}
-              onChange={(e) => {
-                const user = users.find(u => u.id === parseInt(e.target.value));
-                handleUserSelect(user);
-              }}
-              style={{
-                width: '100%',
-                padding: '10px',
-                backgroundColor: '#333',
-                color: 'pink',
-                border: '1px solid #555',
-                borderRadius: '4px'
-              }}
-            >
-              <option value="">-- Pilih User --</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>
-                  {user.username} - {user.host} ({user.dbname})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Connection Details */}
-          {selectedUser && (
-            <div style={{ 
-              backgroundColor: '#222',
-              padding: '15px',
-              borderRadius: '6px',
-              marginBottom: '20px'
-            }}>
-              <h3 style={{ margin: '0 0 15px 0' }}>Connection Details:</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                <div><strong>Host:</strong> {selectedUser.host}</div>
-                <div><strong>Database:</strong> {selectedUser.dbname}</div>
-                <div><strong>Username:</strong> {selectedUser.username}</div>
-                <div><strong>Password:</strong> {'•'.repeat(selectedUser.password.length)}</div>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-            <button
-              onClick={testConnection}
-              disabled={!selectedUser || loading}
-              style={{
-                flex: 1,
-                padding: '12px',
-                backgroundColor: loading ? '#555' : 'pink',
-                color: loading ? '#888' : 'black',
-                border: 'none',
-                borderRadius: '4px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: loading || !selectedUser ? 'not-allowed' : 'pointer'
-              }}
-            >
-              🔁 Test Connection
-            </button>
-            
-            <button
-              onClick={getTables}
-              disabled={!selectedUser || loading}
-              style={{
-                flex: 1,
-                padding: '12px',
-                backgroundColor: loading ? '#555' : '#444',
-                color: loading ? '#888' : 'pink',
-                border: '1px solid pink',
-                borderRadius: '4px',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                cursor: loading || !selectedUser ? 'not-allowed' : 'pointer'
-              }}
-            >
-              📋 Get Tables
-            </button>
-          </div>
-
-          {/* Connection Status */}
-          {connectionStatus && (
-            <div style={{
-              padding: '10px',
-              backgroundColor: connectionStatus.includes('✅') ? '#2d5a2d' : '#5a2d2d',
-              border: `1px solid ${connectionStatus.includes('✅') ? '#4CAF50' : '#f44336'}`,
-              borderRadius: '4px',
-              marginBottom: '20px',
-              textAlign: 'center'
-            }}>
-              {connectionStatus}
-            </div>
-          )}
-
-          {/* Connection Result Details */}
-          {connectionResult && (
-            <div style={{ 
-              backgroundColor: '#222',
-              padding: '15px',
-              borderRadius: '6px',
-              marginBottom: '20px'
-            }}>
-              <h3 style={{ margin: '0 0 15px 0' }}>Connection Info:</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                <div><strong>Host Info:</strong> {connectionResult.hostInfo}</div>
-                <div><strong>Server Version:</strong> {connectionResult.serverVersion}</div>
-                <div><strong>Database:</strong> {connectionResult.database}</div>
-                <div><strong>Connected:</strong> {connectionResult.connected ? 'Yes' : 'No'}</div>
-              </div>
-            </div>
-          )}
-
-          {/* Tables List */}
-          {tables.length > 0 && (
-            <div>
-              <h3 style={{ margin: '0 0 15px 0' }}>Tables ({tables.length}):</h3>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
-                gap: '10px' 
-              }}>
-                {tables.map((table, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      padding: '10px',
-                      backgroundColor: '#333',
-                      border: '1px solid #555',
-                      borderRadius: '4px',
-                      textAlign: 'center'
-                    }}
-                  >
-                    {table}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Users List */}
-        <div style={{ 
-          padding: '20px',
-          border: '1px solid pink',
-          borderRadius: '8px'
-        }}>
-          <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Users with Database Config ({users.length})</h2>
           {users.length === 0 ? (
             <p style={{ textAlign: 'center', color: '#aaa' }}>Tidak ada user dengan konfigurasi database</p>
           ) : (
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
               gap: '15px' 
             }}>
               {users.map(user => (
                 <div 
                   key={user.id}
-                  onClick={() => handleUserSelect(user)}
                   style={{
                     padding: '15px',
-                    backgroundColor: selectedUser?.id === user.id ? '#444' : '#222',
-                    border: selectedUser?.id === user.id ? '2px solid pink' : '1px solid #444',
+                    backgroundColor: '#222',
+                    border: '1px solid #444',
                     borderRadius: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    position: 'relative'
                   }}
                 >
                   <div><strong>Username:</strong> {user.username}</div>
                   <div><strong>Host:</strong> {user.host}</div>
                   <div><strong>Database:</strong> {user.dbname}</div>
-                  {user.tabel && <div><strong>Tabel:</strong> {user.tabel}</div>}
+                  <button
+                    onClick={() => testConnection(user)}
+                    disabled={loading.connection}
+                    style={{
+                      marginTop: '10px',
+                      padding: '8px 15px',
+                      backgroundColor: loading.connection ? '#555' : 'pink',
+                      color: loading.connection ? '#888' : 'black',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                      cursor: loading.connection ? 'not-allowed' : 'pointer',
+                      width: '100%'
+                    }}
+                  >
+                    {loading.connection ? '🔁 Testing...' : '🔁 Test Connection'}
+                  </button>
                 </div>
               ))}
             </div>
           )}
         </div>
+
+        {/* Section 2: List tables */}
+        {selectedUser && tables.length > 0 && (
+          <div style={{ 
+            padding: '20px',
+            border: '1px solid pink',
+            borderRadius: '8px',
+            marginBottom: '30px'
+          }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
+              Tables in {selectedUser.dbname}
+            </h2>
+            
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
+              gap: '10px' 
+            }}>
+              {tables.map((table, index) => (
+                <button
+                  key={index}
+                  onClick={() => getTableData(table)}
+                  disabled={loading.data && selectedTable === table}
+                  style={{
+                    padding: '10px',
+                    backgroundColor: selectedTable === table ? '#444' : '#333',
+                    color: 'pink',
+                    border: selectedTable === table ? '2px solid pink' : '1px solid #555',
+                    borderRadius: '4px',
+                    cursor: loading.data && selectedTable === table ? 'not-allowed' : 'pointer',
+                    textAlign: 'center'
+                  }}
+                >
+                  {loading.data && selectedTable === table ? 'Loading...' : table}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Section 3: Table Data */}
+        {tableData.length > 0 && (
+          <div style={{ 
+            padding: '20px',
+            border: '1px solid pink',
+            borderRadius: '8px'
+          }}>
+            <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
+              Data from table: {selectedTable}
+            </h2>
+            
+            <div style={{ 
+              overflowX: 'auto',
+              maxHeight: '500px',
+              overflowY: 'auto'
+            }}>
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                color: 'pink',
+                backgroundColor: '#222'
+              }}>
+                <thead>
+                  <tr>
+                    {Object.keys(tableData[0] || {}).map((key, index) => (
+                      <th 
+                        key={index}
+                        style={{
+                          border: '1px solid #444',
+                          padding: '10px',
+                          backgroundColor: '#333',
+                          textAlign: 'left'
+                        }}
+                      >
+                        {key}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableData.map((row, rowIndex) => (
+                    <tr key={rowIndex}>
+                      {Object.values(row).map((cell, cellIndex) => (
+                        <td 
+                          key={cellIndex}
+                          style={{
+                            border: '1px solid #444',
+                            padding: '8px',
+                            backgroundColor: rowIndex % 2 === 0 ? '#222' : '#2a2a2a'
+                          }}
+                        >
+                          {cell !== null ? String(cell) : 'NULL'}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div style={{ 
+              marginTop: '10px', 
+              textAlign: 'center', 
+              fontSize: '14px', 
+              color: '#aaa' 
+            }}>
+              Menampilkan {tableData.length} baris data
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
