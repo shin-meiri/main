@@ -9,9 +9,14 @@ const Connect = () => {
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState('');
   const [tableData, setTableData] = useState([]);
+  const [tableColumns, setTableColumns] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('');
   const [loading, setLoading] = useState({ connection: false, tables: false, data: false });
   const [currentUser, setCurrentUser] = useState(null);
+  const [editingRow, setEditingRow] = useState(null);
+  const [editingData, setEditingData] = useState({});
+  const [addingRow, setAddingRow] = useState(false);
+  const [addingData, setAddingData] = useState({});
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -86,6 +91,10 @@ const Connect = () => {
         setTables(response.data.tables || []);
         setSelectedUser(user);
         setConnectionStatus(`✅ Ditemukan ${response.data.tables?.length || 0} tabel`);
+        // Reset data tabel
+        setTableData([]);
+        setSelectedTable('');
+        setTableColumns([]);
       } else {
         setConnectionStatus(`❌ Gagal mengambil tabel: ${response.data.error}`);
       }
@@ -102,6 +111,8 @@ const Connect = () => {
 
     setLoading(prev => ({ ...prev, data: true }));
     setSelectedTable(tableName);
+    setEditingRow(null);
+    setAddingRow(false);
 
     try {
       const response = await axios.post('/api/get-table-data.php', {
@@ -114,6 +125,7 @@ const Connect = () => {
 
       if (response.data.success) {
         setTableData(response.data.data || []);
+        setTableColumns(response.data.columns || []);
         setConnectionStatus(`✅ Menampilkan data dari tabel ${tableName}`);
       } else {
         setConnectionStatus(`❌ Gagal mengambil data: ${response.data.error}`);
@@ -123,6 +135,153 @@ const Connect = () => {
     } finally {
       setLoading(prev => ({ ...prev, data: false }));
     }
+  };
+
+  // Get table structure for add/edit
+  const getTableStructure = async (tableName) => {
+    if (!selectedUser || !tableName) return [];
+
+    try {
+      const response = await axios.post('/api/get-table-structure.php', {
+        host: selectedUser.host,
+        dbname: selectedUser.dbname,
+        username: selectedUser.username,
+        password: selectedUser.password,
+        table: tableName
+      });
+
+      if (response.data.success) {
+        return response.data.columns || [];
+      }
+    } catch (err) {
+      console.error('Error getting table structure:', err);
+    }
+    return [];
+  };
+
+  // Start editing a row
+  const startEditing = async (row, rowIndex) => {
+    if (!selectedTable) return;
+
+    const columns = await getTableStructure(selectedTable);
+    const rowData = {};
+    
+    // Inisialisasi data editing dengan nilai dari row
+    columns.forEach(col => {
+      rowData[col.Field] = row[col.Field] !== null ? row[col.Field] : '';
+    });
+
+    setEditingRow(rowIndex);
+    setEditingData(rowData);
+  };
+
+  // Save edited row
+  const saveEdit = async () => {
+    if (!selectedUser || !selectedTable || editingRow === null) return;
+
+    setLoading(prev => ({ ...prev, data: true }));
+
+    try {
+      const response = await axios.post('/api/update-row.php', {
+        host: selectedUser.host,
+        dbname: selectedUser.dbname,
+        username: selectedUser.username,
+        password: selectedUser.password,
+        table: selectedTable,
+        data: editingData,
+        primaryKey: tableColumns.find(col => col.Key === 'PRI')?.Field || Object.keys(editingData)[0]
+      });
+
+      if (response.data.success) {
+        setConnectionStatus('✅ Data berhasil diupdate!');
+        // Refresh table data
+        getTableData(selectedTable);
+        setEditingRow(null);
+        setEditingData({});
+      } else {
+        setConnectionStatus(`❌ Gagal mengupdate data: ${response.data.error}`);
+      }
+    } catch (err) {
+      setConnectionStatus(`❌ Error mengupdate data: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoading(prev => ({ ...prev, data: false }));
+    }
+  };
+
+  // Cancel editing
+  const cancelEdit = () => {
+    setEditingRow(null);
+    setEditingData({});
+  };
+
+  // Start adding new row
+  const startAdding = async () => {
+    if (!selectedTable) return;
+
+    const columns = await getTableStructure(selectedTable);
+    const newRowData = {};
+    
+    // Inisialisasi data baru dengan nilai kosong
+    columns.forEach(col => {
+      newRowData[col.Field] = '';
+    });
+
+    setAddingRow(true);
+    setAddingData(newRowData);
+  };
+
+  // Save new row
+  const saveNewRow = async () => {
+    if (!selectedUser || !selectedTable) return;
+
+    setLoading(prev => ({ ...prev, data: true }));
+
+    try {
+      const response = await axios.post('/api/insert-row.php', {
+        host: selectedUser.host,
+        dbname: selectedUser.dbname,
+        username: selectedUser.username,
+        password: selectedUser.password,
+        table: selectedTable,
+        data: addingData
+      });
+
+      if (response.data.success) {
+        setConnectionStatus('✅ Data berhasil ditambahkan!');
+        // Refresh table data
+        getTableData(selectedTable);
+        setAddingRow(false);
+        setAddingData({});
+      } else {
+        setConnectionStatus(`❌ Gagal menambahkan data: ${response.data.error}`);
+      }
+    } catch (err) {
+      setConnectionStatus(`❌ Error menambahkan data: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoading(prev => ({ ...prev, data: false }));
+    }
+  };
+
+  // Cancel adding
+  const cancelAdd = () => {
+    setAddingRow(false);
+    setAddingData({});
+  };
+
+  // Handle input change for editing
+  const handleEditInputChange = (field, value) => {
+    setEditingData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Handle input change for adding
+  const handleAddInputChange = (field, value) => {
+    setAddingData(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   // Logout function
@@ -318,9 +477,106 @@ const Connect = () => {
             border: '1px solid pink',
             borderRadius: '8px'
           }}>
-            <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
-              Data from table: {selectedTable}
-            </h2>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ margin: 0 }}>
+                Data from table: {selectedTable}
+              </h2>
+              <button
+                onClick={startAdding}
+                disabled={addingRow || editingRow !== null}
+                style={{
+                  padding: '8px 15px',
+                  backgroundColor: 'pink',
+                  color: 'black',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '14px',
+                  cursor: addingRow || editingRow !== null ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                ➕ Add New Row
+              </button>
+            </div>
+            
+            {/* Add new row form */}
+            {addingRow && (
+              <div style={{ 
+                marginBottom: '20px',
+                padding: '15px',
+                backgroundColor: '#333',
+                border: '1px solid pink',
+                borderRadius: '6px'
+              }}>
+                <h3 style={{ margin: '0 0 15px 0' }}>Add New Row</h3>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
+                  gap: '10px',
+                  marginBottom: '15px'
+                }}>
+                  {Object.keys(addingData).map((field) => (
+                    <div key={field}>
+                      <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px' }}>
+                        {field}
+                      </label>
+                      <input
+                        type="text"
+                        value={addingData[field]}
+                        onChange={(e) => handleAddInputChange(field, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          backgroundColor: '#444',
+                          color: 'pink',
+                          border: '1px solid #555',
+                          borderRadius: '4px',
+                          fontSize: '12px'
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={saveNewRow}
+                    disabled={loading.data}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: loading.data ? '#555' : 'green',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      cursor: loading.data ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {loading.data ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={cancelAdd}
+                    style={{
+                      padding: '6px 12px',
+                      backgroundColor: '#666',
+                      color: 'pink',
+                      border: '1px solid pink',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
             
             <div style={{ 
               overflowX: 'auto',
@@ -342,48 +598,26 @@ const Connect = () => {
                           border: '1px solid #444',
                           padding: '10px',
                           backgroundColor: '#333',
-                          textAlign: 'left'
+                          textAlign: 'left',
+                          position: 'sticky',
+                          top: 0
                         }}
                       >
                         {key}
                       </th>
                     ))}
+                    <th 
+                      style={{
+                        border: '1px solid #444',
+                        padding: '10px',
+                        backgroundColor: '#333',
+                        textAlign: 'center',
+                        position: 'sticky',
+                        top: 0
+                      }}
+                    >
+                      Actions
+                    </th>
                   </tr>
                 </thead>
-                <tbody>
-                  {tableData.map((row, rowIndex) => (
-                    <tr key={rowIndex}>
-                      {Object.values(row).map((cell, cellIndex) => (
-                        <td 
-                          key={cellIndex}
-                          style={{
-                            border: '1px solid #444',
-                            padding: '8px',
-                            backgroundColor: rowIndex % 2 === 0 ? '#222' : '#2a2a2a'
-                          }}
-                        >
-                          {cell !== null ? String(cell) : 'NULL'}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            <div style={{ 
-              marginTop: '10px', 
-              textAlign: 'center', 
-              fontSize: '14px', 
-              color: '#aaa' 
-            }}>
-              Menampilkan {tableData.length} baris data
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default Connect;
+           
