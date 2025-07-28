@@ -15,7 +15,7 @@ const Pages = () => {
 
   const loadData = async () => {
     try {
-      const response = await axios.get('/api/users.php');
+      const response = await axios.get('/api/dat.php');
       setUsers(response.data);
       setError('');
     } catch (err) {
