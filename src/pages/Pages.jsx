@@ -62,6 +62,29 @@ const Pages = () => {
     }
   };
 
+  // Fungsi untuk menghapus user
+  const handleDeleteUser = async (userId) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus user ini?')) {
+      try {
+        // Filter user yang tidak dihapus
+        const updatedUsers = users.filter(user => user.id !== userId);
+        
+        // Kirim data yang sudah diperbarui ke API
+        const response = await axios.post('/api/dat.php', {
+          message: 'welcome',
+          users: updatedUsers
+        });
+
+        if (response.data.status === 'success') {
+          // Refresh data setelah berhasil menghapus
+          fetchData();
+        }
+      } catch (err) {
+        setError(err.message);
+      }
+    }
+  };
+
   // Fungsi untuk handle input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -168,7 +191,7 @@ const Pages = () => {
         margin: '0 auto',
         padding: '20px'
       }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Daftar User</h2>
+        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>Daftar User ({users.length})</h2>
         {users.length === 0 ? (
           <p style={{ textAlign: 'center' }}>Belum ada user yang ditambahkan</p>
         ) : (
@@ -184,12 +207,30 @@ const Pages = () => {
                   padding: '15px',
                   backgroundColor: '#222',
                   border: '1px solid #444',
-                  borderRadius: '6px'
+                  borderRadius: '6px',
+                  position: 'relative'
                 }}
               >
                 <div><strong>ID:</strong> {user.id}</div>
                 <div><strong>Username:</strong> {user.username}</div>
                 <div><strong>Password:</strong> {user.password}</div>
+                <button
+                  onClick={() => handleDeleteUser(user.id)}
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    color: 'pink',
+                    fontSize: '18px',
+                    cursor: 'pointer',
+                    padding: '5px'
+                  }}
+                  title="Hapus User"
+                >
+                  🗑️
+                </button>
               </div>
             ))}
           </div>
