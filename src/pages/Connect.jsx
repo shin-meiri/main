@@ -13,7 +13,7 @@ const Connect = () => {
   const [connectionStatus, setConnectionStatus] = useState('');
   const [loading, setLoading] = useState({ connection: false, tables: false, data: false });
   const [currentUser, setCurrentUser] = useState(null);
-  const [editingCell, setEditingCell] = useState(null); // {rowIndex, columnName}
+  const [editingCell, setEditingCell] = useState(null);
   const [editingValue, setEditingValue] = useState('');
   const [addingRow, setAddingRow] = useState(false);
   const [addingData, setAddingData] = useState({});
@@ -63,7 +63,6 @@ const Connect = () => {
 
       if (response.data.success) {
         setConnectionStatus(`✅ Koneksi berhasil untuk ${user.username}!`);
-        // Jika berhasil, ambil tabelnya
         getTables(user);
       } else {
         setConnectionStatus(`❌ Koneksi gagal untuk ${user.username}: ${response.data.error}`);
@@ -91,7 +90,6 @@ const Connect = () => {
         setTables(response.data.tables || []);
         setSelectedUser(user);
         setConnectionStatus(`✅ Ditemukan ${response.data.tables?.length || 0} tabel`);
-        // Reset data tabel
         setTableData([]);
         setSelectedTable('');
         setTableColumns([]);
@@ -162,13 +160,12 @@ const Connect = () => {
         rowIndex: editingCell.rowIndex,
         columnName: editingCell.columnName,
         value: editingValue,
-        primaryKey: tableColumns[0], // asumsi kolom pertama adalah primary key
+        primaryKey: tableColumns[0],
         primaryKeyValue: tableData[editingCell.rowIndex][tableColumns[0]]
       });
 
       if (response.data.success) {
         setConnectionStatus('✅ Data berhasil diupdate!');
-        // Refresh table data
         getTableData(selectedTable);
         setEditingCell(null);
         setEditingValue('');
@@ -219,7 +216,6 @@ const Connect = () => {
 
       if (response.data.success) {
         setConnectionStatus('✅ Data berhasil ditambahkan!');
-        // Refresh table data
         getTableData(selectedTable);
         setAddingRow(false);
         setAddingData({});
@@ -594,4 +590,77 @@ const Connect = () => {
                                 value={editingValue}
                                 onChange={(e) => setEditingValue(e.target.value)}
                                 autoFocus
-             
+                                style={{
+                                  flex: 1,
+                                  padding: '4px',
+                                  backgroundColor: '#444',
+                                  color: 'pink',
+                                  border: '1px solid pink',
+                                  borderRadius: '3px',
+                                  fontSize: '12px'
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    saveEditedCell();
+                                  } else if (e.key === 'Escape') {
+                                    cancelEditing();
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={saveEditedCell}
+                                disabled={loading.data}
+                                style={{
+                                  padding: '2px 6px',
+                                  backgroundColor: loading.data ? '#555' : 'green',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '3px',
+                                  fontSize: '10px',
+                                  cursor: loading.data ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                style={{
+                                  padding: '2px 6px',
+                                  backgroundColor: '#666',
+                                  color: 'pink',
+                                  border: '1px solid pink',
+                                  borderRadius: '3px',
+                                  fontSize: '10px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            row[column] !== null ? String(row[column]) : 'NULL'
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div style={{ 
+              marginTop: '10px', 
+              textAlign: 'center', 
+              fontSize: '14px', 
+              color: '#aaa' 
+            }}>
+              Menampilkan {tableData.length} baris data
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Connect;
