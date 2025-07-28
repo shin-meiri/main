@@ -268,7 +268,6 @@ const Connect = () => {
   if (!currentUser) {
     return null;
   }
-
   return (
     <div style={{ 
       color: '#e0e0e0', 
@@ -573,4 +572,490 @@ const Connect = () => {
                       }
                     }}
                   >
-                    {loading.connection ? '🔁 Testing
+                    {loading.connection ? '🔁 Testing...' : '🔁 Test Connection'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section 2: List tables */}
+        {selectedUser && tables.length > 0 && (
+          <div style={{ 
+            padding: '25px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '15px',
+            marginBottom: '30px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <h2 style={{ 
+              textAlign: 'center', 
+              marginBottom: '25px',
+              color: '#ffd93d',
+              fontSize: '1.8rem',
+              fontWeight: 'bold'
+            }}>
+              🗃️ Tables in {selectedUser.dbname}
+            </h2>
+            
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', 
+              gap: '15px' 
+            }}>
+              {tables.map((table, index) => (
+                <button
+                  key={index}
+                  onClick={() => getTableData(table)}
+                  disabled={loading.data && selectedTable === table}
+                  style={{
+                    padding: '15px',
+                    backgroundColor: selectedTable === table ? 'rgba(255, 217, 61, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                    color: selectedTable === table ? '#ffd93d' : '#e0e0e0',
+                    border: selectedTable === table ? '2px solid #ffd93d' : '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '10px',
+                    cursor: loading.data && selectedTable === table ? 'not-allowed' : 'pointer',
+                    textAlign: 'center',
+                    transition: 'all 0.3s ease',
+                    backdropFilter: 'blur(5px)'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!(loading.data && selectedTable === table)) {
+                      e.target.style.transform = 'translateY(-3px)';
+                      e.target.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.3)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!(loading.data && selectedTable === table)) {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = 'none';
+                    }
+                  }}
+                >
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📋</div>
+                  <div style={{ fontWeight: 'bold' }}>{table}</div>
+                  <div style={{ fontSize: '0.8rem', marginTop: '5px', opacity: 0.7 }}>
+                    {loading.data && selectedTable === table ? 'Loading...' : 'Click to view'}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Section 3: Table Data */}
+        {tableData.length > 0 && (
+          <div style={{ 
+            padding: '25px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '15px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '25px',
+              flexWrap: 'wrap',
+              gap: '15px'
+            }}>
+              <div>
+                <h2 style={{ 
+                  margin: 0,
+                  color: '#4ecdc4',
+                  fontSize: '1.8rem',
+                  fontWeight: 'bold'
+                }}>
+                  📊 Data from: {selectedTable}
+                </h2>
+                <div style={{ color: '#a0a0c0', marginTop: '5px' }}>
+                  Showing {filteredTableData.length} of {tableData.length} records
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    placeholder="🔍 Search data..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      padding: '10px 15px 10px 40px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '25px',
+                      fontSize: '14px',
+                      width: '200px'
+                    }}
+                  />
+                </div>
+                
+                <button
+                  onClick={startAdding}
+                  disabled={addingRow || editingCell !== null}
+                  style={{
+                    padding: '12px 20px',
+                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                    color: '#4ecdc4',
+                    border: '1px solid #4ecdc4',
+                    borderRadius: '25px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    cursor: addingRow || editingCell !== null ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    if (!(addingRow || editingCell !== null)) {
+                      e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
+                      e.target.style.transform = 'translateY(-2px)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    if (!(addingRow || editingCell !== null)) {
+                      e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
+                      e.target.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  ➕ Add New Row
+                </button>
+              </div>
+            </div>
+            
+            {/* Add new row form */}
+            {addingRow && (
+              <div style={{ 
+                marginBottom: '25px',
+                padding: '20px',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(78, 205, 196, 0.3)',
+                borderRadius: '12px',
+                backdropFilter: 'blur(5px)'
+              }}>
+                <h3 style={{ 
+                  margin: '0 0 20px 0',
+                  color: '#4ecdc4',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  📝 Add New Record
+                </h3>
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: `repeat(auto-fit, minmax(200px, 1fr))`,
+                  gap: '15px',
+                  marginBottom: '20px'
+                }}>
+                  {Object.keys(addingData).map((field) => (
+                    <div key={field}>
+                      <label style={{ 
+                        display: 'block', 
+                        fontSize: '12px', 
+                        marginBottom: '5px',
+                        color: '#a0a0c0'
+                      }}>
+                        {field}
+                      </label>
+                      <input
+                        type="text"
+                        value={addingData[field]}
+                        onChange={(e) => handleAddInputChange(field, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          color: '#fff',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={saveNewRow}
+                    disabled={loading.data}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
+                      color: loading.data ? '#888' : '#4CAF50',
+                      border: '1px solid #4CAF50',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      cursor: loading.data ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    {loading.data ? '💾 Saving...' : '💾 Save Record'}
+                  </button>
+                  <button
+                    onClick={cancelAdd}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: '#ff6b6b',
+                      border: '1px solid #ff6b6b',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    ❌ Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            <div style={{ 
+              overflowX: 'auto',
+              maxHeight: '600px',
+              overflowY: 'auto',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <table style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                color: '#e0e0e0',
+                backgroundColor: 'rgba(26, 26, 46, 0.8)'
+              }}>
+                <thead>
+                  <tr>
+                    {tableColumns.map((column, index) => (
+                      <th 
+                        key={index}
+                        style={{
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          padding: '15px',
+                          backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                          textAlign: 'left',
+                          position: 'sticky',
+                          top: 0,
+                          backdropFilter: 'blur(5px)'
+                        }}
+                      >
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '8px' 
+                        }}>
+                          <span>🏷️</span>
+                          <span style={{ fontWeight: 'bold' }}>{column}</span>
+                        </div>
+                      </th>
+                    ))}
+                    <th 
+                      style={{
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: '15px',
+                        backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                        textAlign: 'center',
+                        position: 'sticky',
+                        top: 0,
+                        backdropFilter: 'blur(5px)'
+                      }}
+                    >
+                      ⚙️ Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredTableData.map((row, rowIndex) => (
+                    <tr 
+                      key={rowIndex}
+                      style={{
+                        backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.1)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.target.style.backgroundColor = rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)';
+                      }}
+                    >
+                      {tableColumns.map((column, cellIndex) => (
+                        <td 
+                          key={cellIndex}
+                          onClick={() => startEditingCell(rowIndex, column, row[column])}
+                          style={{
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            padding: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          {editingCell && 
+                           editingCell.rowIndex === rowIndex && 
+                           editingCell.columnName === column ? (
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <input
+                                type="text"
+                                value={editingValue}
+                                onChange={(e) => setEditingValue(e.target.value)}
+                                autoFocus
+                                style={{
+                                  flex: 1,
+                                  padding: '8px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  color: '#fff',
+                                  border: '1px solid #4ecdc4',
+                                  borderRadius: '6px',
+                                  fontSize: '13px'
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    saveEditedCell();
+                                  } else if (e.key === 'Escape') {
+                                    cancelEditing();
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={saveEditedCell}
+                                disabled={loading.data}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
+                                  color: loading.data ? '#888' : '#4CAF50',
+                                  border: '1px solid #4CAF50',
+                                  borderRadius: '20px',
+                                  fontSize: '11px',
+                                  cursor: loading.data ? 'not-allowed' : 'pointer'
+                                }}
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                style={{
+                                  padding: '6px 12px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  color: '#ff6b6b',
+                                  border: '1px solid #ff6b6b',
+                                  borderRadius: '20px',
+                                  fontSize: '11px',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '8px' 
+                            }}>
+                              <span>✏️</span>
+                              <span>{row[column] !== null ? String(row[column]) : 'NULL'}</span>
+                            </div>
+                          )}
+                        </td>
+                      ))}
+                      <td 
+                        style={{
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          padding: '12px',
+                          textAlign: 'center'
+                        }}
+                      >
+                        <button
+                          onClick={() => {
+                            // Bisa tambahkan aksi lain di sini
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: 'rgba(255, 217, 61, 0.2)',
+                            color: '#ffd93d',
+                            border: '1px solid #ffd93d',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📋 View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            {filteredTableData.length === 0 && searchTerm && (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '40px', 
+                color: '#a0a0c0',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '10px',
+                marginTop: '20px'
+              }}>
+                <div style={{ fontSize: '3rem', marginBottom: '15px' }}>🔍</div>
+                <div style={{ fontSize: '1.2rem' }}>No records found for "{searchTerm}"</div>
+                <button
+                  onClick={() => setSearchTerm('')}
+                  style={{
+                    marginTop: '15px',
+                    padding: '8px 16px',
+                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                    color: '#4ecdc4',
+                    border: '1px solid #4ecdc4',
+                    borderRadius: '20px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Clear Search
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* CSS Animations */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        ::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+          background: rgba(78, 205, 196, 0.5);
+          border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+          background: rgba(78, 205, 196, 0.8);
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default Connect;
