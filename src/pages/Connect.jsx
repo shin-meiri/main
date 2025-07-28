@@ -44,7 +44,7 @@ const Connect = () => {
       );
       setUsers(usersWithDb);
     } catch (err) {
-      console.error('Error fetching ', err);
+      console.error('Error fetching data:', err);
     }
   };
 
@@ -129,14 +129,14 @@ const Connect = () => {
         setConnectionStatus(`✅ Menampilkan data dari tabel ${tableName}`);
       } else {
         const errorMessage = response.data?.error || 'Unknown error';
-        setConnectionStatus(`❌ Gagal mengambil  ${errorMessage}`);
+        setConnectionStatus(`❌ Gagal mengambil data: ${errorMessage}`);
       }
     } catch (err) {
       const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
-      setConnectionStatus(`❌ Error mengambil  ${errorMessage}`);
+      setConnectionStatus(`❌ Error mengambil data: ${errorMessage}`);
       console.error('getTableData error:', err);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
 
@@ -150,7 +150,7 @@ const Connect = () => {
   const saveEditedCell = async () => {
     if (!editingCell || !selectedUser || !selectedTable) return;
 
-    setLoading(prev => ({ ...prev,  true }));
+    setLoading(prev => ({ ...prev, data: true }));
 
     try {
       const response = await axios.post('/api/update-cell.php', {
@@ -173,12 +173,12 @@ const Connect = () => {
         setEditingCell(null);
         setEditingValue('');
       } else {
-        setConnectionStatus(`❌ Gagal mengupdate  ${response.data.error}`);
+        setConnectionStatus(`❌ Gagal mengupdate data: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengupdate  ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error mengupdate data: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
 
@@ -214,7 +214,7 @@ const Connect = () => {
         username: selectedUser.username,
         password: selectedUser.password,
         table: selectedTable,
-         addingData
+        data: addingData
       });
 
       if (response.data.success) {
@@ -227,9 +227,9 @@ const Connect = () => {
         setConnectionStatus(`❌ Gagal menambahkan data: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error menambahkan  ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error menambahkan data: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
 
@@ -594,5 +594,4 @@ const Connect = () => {
                                 value={editingValue}
                                 onChange={(e) => setEditingValue(e.target.value)}
                                 autoFocus
-                                style={{
-                           
+             
