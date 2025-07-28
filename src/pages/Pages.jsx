@@ -1,6 +1,7 @@
 // src/pages/Pages.jsx
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const Pages = () => {
   const [data, setData] = useState(null);
@@ -10,6 +11,18 @@ const Pages = () => {
   const [newUser, setNewUser] = useState({ username: '', password: '' });
   const [editingUser, setEditingUser] = useState(null);
   const [showPasswords, setShowPasswords] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
+  const navigate = useNavigate();
+
+  // Cek apakah user sudah login
+  useEffect(() => {
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    } else {
+      navigate('/login');
+    }
+  }, [navigate]);
 
   // Fungsi untuk mengambil data dari API
   const fetchData = async () => {
@@ -26,8 +39,17 @@ const Pages = () => {
 
   // Load data saat komponen pertama kali dimuat
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (currentUser) {
+      fetchData();
+    }
+  }, [currentUser]);
+
+  // Fungsi untuk logout
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser');
+    setCurrentUser(null);
+    navigate('/login');
+  };
 
   // Fungsi untuk toggle visibility password
   const togglePasswordVisibility = (userId) => {
@@ -168,6 +190,11 @@ const Pages = () => {
     setEditingUser(null);
   };
 
+  // Jika belum login, jangan tampilkan konten
+  if (!currentUser) {
+    return null;
+  }
+
   if (loading) return <div style={{ color: 'pink', backgroundColor: 'black', padding: '20px' }}>Loading...</div>;
   if (error) return <div style={{ color: 'pink', backgroundColor: 'black', padding: '20px' }}>Error: {error}</div>;
 
@@ -179,14 +206,39 @@ const Pages = () => {
       padding: '20px',
       fontFamily: 'Arial, sans-serif'
     }}>
-      {/* Welcome Message di atas */}
+      {/* Header dengan welcome message dan tombol logout */}
       <div style={{ 
-        textAlign: 'center', 
-        fontSize: '2.5rem', 
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: '30px',
-        paddingTop: '20px'
+        padding: '10px 0',
+        borderBottom: '1px solid #444'
       }}>
-        {data?.message || 'welcome'}
+        <div style={{ 
+          fontSize: '2rem' 
+        }}>
+          {data?.message || 'welcome'}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <span style={{ fontSize: '14px', color: '#aaa' }}>
+            Welcome, {currentUser.username}
+          </span>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '8px 15px',
+              backgroundColor: '#555',
+              color: 'pink',
+              border: '1px solid pink',
+              borderRadius: '4px',
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       {/* Form untuk menambah/edit user */}
