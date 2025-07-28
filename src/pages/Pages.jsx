@@ -58,6 +58,11 @@ const Pages = () => {
     navigate('/login');
   };
 
+  // Fungsi untuk ke halaman Connect
+  const handleGoToConnect = () => {
+    navigate('/connect');
+  };
+
   // Fungsi untuk toggle visibility password
   const togglePasswordVisibility = (userId) => {
     setShowPasswords(prev => ({
@@ -258,7 +263,7 @@ const Pages = () => {
       padding: '20px',
       fontFamily: 'Arial, sans-serif'
     }}>
-      {/* Header dengan welcome message dan tombol logout */}
+      {/* Header dengan welcome message dan tombol navigasi */}
       <div style={{ 
         display: 'flex',
         justifyContent: 'space-between',
@@ -273,6 +278,21 @@ const Pages = () => {
           {data?.message || 'welcome'}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <button
+            onClick={handleGoToConnect}
+            style={{
+              padding: '8px 15px',
+              backgroundColor: 'pink',
+              color: 'black',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            View Connections
+          </button>
           <span style={{ fontSize: '14px', color: '#aaa' }}>
             Welcome, {currentUser.username}
           </span>
