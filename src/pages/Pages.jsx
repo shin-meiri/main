@@ -276,6 +276,20 @@ const Pages = () => {
           <span style={{ fontSize: '14px', color: '#aaa' }}>
             Welcome, {currentUser.username}
           </span>
+  <button
+    onClick={() => navigate('/connect')}
+    style={{
+      padding: '8px 15px',
+      backgroundColor: 'pink',
+      color: 'black',
+      border: 'none',
+      borderRadius: '4px',
+      fontSize: '14px',
+      cursor: 'pointer'
+    }}
+  >
+    Connect DB
+  </button>
           <button
             onClick={handleLogout}
             style={{
