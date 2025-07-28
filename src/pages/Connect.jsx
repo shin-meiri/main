@@ -8,7 +8,7 @@ const Connect = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('users'); // users, connections
+  const [connectionStatus, setConnectionStatus] = useState({});
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -52,6 +52,33 @@ const Connect = () => {
     navigate('/');
   };
 
+  // Fungsi untuk test koneksi database (simulasi)
+  const testConnection = (user) => {
+    // Simulasi test koneksi - dalam aplikasi nyata ini akan memanggil API
+    setConnectionStatus(prev => ({
+      ...prev,
+      [user.id]: 'Testing...'
+    }));
+
+    // Simulasi delay untuk test koneksi
+    setTimeout(() => {
+      // Simulasi hasil test koneksi (acak berhasil/gagal)
+      const isSuccess = Math.random() > 0.3; // 70% success rate
+      setConnectionStatus(prev => ({
+        ...prev,
+        [user.id]: isSuccess ? 'Connected' : 'Failed'
+      }));
+
+      // Reset status setelah beberapa detik
+      setTimeout(() => {
+        setConnectionStatus(prev => ({
+          ...prev,
+          [user.id]: ''
+        }));
+      }, 3000);
+    }, 1500);
+  };
+
   // Jika belum login, jangan tampilkan konten
   if (!currentUser) {
     return null;
@@ -84,6 +111,9 @@ const Connect = () => {
       Error: {error}
     </div>
   );
+
+  // Filter user yang memiliki data database
+  const dbUsers = data?.users?.filter(user => user.host && user.dbname) || [];
 
   return (
     <div style={{ 
@@ -143,213 +173,222 @@ const Connect = () => {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Welcome Message */}
       <div style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto'
+        textAlign: 'center', 
+        fontSize: '1.5rem', 
+        marginBottom: '30px',
+        padding: '20px',
+        backgroundColor: '#222',
+        border: '1px solid #444',
+        borderRadius: '8px'
       }}>
-        {/* Welcome Message */}
-        <div style={{ 
+        {data?.message || 'Welcome to Database Connections'}
+      </div>
+
+      {/* Database Connections */}
+      <div>
+        <h2 style={{ 
           textAlign: 'center', 
-          fontSize: '1.5rem', 
-          marginBottom: '30px',
-          padding: '20px',
-          backgroundColor: '#222',
-          border: '1px solid #444',
-          borderRadius: '8px'
-        }}>
-          {data?.message || 'Welcome to Database Connections'}
-        </div>
-
-        {/* Tab Navigation */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '10px', 
           marginBottom: '20px',
-          borderBottom: '1px solid #444'
+          fontSize: '1.8rem'
         }}>
-          <button
-            onClick={() => setActiveTab('users')}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: activeTab === 'users' ? 'pink' : '#333',
-              color: activeTab === 'users' ? 'black' : 'pink',
-              border: '1px solid pink',
-              borderBottom: activeTab === 'users' ? 'none' : '1px solid pink',
-              borderTopLeftRadius: '4px',
-              borderTopRightRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            Users ({data?.users?.length || 0})
-          </button>
-          <button
-            onClick={() => setActiveTab('connections')}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: activeTab === 'connections' ? 'pink' : '#333',
-              color: activeTab === 'connections' ? 'black' : 'pink',
-              border: '1px solid pink',
-              borderBottom: activeTab === 'connections' ? 'none' : '1px solid pink',
-              borderTopLeftRadius: '4px',
-              borderTopRightRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            Database Connections ({data?.users?.filter(u => u.host || u.dbname || u.tabel)?.length || 0})
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === 'users' && (
-          <div>
-            <h2 style={{ 
-              textAlign: 'center', 
-              marginBottom: '20px',
-              fontSize: '1.8rem'
-            }}>
-              Users Table
-            </h2>
-            
-            {data?.users && data.users.length > 0 ? (
-              <div style={{
-                overflowX: 'auto',
-                backgroundColor: '#222',
-                border: '1px solid #444',
-                borderRadius: '8px',
-                marginBottom: '30px'
-              }}>
-                <table style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  color: 'pink'
+          MySQL Database Connections ({dbUsers.length} connections)
+        </h2>
+        
+        {dbUsers.length > 0 ? (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', 
+            gap: '20px' 
+          }}>
+            {dbUsers.map(user => (
+              <div 
+                key={user.id}
+                style={{
+                  padding: '20px',
+                  backgroundColor: '#222',
+                  border: '1px solid #444',
+                  borderRadius: '8px'
+                }}
+              >
+                {/* Connection Header */}
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  marginBottom: '15px',
+                  paddingBottom: '10px',
+                  borderBottom: '1px solid #444'
                 }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#333' }}>
-                      <th style={{ 
-                        padding: '12px', 
-                        textAlign: 'left', 
-                        border: '1px solid #444' 
-                      }}>ID</th>
-                      <th style={{ 
-                        padding: '12px', 
-                        textAlign: 'left', 
-                        border: '1px solid #444' 
-                      }}>Username</th>
-                      <th style={{ 
-                        padding: '12px', 
-                        textAlign: 'left', 
-                        border: '1px solid #444' 
-                      }}>Password</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.users.map(user => (
-                      <tr key={user.id} style={{ borderBottom: '1px solid #444' }}>
-                        <td style={{ padding: '12px', border: '1px solid #444' }}>{user.id}</td>
-                        <td style={{ padding: '12px', border: '1px solid #444' }}>{user.username}</td>
-                        <td style={{ padding: '12px', border: '1px solid #444' }}>••••••••</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  <h3 style={{ margin: 0, color: 'pink' }}>Connection #{user.id}</h3>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={() => testConnection(user)}
+                      style={{
+                        padding: '5px 10px',
+                        backgroundColor: '#444',
+                        color: 'pink',
+                        border: '1px solid pink',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Test Connection
+                    </button>
+                  </div>
+                </div>
+
+                {/* Connection Status */}
+                {connectionStatus[user.id] && (
+                  <div style={{
+                    padding: '8px',
+                    marginBottom: '15px',
+                    backgroundColor: connectionStatus[user.id] === 'Connected' ? '#2d5a2d' : 
+                                   connectionStatus[user.id] === 'Failed' ? '#7a2d2d' : '#2d4a7a',
+                    border: '1px solid',
+                    borderColor: connectionStatus[user.id] === 'Connected' ? '#4caf50' : 
+                                connectionStatus[user.id] === 'Failed' ? '#f44336' : '#2196f3',
+                    borderRadius: '4px',
+                    textAlign: 'center',
+                    fontSize: '14px'
+                  }}>
+                    {connectionStatus[user.id]}
+                  </div>
+                )}
+
+                {/* Connection Details */}
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '120px 1fr', 
+                  gap: '10px',
+                  marginBottom: '15px'
+                }}>
+                  <div><strong>Username:</strong></div>
+                  <div>{user.username}</div>
+                  
+                  <div><strong>Host:</strong></div>
+                  <div>{user.host}</div>
+                  
+                  <div><strong>Database:</strong></div>
+                  <div>{user.dbname}</div>
+                  
+                  {user.tabel && (
+                    <>
+                      <div><strong>Table:</strong></div>
+                      <div>{user.tabel}</div>
+                    </>
+                  )}
+                </div>
+
+                {/* MySQL Connection String */}
+                <div style={{
+                  padding: '10px',
+                  backgroundColor: '#111',
+                  border: '1px solid #444',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontFamily: 'monospace',
+                  wordBreak: 'break-all'
+                }}>
+                  <div><strong>MySQL Connection:</strong></div>
+                  <div style={{ marginTop: '5px' }}>
+                    mysql -h {user.host} -u {user.username} -p {user.dbname}
+                  </div>
+                  {user.tabel && (
+                    <div style={{ marginTop: '5px' }}>
+                      Table: {user.tabel}
+                    </div>
+                  )}
+                </div>
+
+                {/* Table Information (simulasi) */}
+                {user.tabel && (
+                  <div style={{ 
+                    marginTop: '15px',
+                    padding: '10px',
+                    backgroundColor: '#1a1a1a',
+                    border: '1px solid #444',
+                    borderRadius: '4px'
+                  }}>
+                    <h4 style={{ margin: '0 0 10px 0', color: 'pink' }}>Table Structure</h4>
+                    <div style={{ fontSize: '12px' }}>
+                      <div><strong>Table Name:</strong> {user.tabel}</div>
+                      <div><strong>Engine:</strong> InnoDB</div>
+                      <div><strong>Rows:</strong> ~{(Math.floor(Math.random() * 1000) + 100).toLocaleString()}</div>
+                      <div><strong>Size:</strong> {(Math.random() * 10 + 1).toFixed(2)} MB</div>
+                    </div>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '40px',
-                backgroundColor: '#222',
-                border: '1px solid #444',
-                borderRadius: '8px'
-              }}>
-                <p>No users found in the database</p>
-              </div>
-            )}
+            ))}
           </div>
-        )}
-
-        {activeTab === 'connections' && (
-          <div>
-            <h2 style={{ 
-              textAlign: 'center', 
-              marginBottom: '20px',
-              fontSize: '1.8rem'
-            }}>
-              Database Connections Table
-            </h2>
-            
-            {data?.users && data.users.some(u => u.host || u.dbname || u.tabel) ? (
-              <div style={{
-                overflowX: 'auto',
-                backgroundColor: '#222',
-                border: '1px solid #444',
-                borderRadius: '8px'
-              }}>
-                <table style={{
-                  width: '100%',
-                  borderCollapse: 'collapse',
-                  color: 'pink'
-                }}>
-                  <thead>
-                    <tr style={{ backgroundColor: '#333' }}>
-                      <th style={{ 
-                        padding: '12px', 
-                        textAlign: 'left', 
-                        border: '1px solid #444' 
-                      }}>User ID</th>
-                      <th style={{ 
-                        padding: '12px', 
-                        textAlign: 'left', 
-                        border: '1px solid #444' 
-                      }}>Username</th>
-                      <th style={{ 
-                        padding: '12px', 
-                        textAlign: 'left', 
-                        border: '1px solid #444' 
-                      }}>Host</th>
-                      <th style={{ 
-                        padding: '12px', 
-                        textAlign: 'left', 
-                        border: '1px solid #444' 
-                      }}>Database</th>
-                      <th style={{ 
-                        padding: '12px', 
-                        textAlign: 'left', 
-                        border: '1px solid #444' 
-                      }}>Table</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.users
-                      .filter(user => user.host || user.dbname || user.tabel)
-                      .map(user => (
-                        <tr key={user.id} style={{ borderBottom: '1px solid #444' }}>
-                          <td style={{ padding: '12px', border: '1px solid #444' }}>{user.id}</td>
-                          <td style={{ padding: '12px', border: '1px solid #444' }}>{user.username}</td>
-                          <td style={{ padding: '12px', border: '1px solid #444' }}>{user.host || '-'}</td>
-                          <td style={{ padding: '12px', border: '1px solid #444' }}>{user.dbname || '-'}</td>
-                          <td style={{ padding: '12px', border: '1px solid #444' }}>{user.tabel || '-'}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '40px',
-                backgroundColor: '#222',
-                border: '1px solid #444',
-                borderRadius: '8px'
-              }}>
-                <p>No database connections found</p>
-              </div>
-            )}
+        ) : (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '40px',
+            backgroundColor: '#222',
+            border: '1px solid #444',
+            borderRadius: '8px'
+          }}>
+            <p>No database connections found</p>
+            <p style={{ fontSize: '14px', color: '#aaa', marginTop: '10px' }}>
+              Add users with database information in the main page to see connections here
+            </p>
           </div>
         )}
       </div>
+
+      {/* Users Without Database Info */}
+      {data?.users && data.users.length > 0 && (
+        <div style={{ marginTop: '30px' }}>
+          <h2 style={{ 
+            textAlign: 'center', 
+            marginBottom: '20px',
+            fontSize: '1.5rem'
+          }}>
+            Other Users ({data.users.length - dbUsers.length})
+          </h2>
+          
+          {data.users.length > dbUsers.length ? (
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+              gap: '15px' 
+            }}>
+              {data.users
+                .filter(user => !user.host || !user.dbname)
+                .map(user => (
+                  <div 
+                    key={user.id}
+                    style={{
+                      padding: '15px',
+                      backgroundColor: '#222',
+                      border: '1px solid #444',
+                      borderRadius: '6px'
+                    }}
+                  >
+                    <div><strong>ID:</strong> {user.id}</div>
+                    <div><strong>Username:</strong> {user.username}</div>
+                    <div style={{ 
+                      marginTop: '10px', 
+                      fontSize: '12px', 
+                      color: '#aaa' 
+                    }}>
+                      No database connection information
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', color: '#aaa' }}>
+              All users have database connection information
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
