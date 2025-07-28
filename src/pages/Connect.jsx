@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import mysql from 'mysql2/promise';
 
 const Connect = () => {
   const [users, setUsers] = useState([]);
@@ -122,6 +121,11 @@ const Connect = () => {
     navigate('/login');
   };
 
+  // Navigate to main page
+  const goToMainPage = () => {
+    navigate('/');
+  };
+
   // Jika belum login, jangan tampilkan konten
   if (!currentUser) {
     return null;
@@ -153,6 +157,20 @@ const Connect = () => {
           <span style={{ fontSize: '14px', color: '#aaa' }}>
             Welcome, {currentUser.username}
           </span>
+          <button
+            onClick={goToMainPage}
+            style={{
+              padding: '8px 15px',
+              backgroundColor: '#444',
+              color: 'pink',
+              border: '1px solid pink',
+              borderRadius: '4px',
+              fontSize: '14px',
+              cursor: 'pointer'
+            }}
+          >
+            Main Page
+          </button>
           <button
             onClick={handleLogout}
             style={{
