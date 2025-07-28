@@ -8,9 +8,16 @@ const Pages = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [newUser, setNewUser] = useState({ username: '', password: '' });
+  const [newUser, setNewUser] = useState({ 
+    username: '', 
+    password: '',
+    host: '',
+    dbname: '',
+    tabel: ''
+  });
   const [editingUser, setEditingUser] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
+  const [showDbFields, setShowDbFields] = useState(false);
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -61,11 +68,14 @@ const Pages = () => {
       // Tentukan ID baru (auto increment)
       const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
       
-      // Buat user baru
+      // Buat user baru dengan field database opsional
       const userToAdd = {
         id: newId,
         username: newUser.username,
-        password: newUser.password
+        password: newUser.password,
+        host: newUser.host || '',
+        dbname: newUser.dbname || '',
+        tabel: newUser.tabel || ''
       };
 
       // Kirim data ke API
@@ -78,8 +88,15 @@ const Pages = () => {
         // Refresh data setelah berhasil menyimpan
         fetchData();
         // Reset form
-        setNewUser({ username: '', password: '' });
+        setNewUser({ 
+          username: '', 
+          password: '',
+          host: '',
+          dbname: '',
+          tabel: ''
+        });
         setEditingUser(null);
+        setShowDbFields(false);
       }
     } catch (err) {
       setError(err.message);
@@ -91,8 +108,15 @@ const Pages = () => {
     setEditingUser(user);
     setNewUser({
       username: user.username,
-      password: user.password
+      password: user.password,
+      host: user.host || '',
+      dbname: user.dbname || '',
+      tabel: user.tabel || ''
     });
+    // Tampilkan field DB jika ada data DB
+    if (user.host || user.dbname || user.tabel) {
+      setShowDbFields(true);
+    }
   };
 
   // Fungsi untuk update user yang sudah ada
@@ -106,7 +130,14 @@ const Pages = () => {
       // Update user yang diedit
       const updatedUsers = users.map(user => 
         user.id === editingUser.id 
-          ? { ...user, username: newUser.username, password: newUser.password }
+          ? { 
+              ...user, 
+              username: newUser.username, 
+              password: newUser.password,
+              host: newUser.host || '',
+              dbname: newUser.dbname || '',
+              tabel: newUser.tabel || ''
+            }
           : user
       );
 
@@ -120,8 +151,15 @@ const Pages = () => {
         // Refresh data setelah berhasil mengupdate
         fetchData();
         // Reset form
-        setNewUser({ username: '', password: '' });
+        setNewUser({ 
+          username: '', 
+          password: '',
+          host: '',
+          dbname: '',
+          tabel: ''
+        });
         setEditingUser(null);
+        setShowDbFields(false);
       }
     } catch (err) {
       setError(err.message);
@@ -146,8 +184,15 @@ const Pages = () => {
           fetchData();
           // Jika sedang mengedit user yang dihapus, reset form
           if (editingUser && editingUser.id === userId) {
-            setNewUser({ username: '', password: '' });
+            setNewUser({ 
+              username: '', 
+              password: '',
+              host: '',
+              dbname: '',
+              tabel: ''
+            });
             setEditingUser(null);
+            setShowDbFields(false);
           }
         }
       } catch (err) {
@@ -177,8 +222,15 @@ const Pages = () => {
 
   // Fungsi untuk cancel edit
   const handleCancelEdit = () => {
-    setNewUser({ username: '', password: '' });
+    setNewUser({ 
+      username: '', 
+      password: '',
+      host: '',
+      dbname: '',
+      tabel: ''
+    });
     setEditingUser(null);
+    setShowDbFields(false);
   };
 
   // Jika belum login, jangan tampilkan konten
@@ -414,6 +466,118 @@ const Pages = () => {
               onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
             />
           </div>
+
+          {/* Toggle untuk field database */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowDbFields(!showDbFields)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#667eea',
+                cursor: 'pointer',
+                textAlign: 'left',
+                padding: '5px 0',
+                fontSize: '14px',
+                fontWeight: '600',
+                textDecoration: 'underline'
+              }}
+            >
+              {showDbFields ? '▼ Sembunyikan Database Fields' : '▶ Tambah Database Fields (Opsional)'}
+            </button>
+          </div>
+
+          {/* Field database (opsional) */}
+          {showDbFields && (
+            <>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px',
+                  fontWeight: '500',
+                  color: '#333'
+                }}>
+                  Host
+                </label>
+                <input
+                  type="text"
+                  name="host"
+                  value={newUser.host}
+                  onChange={handleInputChange}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    border: '2px solid #e1e5e9',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    transition: 'border-color 0.3s ease',
+                    outline: 'none'
+                  }}
+                  placeholder="localhost"
+                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                />
+              </div>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px',
+                  fontWeight: '500',
+                  color: '#333'
+                }}>
+                  Database Name
+                </label>
+                <input
+                  type="text"
+                  name="dbname"
+                  value={newUser.dbname}
+                  onChange={handleInputChange}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    border: '2px solid #e1e5e9',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    transition: 'border-color 0.3s ease',
+                    outline: 'none'
+                  }}
+                  placeholder="nama_database"
+                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                />
+              </div>
+              <div>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: '8px',
+                  fontWeight: '500',
+                  color: '#333'
+                }}>
+                  Tabel
+                </label>
+                <input
+                  type="text"
+                  name="tabel"
+                  value={newUser.tabel}
+                  onChange={handleInputChange}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    border: '2px solid #e1e5e9',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    transition: 'border-color 0.3s ease',
+                    outline: 'none'
+                  }}
+                  placeholder="nama_tabel"
+                  onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                />
+              </div>
+            </>
+          )}
+
           <div style={{ display: 'flex', gap: '15px' }}>
             <button
               type="submit"
@@ -471,10 +635,9 @@ const Pages = () => {
           </div>
         </form>
       </div>
-
       {/* Daftar user yang sudah ada */}
       <div style={{ 
-        maxWidth: '1000px', 
+        maxWidth: '1200px', 
         margin: '0 auto',
         padding: '30px',
         backgroundColor: 'white',
@@ -511,7 +674,7 @@ const Pages = () => {
         ) : (
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', 
             gap: '20px' 
           }}>
             {users.map(user => (
@@ -575,7 +738,7 @@ const Pages = () => {
                 </div>
                 
                 <div style={{ 
-                  marginBottom: '20px',
+                  marginBottom: '15px',
                   padding: '12px',
                   backgroundColor: 'rgba(102, 126, 234, 0.1)',
                   borderRadius: '8px',
@@ -597,6 +760,52 @@ const Pages = () => {
                     {user.password}
                   </div>
                 </div>
+
+                {/* Tampilkan field database jika ada data */}
+                {(user.host || user.dbname || user.tabel) && (
+                  <div style={{ 
+                    marginBottom: '20px',
+                    padding: '12px',
+                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(76, 175, 80, 0.2)'
+                  }}>
+                    <div style={{ 
+                      fontSize: '0.9rem', 
+                      color: '#666', 
+                      marginBottom: '8px',
+                      fontWeight: '600'
+                    }}>
+                      🗄️ Database Configuration:
+                    </div>
+                    {user.host && (
+                      <div style={{ 
+                        fontSize: '0.9rem', 
+                        color: '#333',
+                        marginBottom: '3px'
+                      }}>
+                        <strong>Host:</strong> {user.host}
+                      </div>
+                    )}
+                    {user.dbname && (
+                      <div style={{ 
+                        fontSize: '0.9rem', 
+                        color: '#333',
+                        marginBottom: '3px'
+                      }}>
+                        <strong>DB Name:</strong> {user.dbname}
+                      </div>
+                    )}
+                    {user.tabel && (
+                      <div style={{ 
+                        fontSize: '0.9rem', 
+                        color: '#333'
+                      }}>
+                        <strong>Tabel:</strong> {user.tabel}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <button
                   onClick={(e) => {
