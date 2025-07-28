@@ -1,15 +1,17 @@
 // src/pages/Connect.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const Connect = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [tables, setTables] = useState([]);
+  const [selectedTable, setSelectedTable] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState('');
+  const [testResult, setTestResult] = useState('');
+  const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState({});
-  const [selectedTables, setSelectedTables] = useState({});
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -22,117 +24,143 @@ const Connect = () => {
     }
   }, [navigate]);
 
-  // Fungsi untuk mengambil data dari API
-  const fetchData = async () => {
+  // Load data user dari API
+  useEffect(() => {
+    if (currentUser) {
+      loadUserData();
+    }
+  }, [currentUser]);
+
+  const loadUserData = async () => {
     try {
       const response = await axios.get('/api/dat.json');
-      setData(response.data);
-      setLoading(false);
+      const validUsers = (response.data.users || []).filter(user => 
+        user.host && user.dbname && user.username && user.password
+      );
+      setUsers(validUsers);
+      
+      // Set user pertama sebagai default jika ada
+      if (validUsers.length > 0 && !selectedUser) {
+        setSelectedUser(validUsers[0].id.toString());
+      }
     } catch (err) {
-      setError(err.message);
+      console.error('Error loading user data:', err);
+    }
+  };
+
+  // Handle perubahan user selection
+  const handleUserChange = (userId) => {
+    setSelectedUser(userId);
+    setSelectedTable('');
+    setTables([]);
+    setTestResult('');
+    
+    // Reset connection status
+    const selectedUserData = users.find(user => user.id.toString() === userId);
+    if (selectedUserData) {
+      setConnectionStatus(`Selected: ${selectedUserData.username}@${selectedUserData.host}/${selectedUserData.dbname}`);
+    }
+  };
+
+  // Test connection ke database
+  const testConnection = async () => {
+    if (!selectedUser) {
+      setTestResult('Please select a user first');
+      return;
+    }
+
+    setLoading(true);
+    setTestResult('');
+    
+    try {
+      const selectedUserData = users.find(user => user.id.toString() === selectedUser);
+      
+      if (!selectedUserData) {
+        throw new Error('User data not found');
+      }
+
+      // Simulasi test connection (dalam aplikasi nyata, ini akan menghubungi backend API)
+      // Untuk demo, kita akan menggunakan fetch API ke endpoint khusus
+      const response = await fetch('/api/test-connection.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host: selectedUserData.host,
+          username: selectedUserData.username,
+          password: selectedUserData.password,
+          dbname: selectedUserData.dbname
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setTestResult('✅ Connection successful!');
+        // Jika berhasil, load tables
+        loadTables(selectedUserData);
+      } else {
+        setTestResult(`❌ Connection failed: ${result.message}`);
+      }
+    } catch (err) {
+      setTestResult(`❌ Connection failed: ${err.message}`);
+    } finally {
       setLoading(false);
     }
   };
 
-  // Load data saat komponen pertama kali dimuat
-  useEffect(() => {
-    if (currentUser) {
-      fetchData();
-    }
-  }, [currentUser]);
+  // Load tables dari database
+  const loadTables = async (userData) => {
+    try {
+      // Simulasi load tables (dalam aplikasi nyata, ini akan menghubungi backend API)
+      const response = await fetch('/api/get-tables.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host: userData.host,
+          username: userData.username,
+          password: userData.password,
+          dbname: userData.dbname
+        })
+      });
 
-  // Fungsi untuk logout
+      const result = await response.json();
+      
+      if (result.success) {
+        setTables(result.tables || []);
+        if (result.tables && result.tables.length > 0) {
+          setSelectedTable(result.tables[0]);
+        }
+      } else {
+        setTables([]);
+        setSelectedTable('');
+      }
+    } catch (err) {
+      console.error('Error loading tables:', err);
+      setTables([]);
+      setSelectedTable('');
+    }
+  };
+
+  // Handle test connection button click
+  const handleTestConnection = () => {
+    testConnection();
+  };
+
+  // Logout
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     setCurrentUser(null);
     navigate('/login');
   };
 
-  // Fungsi untuk kembali ke halaman utama
-  const handleBackToHome = () => {
-    navigate('/');
-  };
-
-  // Fungsi untuk test koneksi database
-  const testConnection = (user) => {
-    // Simulasi test koneksi
-    setConnectionStatus(prev => ({
-      ...prev,
-      [user.id]: 'Testing...'
-    }));
-
-    // Simulasi delay untuk test koneksi
-    setTimeout(() => {
-      // Simulasi hasil test koneksi (acak berhasil/gagal)
-      const isSuccess = Math.random() > 0.3; // 70% success rate
-      setConnectionStatus(prev => ({
-        ...prev,
-        [user.id]: isSuccess ? 'Connected ✅' : 'Failed ❌'
-      }));
-
-      // Reset status setelah beberapa detik
-      setTimeout(() => {
-        setConnectionStatus(prev => ({
-          ...prev,
-          [user.id]: ''
-        }));
-      }, 5000);
-    }, 1500);
-  };
-
-  // Fungsi untuk handle perubahan tabel dropdown
-  const handleTableChange = (userId, value) => {
-    setSelectedTables(prev => ({
-      ...prev,
-      [userId]: value
-    }));
-  };
-
-  // Fungsi untuk mendapatkan daftar tabel (simulasi)
-  const getTableList = (userId) => {
-    // Simulasi daftar tabel
-    const tables = [
-      'users', 'products', 'orders', 'customers', 
-      'categories', 'suppliers', 'employees', 'invoices'
-    ];
-    return tables;
-  };
-
   // Jika belum login, jangan tampilkan konten
   if (!currentUser) {
     return null;
   }
-
-  if (loading) return (
-    <div style={{ 
-      color: 'pink', 
-      backgroundColor: 'black', 
-      minHeight: '100vh',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '20px'
-    }}>
-      Loading...
-    </div>
-  );
-
-  if (error) return (
-    <div style={{ 
-      color: 'pink', 
-      backgroundColor: 'black', 
-      minHeight: '100vh',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '20px'
-    }}>
-      Error: {error}
-    </div>
-  );
-
-  // Filter user yang memiliki data database
-  const dbUsers = data?.users?.filter(user => user.host && user.dbname) || [];
 
   return (
     <div style={{ 
@@ -142,7 +170,7 @@ const Connect = () => {
       padding: '20px',
       fontFamily: 'Arial, sans-serif'
     }}>
-      {/* Header */}
+      {/* Header dengan tombol logout */}
       <div style={{ 
         display: 'flex',
         justifyContent: 'space-between',
@@ -154,27 +182,12 @@ const Connect = () => {
         <div style={{ 
           fontSize: '2rem' 
         }}>
-          Database Connections
+          Database Connection
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <span style={{ fontSize: '14px', color: '#aaa' }}>
             Welcome, {currentUser.username}
           </span>
-          <button
-            onClick={handleBackToHome}
-            style={{
-              padding: '8px 15px',
-              backgroundColor: 'pink',
-              color: 'black',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '14px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            Back to Home
-          </button>
           <button
             onClick={handleLogout}
             style={{
@@ -192,233 +205,184 @@ const Connect = () => {
         </div>
       </div>
 
-      {/* Database Connections */}
-      <div>
-        <h2 style={{ 
-          textAlign: 'center', 
-          marginBottom: '20px',
-          fontSize: '1.8rem'
-        }}>
-          MySQL Database Connections ({dbUsers.length} connections)
-        </h2>
+      {/* Connection Form */}
+      <div style={{ 
+        maxWidth: '600px', 
+        margin: '0 auto 30px auto',
+        padding: '20px',
+        border: '1px solid pink',
+        borderRadius: '8px'
+      }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>MySQL Connection</h2>
         
-        {dbUsers.length > 0 ? (
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', 
-            gap: '20px' 
-          }}>
-            {dbUsers.map(user => (
-              <div 
-                key={user.id}
-                style={{
-                  padding: '20px',
-                  backgroundColor: '#222',
-                  border: '1px solid #444',
-                  borderRadius: '8px'
-                }}
-              >
-                {/* Connection Header */}
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  marginBottom: '15px',
-                  paddingBottom: '10px',
-                  borderBottom: '1px solid #444'
-                }}>
-                  <h3 style={{ margin: 0, color: 'pink' }}>Connection #{user.id}</h3>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                      onClick={() => testConnection(user)}
-                      style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#444',
-                        color: 'pink',
-                        border: '1px solid pink',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                      }}
-                    >
-                      🔁 Test Connection
-                    </button>
-                  </div>
-                </div>
-
-                {/* Connection Status */}
-                {connectionStatus[user.id] && (
-                  <div style={{
-                    padding: '10px',
-                    marginBottom: '15px',
-                    backgroundColor: connectionStatus[user.id].includes('Connected') ? '#2d5a2d' : 
-                                   connectionStatus[user.id].includes('Failed') ? '#7a2d2d' : '#2d4a7a',
-                    border: '1px solid',
-                    borderColor: connectionStatus[user.id].includes('Connected') ? '#4caf50' : 
-                                connectionStatus[user.id].includes('Failed') ? '#f44336' : '#2196f3',
-                    borderRadius: '4px',
-                    textAlign: 'center',
-                    fontSize: '14px',
-                    fontWeight: 'bold'
-                  }}>
-                    {connectionStatus[user.id]}
-                  </div>
-                )}
-
-                {/* Connection Details */}
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: '100px 1fr', 
-                  gap: '10px',
-                  marginBottom: '15px'
-                }}>
-                  <div><strong>Username:</strong></div>
-                  <div>{user.username}</div>
-                  
-                  <div><strong>Host:</strong></div>
-                  <div>{user.host}</div>
-                  
-                  <div><strong>Database:</strong></div>
-                  <div>{user.dbname}</div>
-                </div>
-
-                {/* Table Selection */}
-                <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px' }}>
-                    <strong>Select Table:</strong>
-                  </label>
-                  <select
-                    value={selectedTables[user.id] || (user.tabel || '')}
-                    onChange={(e) => handleTableChange(user.id, e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px',
-                      backgroundColor: '#333',
-                      color: 'pink',
-                      border: '1px solid #555',
-                      borderRadius: '4px',
-                      fontSize: '14px'
-                    }}
-                  >
-                    <option value="">-- Select a table --</option>
-                    {getTableList(user.id).map((table, index) => (
-                      <option key={index} value={table}>{table}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* MySQL Connection String */}
-                <div style={{
-                  padding: '10px',
-                  backgroundColor: '#111',
-                  border: '1px solid #444',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontFamily: 'monospace',
-                  wordBreak: 'break-all'
-                }}>
-                  <div><strong>MySQL Connection:</strong></div>
-                  <div style={{ marginTop: '5px' }}>
-                    mysql -h {user.host} -u {user.username} -p {user.dbname}
-                  </div>
-                  {selectedTables[user.id] && (
-                    <div style={{ marginTop: '5px' }}>
-                      Selected Table: {selectedTables[user.id]}
-                    </div>
-                  )}
-                </div>
-
-                {/* Table Information */}
-                {selectedTables[user.id] && (
-                  <div style={{ 
-                    marginTop: '15px',
-                    padding: '10px',
-                    backgroundColor: '#1a1a1a',
-                    border: '1px solid #444',
-                    borderRadius: '4px'
-                  }}>
-                    <h4 style={{ margin: '0 0 10px 0', color: 'pink' }}>
-                      Table: {selectedTables[user.id]}
-                    </h4>
-                    <div style={{ fontSize: '12px' }}>
-                      <div><strong>Engine:</strong> InnoDB</div>
-                      <div><strong>Rows:</strong> ~{(Math.floor(Math.random() * 1000) + 100).toLocaleString()}</div>
-                      <div><strong>Size:</strong> {(Math.random() * 10 + 1).toFixed(2)} MB</div>
-                      <div><strong>Collation:</strong> utf8_general_ci</div>
-                    </div>
-                  </div>
-                )}
-              </div>
+        {/* User Selection */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', marginBottom: '8px' }}>Select Database Connection:</label>
+          <select
+            value={selectedUser}
+            onChange={(e) => handleUserChange(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              backgroundColor: '#333',
+              color: 'pink',
+              border: '1px solid #555',
+              borderRadius: '4px',
+              fontSize: '16px'
+            }}
+          >
+            <option value="">-- Select Connection --</option>
+            {users.map(user => (
+              <option key={user.id} value={user.id}>
+                {user.username}@{user.host}/{user.dbname}
+              </option>
             ))}
-          </div>
-        ) : (
+          </select>
+        </div>
+
+        {/* Connection Info */}
+        {selectedUser && (
           <div style={{ 
-            textAlign: 'center', 
-            padding: '40px',
-            backgroundColor: '#222',
-            border: '1px solid #444',
-            borderRadius: '8px'
+            backgroundColor: '#333', 
+            padding: '15px', 
+            borderRadius: '6px', 
+            marginBottom: '20px',
+            fontSize: '14px'
           }}>
-            <p>No database connections found</p>
-            <p style={{ fontSize: '14px', color: '#aaa', marginTop: '10px' }}>
-              Add users with database information in the main page to see connections here
-            </p>
+            <div><strong>Host:</strong> {users.find(u => u.id.toString() === selectedUser)?.host}</div>
+            <div><strong>Database:</strong> {users.find(u => u.id.toString() === selectedUser)?.dbname}</div>
+            <div><strong>Username:</strong> {users.find(u => u.id.toString() === selectedUser)?.username}</div>
+          </div>
+        )}
+
+        {/* Test Connection Button */}
+        <div style={{ marginBottom: '20px' }}>
+          <button
+            onClick={handleTestConnection}
+            disabled={!selectedUser || loading}
+            style={{
+              width: '100%',
+              padding: '14px',
+              backgroundColor: (!selectedUser || loading) ? '#555' : 'pink',
+              color: (!selectedUser || loading) ? '#888' : 'black',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: (!selectedUser || loading) ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px'
+            }}
+          >
+            {loading ? (
+              <>
+                <span>Testing...</span>
+              </>
+            ) : (
+              <>
+                <span>🔁 Test Connection</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Test Result */}
+        {testResult && (
+          <div style={{ 
+            padding: '15px', 
+            borderRadius: '6px', 
+            marginBottom: '20px',
+            backgroundColor: testResult.includes('✅') ? '#2d5a2d' : '#7a2d2d',
+            border: `1px solid ${testResult.includes('✅') ? '#4caf50' : '#f44336'}`,
+            textAlign: 'center'
+          }}>
+            {testResult}
+          </div>
+        )}
+
+        {/* Table Selection (hanya muncul jika koneksi berhasil) */}
+        {tables.length > 0 && (
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px' }}>Select Table:</label>
+            <select
+              value={selectedTable}
+              onChange={(e) => setSelectedTable(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                backgroundColor: '#333',
+                color: 'pink',
+                border: '1px solid #555',
+                borderRadius: '4px',
+                fontSize: '16px'
+              }}
+            >
+              {tables.map((table, index) => (
+                <option key={index} value={table}>
+                  {table}
+                </option>
+              ))}
+            </select>
           </div>
         )}
       </div>
 
-      {/* Users Without Database Info */}
-      {data?.users && data.users.length > 0 && (
-        <div style={{ marginTop: '30px' }}>
-          <h2 style={{ 
-            textAlign: 'center', 
-            marginBottom: '20px',
-            fontSize: '1.5rem'
+      {/* Daftar Koneksi yang Tersedia */}
+      <div style={{ 
+        maxWidth: '800px', 
+        margin: '0 auto',
+        padding: '20px'
+      }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>
+          Available Database Connections ({users.length})
+        </h2>
+        {users.length === 0 ? (
+          <p style={{ textAlign: 'center', color: '#aaa' }}>
+            No database connections found. Please add users with database information in the main page.
+          </p>
+        ) : (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '15px' 
           }}>
-            Other Users ({data.users.length - dbUsers.length})
-          </h2>
-          
-          {data.users.length > dbUsers.length ? (
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-              gap: '15px' 
-            }}>
-              {data.users
-                .filter(user => !user.host || !user.dbname)
-                .map(user => (
-                  <div 
-                    key={user.id}
-                    style={{
-                      padding: '15px',
-                      backgroundColor: '#222',
-                      border: '1px solid #444',
-                      borderRadius: '6px'
-                    }}
-                  >
-                    <div><strong>ID:</strong> {user.id}</div>
-                    <div><strong>Username:</strong> {user.username}</div>
-                    <div style={{ 
-                      marginTop: '10px', 
-                      fontSize: '12px', 
-                      color: '#aaa' 
-                    }}>
-                      No database connection information
-                    </div>
-                  </div>
-                ))
-              }
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', color: '#aaa' }}>
-              All users have database connection information
-            </div>
-          )}
-        </div>
-      )}
+            {users.map(user => (
+              <div 
+                key={user.id}
+                onClick={() => handleUserChange(user.id.toString())}
+                style={{
+                  padding: '15px',
+                  backgroundColor: selectedUser === user.id.toString() ? '#444' : '#222',
+                  border: selectedUser === user.id.toString() ? '2px solid pink' : '1px solid #444',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ 
+                  fontSize: '18px', 
+                  fontWeight: 'bold', 
+                  marginBottom: '10px',
+                  color: selectedUser === user.id.toString() ? 'pink' : 'inherit'
+                }}>
+                  {user.username}@{user.host}
+                </div>
+                <div><strong>Database:</strong> {user.dbname}</div>
+                {user.tabel && <div><strong>Table:</strong> {user.tabel}</div>}
+                <div style={{ 
+                  fontSize: '12px', 
+                  color: '#888', 
+                  marginTop: '10px' 
+                }}>
+                  ID: {user.id}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
