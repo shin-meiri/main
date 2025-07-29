@@ -4,27 +4,28 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const Connect = () => {
-  const [profiles, setProfiles] = useState([]);
-  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [connectionConfig, setConnectionConfig] = useState({
+    host: 'localhost',
+    username: '',
+    password: '',
+    database: ''
+  });
+  const [isConnected, setIsConnected] = useState(false);
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState('');
   const [tableData, setTableData] = useState([]);
+  const [tableStructure, setTableStructure] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('');
   const [loading, setLoading] = useState({ 
-    profiles: false, 
     connection: false, 
     tables: false, 
-    data: false 
+     false 
   });
   const [currentUser, setCurrentUser] = useState(null);
-  const [editingProfile, setEditingProfile] = useState(null);
-  const [profileForm, setProfileForm] = useState({
-    name: '',
-    host: '',
-    username: '',
-    password: '',
-    dbname: ''
-  });
+  const [editingRow, setEditingRow] = useState(null);
+  const [editingData, setEditingData] = useState({});
+  const [addingRow, setAddingRow] = useState(false);
+  const [addingData, setAddingData] = useState({});
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -37,79 +38,57 @@ const Connect = () => {
     }
   }, [navigate]);
 
-  // Fetch profiles dari API
-  useEffect(() => {
-    if (currentUser) {
-      fetchProfiles();
-    }
-  }, [currentUser]);
-
-  const fetchProfiles = async () => {
-    setLoading(prev => ({ ...prev, profiles: true }));
-    try {
-      const response = await axios.get('/api/dat.json');
-      // Filter profiles yang memiliki konfigurasi database lengkap
-      const dbProfiles = (response.data.users || []).filter(user => 
-        user.host && user.dbname && user.username && user.password
-      ).map(user => ({
-        id: user.id,
-        name: user.username,
-        host: user.host,
-        username: user.username,
-        password: user.password,
-        dbname: user.dbname
-      }));
-      setProfiles(dbProfiles);
-    } catch (err) {
-      setConnectionStatus(`❌ Error fetching profiles: ${err.message}`);
-    } finally {
-      setLoading(prev => ({ ...prev, profiles: false }));
-    }
-  };
-
   // Test connection to MySQL
-  const testConnection = async (profile) => {
+  const testConnection = async () => {
+    if (!connectionConfig.host || !connectionConfig.username || 
+        !connectionConfig.password || !connectionConfig.database) {
+      setConnectionStatus('❌ All fields are required!');
+      return;
+    }
+
     setLoading(prev => ({ ...prev, connection: true }));
-    setConnectionStatus(`Testing connection to ${profile.name}...`);
+    setConnectionStatus('Testing connection...');
 
     try {
-      const response = await axios.post('/api/test-connection.php', {
-        host: profile.host,
-        dbname: profile.dbname,
-        username: profile.username,
-        password: profile.password
+      const response = await axios.post('/api/mysql-connect.php', {
+        host: connectionConfig.host,
+        username: connectionConfig.username,
+        password: connectionConfig.password,
+        database: connectionConfig.database
       });
 
       if (response.data.success) {
-        setConnectionStatus(`✅ Connection successful to ${profile.name}!`);
-        setSelectedProfile(profile);
-        // Reset previous data
+        setConnectionStatus('✅ Connection successful!');
+        setIsConnected(true);
         setTables([]);
         setSelectedTable('');
         setTableData([]);
+        setTableStructure([]);
       } else {
         setConnectionStatus(`❌ Connection failed: ${response.data.error}`);
+        setIsConnected(false);
       }
     } catch (err) {
       setConnectionStatus(`❌ Connection error: ${err.response?.data?.error || err.message}`);
+      setIsConnected(false);
     } finally {
       setLoading(prev => ({ ...prev, connection: false }));
     }
   };
 
-  // Get tables from selected database
-  const getTables = async (profile) => {
-    if (!profile) return;
+  // Get tables from database
+  const getTables = async () => {
+    if (!isConnected) return;
     
     setLoading(prev => ({ ...prev, tables: true }));
-    setConnectionStatus(`Fetching tables from ${profile.name}...`);
+    setConnectionStatus('Fetching tables...');
 
     try {
-      const response = await axios.post('/api/get-tables.php', {
-        host: profile.host,
-        dbname: profile.dbname,
-        username: profile.username,
-        password: profile.password
+      const response = await axios.post('/api/mysql-get-tables.php', {
+        host: connectionConfig.host,
+        username: connectionConfig.username,
+        password: connectionConfig.password,
+        database: connectionConfig.database
       });
 
       if (response.data.success) {
@@ -127,154 +106,207 @@ const Connect = () => {
 
   // Get table data
   const getTableData = async (tableName) => {
-    if (!selectedProfile || !tableName) return;
+    if (!isConnected || !tableName) return;
 
-    setLoading(prev => ({ ...prev, data: true }));
+    setLoading(prev => ({ ...prev,  true }));
     setSelectedTable(tableName);
     setConnectionStatus(`Fetching data from ${tableName}...`);
 
     try {
-      const response = await axios.post('/api/get-table-data.php', {
-        host: selectedProfile.host,
-        dbname: selectedProfile.dbname,
-        username: selectedProfile.username,
-        password: selectedProfile.password,
+      const response = await axios.post('/api/mysql-get-data.php', {
+        host: connectionConfig.host,
+        username: connectionConfig.username,
+        password: connectionConfig.password,
+        database: connectionConfig.database,
         table: tableName
       });
 
       if (response.data.success) {
         setTableData(response.data.data || []);
+        setTableStructure(response.data.structure || []);
         setConnectionStatus(`✅ Displaying data from ${tableName}`);
       } else {
-        setConnectionStatus(`❌ Failed to fetch data: ${response.data.error}`);
+        setConnectionStatus(`❌ Failed to fetch  ${response.data.error}`);
       }
     } catch (err) {
       setConnectionStatus(`❌ Error fetching data: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
-  // CRUD Profile Functions
-  const startEditingProfile = (profile) => {
-    setEditingProfile(profile);
-    setProfileForm({
-      name: profile.name,
-      host: profile.host,
-      username: profile.username,
-      password: profile.password,
-      dbname: profile.dbname
-    });
-  };
 
-  const startAddingProfile = () => {
-    setEditingProfile(null);
-    setProfileForm({
-      name: '',
-      host: '',
-      username: '',
-      password: '',
-      dbname: ''
-    });
-  };
-
-  const saveProfile = async () => {
-    if (!profileForm.name || !profileForm.host || !profileForm.username || 
-        !profileForm.password || !profileForm.dbname) {
-      setConnectionStatus('❌ All fields are required!');
-      return;
-    }
+  // Get table structure
+  const getTableStructure = async (tableName) => {
+    if (!isConnected || !tableName) return;
 
     try {
-      // Get current users data
-      const response = await axios.get('/api/dat.json');
-      let users = response.data.users || [];
-      
-      if (editingProfile) {
-        // Update existing profile
-        users = users.map(user => 
-          user.id === editingProfile.id 
-            ? { 
-                ...user,
-                username: profileForm.name,
-                host: profileForm.host,
-                dbname: profileForm.dbname,
-                dbUsername: profileForm.username,
-                password: profileForm.password
-              }
-            : user
-        );
-      } else {
-        // Add new profile
-        const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
-        users.push({
-          id: newId,
-          username: profileForm.name,
-          host: profileForm.host,
-          dbname: profileForm.dbname,
-          dbUsername: profileForm.username,
-          password: profileForm.password
-        });
-      }
-
-      // Save to API
-      const saveResponse = await axios.post('/api/dat.php', {
-        message: response.data.message || 'welcome',
-        users: users
+      const response = await axios.post('/api/mysql-get-structure.php', {
+        host: connectionConfig.host,
+        username: connectionConfig.username,
+        password: connectionConfig.password,
+        database: connectionConfig.database,
+        table: tableName
       });
 
-      if (saveResponse.data.status === 'success') {
-        setConnectionStatus(editingProfile 
-          ? '✅ Profile updated successfully!' 
-          : '✅ Profile added successfully!'
-        );
-        fetchProfiles();
-        cancelEditing();
+      if (response.data.success) {
+        return response.data.structure || [];
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error saving profile: ${err.message}`);
+      console.error('Error getting table structure:', err);
+    }
+    return [];
+  };
+  // Insert new row
+  const insertRow = async () => {
+    if (!isConnected || !selectedTable) return;
+
+    setLoading(prev => ({ ...prev,  true }));
+    setConnectionStatus('Inserting new row...');
+
+    try {
+      const response = await axios.post('/api/mysql-insert.php', {
+        host: connectionConfig.host,
+        username: connectionConfig.username,
+        password: connectionConfig.password,
+        database: connectionConfig.database,
+        table: selectedTable,
+         addingData
+      });
+
+      if (response.data.success) {
+        setConnectionStatus('✅ Row inserted successfully!');
+        setAddingRow(false);
+        setAddingData({});
+        // Refresh table data
+        getTableData(selectedTable);
+      } else {
+        setConnectionStatus(`❌ Failed to insert row: ${response.data.error}`);
+      }
+    } catch (err) {
+      setConnectionStatus(`❌ Error inserting row: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
-  const deleteProfile = async (profileId) => {
-    if (window.confirm('Are you sure you want to delete this profile?')) {
+  // Update row
+  const updateRow = async () => {
+    if (!isConnected || !selectedTable || editingRow === null) return;
+
+    setLoading(prev => ({ ...prev,  true }));
+    setConnectionStatus('Updating row...');
+
+    try {
+      const response = await axios.post('/api/mysql-update.php', {
+        host: connectionConfig.host,
+        username: connectionConfig.username,
+        password: connectionConfig.password,
+        database: connectionConfig.database,
+        table: selectedTable,
+         editingData,
+        primaryKey: tableStructure.find(col => col.Key === 'PRI')?.Field || Object.keys(editingData)[0],
+        primaryKeyValue: tableData[editingRow][tableStructure.find(col => col.Key === 'PRI')?.Field || Object.keys(editingData)[0]]
+      });
+
+      if (response.data.success) {
+        setConnectionStatus('✅ Row updated successfully!');
+        setEditingRow(null);
+        setEditingData({});
+        // Refresh table data
+        getTableData(selectedTable);
+      } else {
+        setConnectionStatus(`❌ Failed to update row: ${response.data.error}`);
+      }
+    } catch (err) {
+      setConnectionStatus(`❌ Error updating row: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoading(prev => ({ ...prev,  false }));
+    }
+  };
+
+  // Delete row
+  const deleteRow = async (rowIndex) => {
+    if (!isConnected || !selectedTable) return;
+
+    if (window.confirm('Are you sure you want to delete this row?')) {
+      setLoading(prev => ({ ...prev,  true }));
+      setConnectionStatus('Deleting row...');
+
       try {
-        const response = await axios.get('/api/dat.json');
-        const users = (response.data.users || []).filter(user => user.id !== profileId);
-        
-        const saveResponse = await axios.post('/api/dat.php', {
-          message: response.data.message || 'welcome',
-          users: users
+        const primaryKey = tableStructure.find(col => col.Key === 'PRI')?.Field || Object.keys(tableData[rowIndex])[0];
+        const primaryKeyValue = tableData[rowIndex][primaryKey];
+
+        const response = await axios.post('/api/mysql-delete.php', {
+          host: connectionConfig.host,
+          username: connectionConfig.username,
+          password: connectionConfig.password,
+          database: connectionConfig.database,
+          table: selectedTable,
+          primaryKey: primaryKey,
+          primaryKeyValue: primaryKeyValue
         });
 
-        if (saveResponse.data.status === 'success') {
-          setConnectionStatus('✅ Profile deleted successfully!');
-          fetchProfiles();
-          if (selectedProfile && selectedProfile.id === profileId) {
-            setSelectedProfile(null);
-            setTables([]);
-            setSelectedTable('');
-            setTableData([]);
-          }
+        if (response.data.success) {
+          setConnectionStatus('✅ Row deleted successfully!');
+          // Refresh table data
+          getTableData(selectedTable);
+        } else {
+          setConnectionStatus(`❌ Failed to delete row: ${response.data.error}`);
         }
       } catch (err) {
-        setConnectionStatus(`❌ Error deleting profile: ${err.message}`);
+        setConnectionStatus(`❌ Error deleting row: ${err.response?.data?.error || err.message}`);
+      } finally {
+        setLoading(prev => ({ ...prev,  false }));
       }
     }
   };
 
-  const cancelEditing = () => {
-    setEditingProfile(null);
-    setProfileForm({
-      name: '',
-      host: '',
-      username: '',
-      password: '',
-      dbname: ''
-    });
+  // Start editing row
+  const startEditingRow = async (rowIndex) => {
+    const rowData = tableData[rowIndex];
+    setEditingRow(rowIndex);
+    setEditingData({ ...rowData });
   };
 
-  const handleProfileFormChange = (field, value) => {
-    setProfileForm(prev => ({
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingRow(null);
+    setEditingData({});
+  };
+
+  // Start adding row
+  const startAddingRow = () => {
+    const emptyData = {};
+    tableStructure.forEach(col => {
+      emptyData[col.Field] = '';
+    });
+    setAddingData(emptyData);
+    setAddingRow(true);
+  };
+
+  // Cancel adding
+  const cancelAdding = () => {
+    setAddingRow(false);
+    setAddingData({});
+  };
+
+  // Handle input changes
+  const handleConfigChange = (field, value) => {
+    setConnectionConfig(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleEditingChange = (field, value) => {
+    setEditingData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleAddingChange = (field, value) => {
+    setAddingData(prev => ({
       ...prev,
       [field]: value
     }));
@@ -324,7 +356,7 @@ const Connect = () => {
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent'
         }}>
-          🚀 Database Connection Manager
+          🚀 MySQL Database Manager
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
           <span style={{ fontSize: '14px', color: '#a0a0c0' }}>
@@ -343,14 +375,6 @@ const Connect = () => {
               cursor: 'pointer',
               transition: 'all 0.3s ease'
             }}
-            onMouseOver={(e) => {
-              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
-              e.target.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
-              e.target.style.transform = 'translateY(0)';
-            }}
           >
             🏠 Main Page
           </button>
@@ -366,14 +390,6 @@ const Connect = () => {
               fontWeight: 'bold',
               cursor: 'pointer',
               transition: 'all 0.3s ease'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.3)';
-              e.target.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.2)';
-              e.target.style.transform = 'translateY(0)';
             }}
           >
             🔒 Logout
@@ -401,7 +417,7 @@ const Connect = () => {
           </div>
         )}
 
-        {/* Profile Management Section */}
+        {/* Connection Configuration */}
         <div style={{ 
           padding: '25px',
           backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -409,376 +425,141 @@ const Connect = () => {
           marginBottom: '30px',
           border: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: '25px'
+          <h2 style={{ 
+            margin: '0 0 25px 0',
+            color: '#4ecdc4',
+            fontSize: '1.8rem'
           }}>
-            <h2 style={{ 
-              margin: 0,
-              color: '#4ecdc4',
-              fontSize: '1.8rem'
-            }}>
-              📁 Database Profiles
-            </h2>
-            <button
-              onClick={startAddingProfile}
-              style={{
-                padding: '12px 20px',
-                backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                color: '#4ecdc4',
-                border: '1px solid #4ecdc4',
-                borderRadius: '25px',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
-                e.target.style.transform = 'translateY(-2px)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
-                e.target.style.transform = 'translateY(0)';
-              }}
-            >
-              ➕ Add New Profile
-            </button>
-          </div>
-
-          {/* Profile Form */}
-          {(editingProfile || profileForm.name) && (
-            <div style={{ 
-              marginBottom: '25px',
-              padding: '20px',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              borderRadius: '12px',
-              border: '1px solid rgba(78, 205, 196, 0.3)'
-            }}>
-              <h3 style={{ 
-                margin: '0 0 20px 0',
-                color: '#4ecdc4'
-              }}>
-                {editingProfile ? '✏️ Edit Profile' : '📝 Add New Profile'}
-              </h3>
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '15px',
-                marginBottom: '20px'
-              }}>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '12px', 
-                    marginBottom: '5px',
-                    color: '#a0a0c0'
-                  }}>
-                    Profile Name
-                  </label>
-                  <input
-                    type="text"
-                    value={profileForm.name}
-                    onChange={(e) => handleProfileFormChange('name', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '8px',
-                      fontSize: '14px'
-                    }}
-                    placeholder="My Database"
-                  />
-                </div>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '12px', 
-                    marginBottom: '5px',
-                    color: '#a0a0c0'
-                  }}>
-                    Host
-                  </label>
-                  <input
-                    type="text"
-                    value={profileForm.host}
-                    onChange={(e) => handleProfileFormChange('host', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '8px',
-                      fontSize: '14px'
-                    }}
-                    placeholder="localhost"
-                  />
-                </div>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '12px', 
-                    marginBottom: '5px',
-                    color: '#a0a0c0'
-                  }}>
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    value={profileForm.username}
-                    onChange={(e) => handleProfileFormChange('username', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '8px',
-                      fontSize: '14px'
-                    }}
-                    placeholder="db_user"
-                  />
-                </div>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '12px', 
-                    marginBottom: '5px',
-                    color: '#a0a0c0'
-                  }}>
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={profileForm.password}
-                    onChange={(e) => handleProfileFormChange('password', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '8px',
-                      fontSize: '14px'
-                    }}
-                    placeholder="password"
-                  />
-                </div>
-                <div>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '12px', 
-                    marginBottom: '5px',
-                    color: '#a0a0c0'
-                  }}>
-                    Database Name
-                  </label>
-                  <input
-                    type="text"
-                    value={profileForm.dbname}
-                    onChange={(e) => handleProfileFormChange('dbname', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '8px',
-                      fontSize: '14px'
-                    }}
-                    placeholder="my_database"
-                  />
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={saveProfile}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: 'rgba(76, 175, 80, 0.3)',
-                    color: '#4CAF50',
-                    border: '1px solid #4CAF50',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  💾 Save Profile
-                </button>
-                <button
-                  onClick={cancelEditing}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    color: '#ff6b6b',
-                    border: '1px solid #ff6b6b',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  ❌ Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Profiles List */}
+            🔌 Database Connection
+          </h2>
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-            gap: '20px' 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '20px',
+            marginBottom: '20px'
           }}>
-            {profiles.map(profile => (
-              <div 
-                key={profile.id}
+            <div>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '12px', 
+                marginBottom: '5px',
+                color: '#a0a0c0'
+              }}>
+                Host
+              </label>
+              <input
+                type="text"
+                value={connectionConfig.host}
+                onChange={(e) => handleConfigChange('host', e.target.value)}
                 style={{
-                  padding: '20px',
-                  backgroundColor: selectedProfile?.id === profile.id ? 'rgba(78, 205, 196, 0.2)' : 'rgba(255, 255, 255, 0.08)',
-                  border: selectedProfile?.id === profile.id ? '2px solid #4ecdc4' : '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: '12px',
-                  position: 'relative',
-                  transition: 'all 0.3s ease'
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  fontSize: '14px'
                 }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  marginBottom: '15px' 
-                }}>
-                  <div style={{ 
-                    width: '40px', 
-                    height: '40px', 
-                    backgroundColor: '#4ecdc4',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: '15px',
-                    fontWeight: 'bold'
-                  }}>
-                    {profile.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{ 
-                      fontSize: '1.2rem', 
-                      fontWeight: 'bold',
-                      color: selectedProfile?.id === profile.id ? '#4ecdc4' : '#fff'
-                    }}>
-                      {profile.name}
-                    </div>
-                    <div style={{ 
-                      fontSize: '0.9rem', 
-                      color: '#a0a0c0' 
-                    }}>
-                      {profile.dbname}
-                    </div>
-                  </div>
-                </div>
-                
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '10px',
-                  marginBottom: '20px'
-                }}>
-                  <div>
-                    <div style={{ 
-                      fontSize: '0.8rem', 
-                      color: '#a0a0c0',
-                      marginBottom: '3px' 
-                    }}>
-                      🌐 Host
-                    </div>
-                    <div style={{ 
-                      fontSize: '0.9rem',
-                      color: '#fff'
-                    }}>
-                      {profile.host}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ 
-                      fontSize: '0.8rem', 
-                      color: '#a0a0c0',
-                      marginBottom: '3px' 
-                    }}>
-                      👤 User
-                    </div>
-                    <div style={{ 
-                      fontSize: '0.9rem',
-                      color: '#fff'
-                    }}>
-                      {profile.username}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '10px' 
-                }}>
-                  <button
-                    onClick={() => testConnection(profile)}
-                    disabled={loading.connection}
-                    style={{
-                      flex: 1,
-                      padding: '8px',
-                      backgroundColor: loading.connection ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 217, 61, 0.2)',
-                      color: loading.connection ? '#888' : '#ffd93d',
-                      border: '1px solid #ffd93d',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      cursor: loading.connection ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {loading.connection ? '🔄 Testing...' : '🔁 Test'}
-                  </button>
-                  <button
-                    onClick={() => startEditingProfile(profile)}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                      color: '#4ecdc4',
-                      border: '1px solid #4ecdc4',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    onClick={() => deleteProfile(profile.id)}
-                    style={{
-                      padding: '8px 12px',
-                      backgroundColor: 'rgba(255, 107, 107, 0.2)',
-                      color: '#ff6b6b',
-                      border: '1px solid #ff6b6b',
-                      borderRadius: '20px',
-                      fontSize: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-            ))}
+                placeholder="localhost"
+              />
+            </div>
+            <div>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '12px', 
+                marginBottom: '5px',
+                color: '#a0a0c0'
+              }}>
+                Username
+              </label>
+              <input
+                type="text"
+                value={connectionConfig.username}
+                onChange={(e) => handleConfigChange('username', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+                placeholder="root"
+              />
+            </div>
+            <div>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '12px', 
+                marginBottom: '5px',
+                color: '#a0a0c0'
+              }}>
+                Password
+              </label>
+              <input
+                type="password"
+                value={connectionConfig.password}
+                onChange={(e) => handleConfigChange('password', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+                placeholder="password"
+              />
+            </div>
+            <div>
+              <label style={{ 
+                display: 'block', 
+                fontSize: '12px', 
+                marginBottom: '5px',
+                color: '#a0a0c0'
+              }}>
+                Database
+              </label>
+              <input
+                type="text"
+                value={connectionConfig.database}
+                onChange={(e) => handleConfigChange('database', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: '#fff',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  fontSize: '14px'
+                }}
+                placeholder="my_database"
+              />
+            </div>
           </div>
+          <button
+            onClick={testConnection}
+            disabled={loading.connection}
+            style={{
+              padding: '12px 25px',
+              backgroundColor: loading.connection ? 'rgba(255, 255, 255, 0.1)' : 'rgba(78, 205, 196, 0.3)',
+              color: loading.connection ? '#888' : '#4ecdc4',
+              border: '1px solid #4ecdc4',
+              borderRadius: '25px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: loading.connection ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            {loading.connection ? '🔄 Connecting...' : '🔌 Connect to Database'}
+          </button>
         </div>
-        {/* Database Content Section */}
-        {selectedProfile && (
+
+        {/* Database Content */}
+        {isConnected && (
           <div style={{ 
             padding: '25px',
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -796,10 +577,10 @@ const Connect = () => {
                 color: '#ffd93d',
                 fontSize: '1.8rem'
               }}>
-                🗄️ {selectedProfile.name} - {selectedProfile.dbname}
+                🗄️ {connectionConfig.database}
               </h2>
               <button
-                onClick={() => getTables(selectedProfile)}
+                onClick={getTables}
                 disabled={loading.tables}
                 style={{
                   padding: '10px 20px',
@@ -815,7 +596,6 @@ const Connect = () => {
                 {loading.tables ? '🔄 Loading...' : '📋 Refresh Tables'}
               </button>
             </div>
-
             {/* Tables List */}
             {tables.length > 0 && (
               <div style={{ 
@@ -857,12 +637,205 @@ const Connect = () => {
             {/* Table Data */}
             {tableData.length > 0 && (
               <div>
-                <h3 style={{ 
-                  color: '#ff6b6b',
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
                   marginBottom: '15px'
                 }}>
-                  📊 Data from {selectedTable}
-                </h3>
+                  <h3 style={{ 
+                    margin: 0,
+                    color: '#ff6b6b'
+                  }}>
+                    📊 Data from {selectedTable}
+                  </h3>
+                  <button
+                    onClick={startAddingRow}
+                    disabled={addingRow || editingRow !== null}
+                    style={{
+                      padding: '8px 15px',
+                      backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                      color: '#4ecdc4',
+                      border: '1px solid #4ecdc4',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: addingRow || editingRow !== null ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    ➕ Add New Row
+                  </button>
+                </div>
+
+                {/* Add Row Form */}
+                {addingRow && (
+                  <div style={{ 
+                    marginBottom: '20px',
+                    padding: '15px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(78, 205, 196, 0.3)'
+                  }}>
+                    <h4 style={{ 
+                      margin: '0 0 15px 0',
+                      color: '#4ecdc4'
+                    }}>
+                      📝 Add New Row
+                    </h4>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gap: '10px',
+                      marginBottom: '15px'
+                    }}>
+                      {Object.keys(addingData).map((field) => (
+                        <div key={field}>
+                          <label style={{ 
+                            display: 'block', 
+                            fontSize: '11px', 
+                            marginBottom: '3px',
+                            color: '#a0a0c0'
+                          }}>
+                            {field}
+                          </label>
+                          <input
+                            type="text"
+                            value={addingData[field]}
+                            onChange={(e) => handleAddingChange(field, e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px',
+                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                              color: '#fff',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              borderRadius: '6px',
+                              fontSize: '12px'
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={insertRow}
+                        disabled={loading.data}
+                        style={{
+                          padding: '8px 15px',
+                          backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
+                          color: loading.data ? '#888' : '#4CAF50',
+                          border: '1px solid #4CAF50',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: loading.data ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        {loading.data ? '💾 Saving...' : '💾 Save Row'}
+                      </button>
+                      <button
+                        onClick={cancelAdding}
+                        style={{
+                          padding: '8px 15px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          color: '#ff6b6b',
+                          border: '1px solid #ff6b6b',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ❌ Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Edit Row Form */}
+                {editingRow !== null && (
+                  <div style={{ 
+                    marginBottom: '20px',
+                    padding: '15px',
+                    backgroundColor: 'rgba(255, 217, 61, 0.1)',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255, 217, 61, 0.5)'
+                  }}>
+                    <h4 style={{ 
+                      margin: '0 0 15px 0',
+                      color: '#ffd93d'
+                    }}>
+                      🛠️ Edit Row
+                    </h4>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gap: '10px',
+                      marginBottom: '15px'
+                    }}>
+                      {Object.keys(editingData).map((field) => (
+                        <div key={field}>
+                          <label style={{ 
+                            display: 'block', 
+                            fontSize: '11px', 
+                            marginBottom: '3px',
+                            color: '#a0a0c0'
+                          }}>
+                            {field}
+                          </label>
+                          <input
+                            type="text"
+                            value={editingData[field]}
+                            onChange={(e) => handleEditingChange(field, e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '8px',
+                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                              color: '#fff',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              borderRadius: '6px',
+                              fontSize: '12px'
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        onClick={updateRow}
+                        disabled={loading.data}
+                        style={{
+                          padding: '8px 15px',
+                          backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
+                          color: loading.data ? '#888' : '#4CAF50',
+                          border: '1px solid #4CAF50',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: loading.data ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        {loading.data ? '💾 Updating...' : '💾 Update Row'}
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        style={{
+                          padding: '8px 15px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                          color: '#ff6b6b',
+                          border: '1px solid #ff6b6b',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ❌ Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Data Table */}
                 <div style={{ 
                   overflowX: 'auto',
                   maxHeight: '400px',
@@ -893,6 +866,18 @@ const Connect = () => {
                             {key}
                           </th>
                         ))}
+                        <th 
+                          style={{
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            padding: '12px',
+                            backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                            textAlign: 'center',
+                            position: 'sticky',
+                            top: 0
+                          }}
+                        >
+                          Actions
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -915,6 +900,44 @@ const Connect = () => {
                               {cell !== null ? String(cell) : 'NULL'}
                             </td>
                           ))}
+                          <td 
+                            style={{
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              padding: '10px',
+                              textAlign: 'center'
+                            }}
+                          >
+                            <button
+                              onClick={() => startEditingRow(rowIndex)}
+                              disabled={editingRow !== null && editingRow !== rowIndex}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                                color: '#4ecdc4',
+                                border: '1px solid #4ecdc4',
+                                borderRadius: '15px',
+                                fontSize: '11px',
+                                cursor: editingRow !== null && editingRow !== rowIndex ? 'not-allowed' : 'pointer',
+                                marginRight: '5px'
+                              }}
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => deleteRow(rowIndex)}
+                              style={{
+                                padding: '5px 10px',
+                                backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                                color: '#ff6b6b',
+                                border: '1px solid #ff6b6b',
+                                borderRadius: '15px',
+                                fontSize: '11px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              🗑️
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
