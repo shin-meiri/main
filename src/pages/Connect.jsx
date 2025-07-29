@@ -4,22 +4,12 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const Connect = () => {
-  const [connectionConfig, setConnectionConfig] = useState({
-    host: 'localhost',
-    username: '',
-    password: '',
-    database: ''
-  });
-  const [isConnected, setIsConnected] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
   const [tables, setTables] = useState([]);
-  const [selectedTable, setSelectedTable] = useState('');
-  const [tableData, setTableData] = useState([]);
-  const [tableColumns, setTableColumns] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [editingRow, setEditingRow] = useState(null);
-  const [editingData, setEditingData] = useState({});
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -32,160 +22,76 @@ const Connect = () => {
     }
   }, [navigate]);
 
-  // Test connection to MySQL
-  const testConnection = async () => {
-    if (!connectionConfig.host || !connectionConfig.username || 
-        !connectionConfig.password || !connectionConfig.database) {
-      setConnectionStatus('All fields are required!');
-      return;
+  // Fetch data users dari API
+  useEffect(() => {
+    if (currentUser) {
+      fetchData();
     }
+  }, [currentUser]);
 
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('/api/dat.json');
+      const usersWithDb = (response.data.users || []).filter(user => 
+        user.host && user.dbname && user.username && user.password
+      );
+      setUsers(usersWithDb);
+    } catch (err) {
+      console.error('Error fetching ', err);
+    }
+  };
+
+  // Test connection to MySQL
+  const testConnection = async (user) => {
     setLoading(true);
-    setConnectionStatus('Testing connection...');
+    setConnectionStatus(`Testing connection to ${user.username}...`);
 
     try {
       const response = await axios.post('/api/test-connection.php', {
-        host: connectionConfig.host,
-        dbname: connectionConfig.database,
-        username: connectionConfig.username,
-        password: connectionConfig.password
+        host: user.host,
+        dbname: user.dbname,
+        username: user.username,
+        password: user.password
       });
 
       if (response.data.success) {
-        setConnectionStatus('Connection successful!');
-        setIsConnected(true);
+        setConnectionStatus(`✅ Connection successful to ${user.username}!`);
+        setSelectedUser(user);
+        getTables(user);
       } else {
-        setConnectionStatus(`Connection failed: ${response.data.error}`);
-        setIsConnected(false);
+        setConnectionStatus(`❌ Connection failed: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`Connection error: ${err.response?.data?.error || err.message}`);
-      setIsConnected(false);
+      setConnectionStatus(`❌ Connection error: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Get tables from database
-  const getTables = async () => {
-    if (!isConnected) return;
-
+  // Get tables from selected database
+  const getTables = async (user) => {
     setLoading(true);
-    setConnectionStatus('Fetching tables...');
+    setConnectionStatus(`Fetching tables from ${user.username}...`);
 
     try {
       const response = await axios.post('/api/get-tables.php', {
-        host: connectionConfig.host,
-        dbname: connectionConfig.database,
-        username: connectionConfig.username,
-        password: connectionConfig.password
+        host: user.host,
+        dbname: user.dbname,
+        username: user.username,
+        password: user.password
       });
 
       if (response.data.success) {
         setTables(response.data.tables || []);
-        setConnectionStatus(`Found ${response.data.tables?.length || 0} tables`);
+        setConnectionStatus(`✅ Found ${response.data.tables?.length || 0} tables`);
       } else {
-        setConnectionStatus(`Failed to fetch tables: ${response.data.error}`);
+        setConnectionStatus(`❌ Failed to fetch tables: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`Error fetching tables: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error fetching tables: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
     }
-  };
-
-  // Get table data
-  const getTableData = async (tableName) => {
-    if (!isConnected || !tableName) return;
-
-    setLoading(true);
-    setSelectedTable(tableName);
-    setConnectionStatus(`Fetching data from ${tableName}...`);
-
-    try {
-      const response = await axios.post('/api/get-table-data.php', {
-        host: connectionConfig.host,
-        dbname: connectionConfig.database,
-        username: connectionConfig.username,
-        password: connectionConfig.password,
-        table: tableName
-      });
-
-      if (response.data && response.data.success) {
-        setTableData(response.data.data || []);
-        setTableColumns(response.data.columns || []);
-        setConnectionStatus(`Displaying data from ${tableName}`);
-      } else {
-        setConnectionStatus(`Failed to fetch data: ${response.data.error}`);
-      }
-    } catch (err) {
-      setConnectionStatus(`Error fetching data: ${err.response?.data?.error || err.message}`);
-      console.error('getTableData error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Start editing row
-  const startEditingRow = (rowIndex) => {
-    setEditingRow(rowIndex);
-    const rowData = tableData[rowIndex] || {};
-    setEditingData({ ...rowData });
-  };
-
-  // Save edited row
-  const saveEditedRow = async () => {
-    if (editingRow === null || !isConnected || !selectedTable) return;
-
-    setLoading(true);
-    setConnectionStatus('Updating row...');
-
-    try {
-      const response = await axios.post('/api/update-row.php', {
-        host: connectionConfig.host,
-        dbname: connectionConfig.database,
-        username: connectionConfig.username,
-        password: connectionConfig.password,
-        table: selectedTable,
-        data: editingData,
-        primaryKey: tableColumns[0]?.Field || Object.keys(editingData)[0],
-        primaryKeyValue: tableData[editingRow][tableColumns[0]?.Field || Object.keys(editingData)[0]]
-      });
-
-      if (response.data.success) {
-        setConnectionStatus('Row updated successfully!');
-        getTableData(selectedTable);
-        setEditingRow(null);
-        setEditingData({});
-      } else {
-        setConnectionStatus(`Failed to update row: ${response.data.error}`);
-      }
-    } catch (err) {
-      setConnectionStatus(`Error updating row: ${err.response?.data?.error || err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Cancel editing
-  const cancelEditing = () => {
-    setEditingRow(null);
-    setEditingData({});
-  };
-
-  // Handle input change
-  const handleInputChange = (field, value) => {
-    setConnectionConfig(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleEditInputChange = (field, value) => {
-    setEditingData(prev => ({
-      ...prev,
-      [field]: value
-    }));
   };
 
   // Logout function
@@ -195,6 +101,11 @@ const Connect = () => {
     navigate('/login');
   };
 
+  // Navigate to main page
+  const goToMainPage = () => {
+    navigate('/');
+  };
+
   // Jika belum login, jangan tampilkan konten
   if (!currentUser) {
     return null;
@@ -202,345 +113,258 @@ const Connect = () => {
 
   return (
     <div style={{ 
-      padding: '20px',
-      fontFamily: 'Arial, sans-serif',
+      minHeight: '100vh',
       backgroundColor: '#f5f5f5',
-      minHeight: '100vh'
+      padding: '20px',
+      fontFamily: 'Arial, sans-serif'
     }}>
+      {/* Header */}
       <div style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto',
-        backgroundColor: 'white',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '30px',
         padding: '20px',
+        backgroundColor: 'white',
         borderRadius: '8px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
       }}>
         <div style={{ 
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '20px',
-          paddingBottom: '10px',
-          borderBottom: '1px solid #eee'
+          fontSize: '2rem',
+          fontWeight: 'bold',
+          color: '#333'
         }}>
-          <h1>MySQL Database Manager</h1>
-          <div>
-            <span>Welcome, {currentUser.username}</span>
-            <button 
-              onClick={handleLogout}
-              style={{
-                marginLeft: '15px',
-                padding: '8px 15px',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Logout
-            </button>
-          </div>
+          MySQL Database Manager
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <span style={{ fontSize: '14px', color: '#666' }}>
+            Welcome, <strong>{currentUser.username}</strong>
+          </span>
+          <button
+            onClick={goToMainPage}
+            style={{
+              padding: '8px 15px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Main Page
+          </button>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '8px 15px',
+              backgroundColor: '#dc3545',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </div>
 
+      <div style={{ 
+        maxWidth: '1200px', 
+        margin: '0 auto'
+      }}>
+        {/* Connection Status */}
         {connectionStatus && (
           <div style={{
-            padding: '10px',
-            backgroundColor: connectionStatus.includes('successful') ? '#d4edda' : '#f8d7da',
-            color: connectionStatus.includes('successful') ? '#155724' : '#721c24',
-            border: `1px solid ${connectionStatus.includes('successful') ? '#c3e6cb' : '#f5c6cb'}`,
+            padding: '15px',
+            backgroundColor: connectionStatus.includes('✅') ? '#d4edda' : '#f8d7da',
+            color: connectionStatus.includes('✅') ? '#155724' : '#721c24',
+            border: `1px solid ${connectionStatus.includes('✅') ? '#c3e6cb' : '#f5c6cb'}`,
             borderRadius: '4px',
-            marginBottom: '20px'
+            marginBottom: '25px',
+            textAlign: 'center',
+            fontWeight: 'bold'
           }}>
             {connectionStatus}
           </div>
         )}
 
-        <div style={{ marginBottom: '30px' }}>
-          <h2>Database Connection</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '15px' }}>
-            <div>
-              <label>Host:</label>
-              <input
-                type="text"
-                value={connectionConfig.host}
-                onChange={(e) => handleInputChange('host', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  marginTop: '5px'
-                }}
-                placeholder="localhost"
-              />
-            </div>
-            <div>
-              <label>Username:</label>
-              <input
-                type="text"
-                value={connectionConfig.username}
-                onChange={(e) => handleInputChange('username', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  marginTop: '5px'
-                }}
-                placeholder="root"
-              />
-            </div>
-            <div>
-              <label>Password:</label>
-              <input
-                type="password"
-                value={connectionConfig.password}
-                onChange={(e) => handleInputChange('password', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  marginTop: '5px'
-                }}
-                placeholder="password"
-              />
-            </div>
-            <div>
-              <label>Database:</label>
-              <input
-                type="text"
-                value={connectionConfig.database}
-                onChange={(e) => handleInputChange('database', e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                  marginTop: '5px'
-                }}
-                placeholder="my_database"
-              />
-            </div>
-          </div>
-          <button
-            onClick={testConnection}
-            disabled={loading}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: loading ? '#6c757d' : '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontWeight: 'bold'
-            }}
-          >
-            {loading ? 'Connecting...' : 'Test Connection'}
-          </button>
-        </div>
+        {/* Section 1: List dat.json */}
+        <div style={{ 
+          padding: '25px',
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          marginBottom: '30px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+        }}>
+          <h2 style={{ 
+            textAlign: 'center', 
+            marginBottom: '25px',
+            color: '#333'
+          }}>
+            List dat.json
+          </h2>
+          
+          {users.length === 0 ? (
+            <p style={{ textAlign: 'center', color: '#666' }}>No database configurations found</p>
+          ) : (
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+              gap: '20px' 
+            }}>
+              {users.map(user => (
+                <div 
+                  key={user.id}
+                  style={{
+                    padding: '20px',
+                    backgroundColor: selectedUser?.id === user.id ? '#e3f2fd' : '#f8f9fa',
+                    border: selectedUser?.id === user.id ? '2px solid #2196f3' : '1px solid #dee2e6',
+                    borderRadius: '8px',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    marginBottom: '15px' 
+                  }}>
+                    <div style={{ 
+                      width: '40px', 
+                      height: '40px', 
+                      backgroundColor: '#2196f3',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: '15px',
+                      fontWeight: 'bold',
+                      color: 'white'
+                    }}>
+                      {user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ 
+                        fontSize: '1.2rem', 
+                        fontWeight: 'bold', 
+                        color: '#333' 
+                      }}>
+                        {user.username}
+                      </div>
+                      <div style={{ 
+                        fontSize: '0.9rem', 
+                        color: '#666' 
+                      }}>
+                        {user.dbname}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ 
+                    marginBottom: '15px',
+                    padding: '10px',
+                    backgroundColor: '#e9ecef',
+                    borderRadius: '4px'
+                  }}>
+                    <div style={{ 
+                      fontSize: '0.8rem', 
+                      color: '#495057',
+                      marginBottom: '5px' 
+                    }}>
+                      Host: <strong>{user.host}</strong>
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.8rem', 
+                      color: '#495057' 
+                    }}>
+                      User: <strong>{user.username}</strong>
+                    </div>
+                  </div>
 
-        {isConnected && (
-          <div>
-            <div style={{ marginBottom: '20px' }}>
-              <h2>Tables</h2>
-              <button
-                onClick={getTables}
-                disabled={loading}
-                style={{
-                  padding: '8px 15px',
-                  backgroundColor: loading ? '#6c757d' : '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  marginRight: '10px'
-                }}
-              >
-                {loading ? 'Loading...' : 'Get Tables'}
-              </button>
-              <div style={{ marginTop: '10px' }}>
-                {tables.map((table, index) => (
                   <button
-                    key={index}
-                    onClick={() => getTableData(table)}
+                    onClick={() => testConnection(user)}
                     disabled={loading}
                     style={{
-                      padding: '6px 12px',
-                      backgroundColor: selectedTable === table ? '#ffc107' : '#6c757d',
-                      color: selectedTable === table ? '#212529' : 'white',
+                      width: '100%',
+                      padding: '10px',
+                      backgroundColor: loading ? '#6c757d' : '#2196f3',
+                      color: 'white',
                       border: 'none',
                       borderRadius: '4px',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      marginRight: '5px',
-                      marginBottom: '5px'
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      cursor: loading ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    {table}
+                    {loading ? '🔄 Testing...' : '🔁 Test Connection'}
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {tableData.length > 0 && (
-              <div>
-                <h2>Data from table: {selectedTable}</h2>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{
-                    width: '100%',
-                    borderCollapse: 'collapse',
-                    border: '1px solid #ddd'
-                  }}>
-                    <thead>
-                      <tr>
-                        {tableColumns.map((column, index) => (
-                          <th 
-                            key={index}
-                            style={{
-                              border: '1px solid #ddd',
-                              padding: '10px',
-                              backgroundColor: '#f8f9fa',
-                              textAlign: 'left'
-                            }}
-                          >
-                            {column.Field || column}
-                          </th>
-                        ))}
-                        <th 
-                          style={{
-                            border: '1px solid #ddd',
-                            padding: '10px',
-                            backgroundColor: '#f8f9fa',
-                            textAlign: 'center'
-                          }}
-                        >
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tableData.map((row, rowIndex) => (
-                        <React.Fragment key={rowIndex}>
-                          <tr>
-                            {tableColumns.map((column, cellIndex) => (
-                              <td 
-                                key={cellIndex}
-                                style={{
-                                  border: '1px solid #ddd',
-                                  padding: '8px',
-                                  backgroundColor: rowIndex % 2 === 0 ? '#fff' : '#f8f9fa'
-                                }}
-                              >
-                                {row[column.Field || column] !== null ? 
-                                 String(row[column.Field || column]) : 'NULL'}
-                              </td>
-                            ))}
-                            <td 
-                              style={{
-                                border: '1px solid #ddd',
-                                padding: '8px',
-                                textAlign: 'center'
-                              }}
-                            >
-                              <button
-                                onClick={() => startEditingRow(rowIndex)}
-                                style={{
-                                  padding: '4px 8px',
-                                  backgroundColor: '#007bff',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '3px',
-                                  cursor: 'pointer',
-                                  fontSize: '12px'
-                                }}
-                              >
-                                Edit
-                              </button>
-                            </td>
-                          </tr>
-                          
-                          {editingRow === rowIndex && (
-                            <tr>
-                              <td 
-                                colSpan={tableColumns.length + 1}
-                                style={{
-                                  padding: '15px',
-                                  backgroundColor: '#e9ecef',
-                                  border: '1px solid #ddd'
-                                }}
-                              >
-                                <h3>Edit Row</h3>
-                                <div style={{ 
-                                  display: 'grid', 
-                                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
-                                  gap: '10px',
-                                  marginBottom: '15px'
-                                }}>
-                                  {tableColumns.map((column) => (
-                                    <div key={column.Field}>
-                                      <label style={{ 
-                                        display: 'block', 
-                                        fontSize: '12px', 
-                                        marginBottom: '3px' 
-                                      }}>
-                                        {column.Field}
-                                      </label>
-                                      <input
-                                        type="text"
-                                        value={editingData[column.Field] || ''}
-                                        onChange={(e) => handleEditInputChange(column.Field, e.target.value)}
-                                        style={{
-                                          width: '100%',
-                                          padding: '6px',
-                                          border: '1px solid #ddd',
-                                          borderRadius: '3px'
-                                        }}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                  <button
-                                    onClick={saveEditedRow}
-                                    disabled={loading}
-                                    style={{
-                                      padding: '6px 12px',
-                                      backgroundColor: loading ? '#6c757d' : '#28a745',
-                                      color: 'white',
-                                      border: 'none',
-                                      borderRadius: '3px',
-                                      cursor: loading ? 'not-allowed' : 'pointer',
-                                      fontSize: '12px'
-                                    }}
-                                  >
-                                    {loading ? 'Saving...' : 'Save'}
-                                  </button>
-                                  <button
-                                    onClick={cancelEditing}
-                                    style={{
-                                      padding: '6px 12px',
-                                      backgroundColor: '#dc3545',
-                                      color: 'white',
-                                      border: 'none',
-                                      borderRadius: '3px',
-                                      cursor: 'pointer',
-                                      fontSize: '12px'
-                                    }}
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      ))}
-                    </tbody>
-                  </table>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Section 2: List tabel MySQL */}
+        {selectedUser && tables.length > 0 && (
+          <div style={{ 
+            padding: '25px',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+          }}>
+            <h2 style={{ 
+              textAlign: 'center', 
+              marginBottom: '25px',
+              color: '#333'
+            }}>
+              Tables in {selectedUser.dbname}
+            </h2>
+            
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
+              gap: '15px' 
+            }}>
+              {tables.map((table, index) => (
+                <div
+                  key={index}
+                  style={{
+                    padding: '15px',
+                    backgroundColor: '#f8f9fa',
+                    border: '1px solid #dee2e6',
+                    borderRadius: '6px',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.backgroundColor = '#e3f2fd';
+                    e.target.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.backgroundColor = '#f8f9fa';
+                    e.target.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <div style={{ 
+                    fontSize: '2rem', 
+                    marginBottom: '8px' 
+                  }}>
+                    📋
+                  </div>
+                  <div style={{ 
+                    fontWeight: 'bold',
+                    color: '#333'
+                  }}>
+                    {table}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
