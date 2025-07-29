@@ -14,18 +14,19 @@ const Connect = () => {
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState('');
   const [tableData, setTableData] = useState([]);
-  const [tableStructure, setTableStructure] = useState([]);
+  const [tableColumns, setTableColumns] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('');
   const [loading, setLoading] = useState({ 
     connection: false, 
     tables: false, 
-    data: false 
+     false 
   });
   const [currentUser, setCurrentUser] = useState(null);
   const [editingRow, setEditingRow] = useState(null);
   const [editingData, setEditingData] = useState({});
   const [addingRow, setAddingRow] = useState(false);
   const [addingData, setAddingData] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -123,7 +124,7 @@ const Connect = () => {
   const getTableData = async (tableName) => {
     if (!isConnected || !tableName) return;
 
-    setLoading(prev => ({ ...prev, data: true }));
+    setLoading(prev => ({ ...prev,  true }));
     setSelectedTable(tableName);
     setConnectionStatus(`Fetching data from ${tableName}...`);
 
@@ -136,17 +137,18 @@ const Connect = () => {
         table: tableName
       });
 
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         setTableData(response.data.data || []);
-        setTableStructure(response.data.columns || []);
+        setTableColumns(response.data.columns || []);
         setConnectionStatus(`✅ Displaying data from ${tableName}`);
       } else {
-        setConnectionStatus(`❌ Failed to fetch data: ${response.data.error}`);
+        setConnectionStatus(`❌ Failed to fetch  ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error fetching data: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error fetching  ${err.response?.data?.error || err.message}`);
+      console.error('getTableData error:', err);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
@@ -154,7 +156,7 @@ const Connect = () => {
   const insertRow = async () => {
     if (!isConnected || !selectedTable) return;
 
-    setLoading(prev => ({ ...prev, data: true }));
+    setLoading(prev => ({ ...prev,  true }));
     setConnectionStatus('Inserting new row...');
 
     try {
@@ -164,7 +166,7 @@ const Connect = () => {
         username: connectionConfig.username,
         password: connectionConfig.password,
         table: selectedTable,
-        data: addingData
+         addingData
       });
 
       if (response.data.success) {
@@ -179,7 +181,7 @@ const Connect = () => {
     } catch (err) {
       setConnectionStatus(`❌ Error inserting row: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
@@ -187,7 +189,7 @@ const Connect = () => {
   const updateRow = async () => {
     if (!isConnected || !selectedTable || editingRow === null) return;
 
-    setLoading(prev => ({ ...prev, data: true }));
+    setLoading(prev => ({ ...prev,  true }));
     setConnectionStatus('Updating row...');
 
     try {
@@ -197,9 +199,9 @@ const Connect = () => {
         username: connectionConfig.username,
         password: connectionConfig.password,
         table: selectedTable,
-        data: editingData,
-        primaryKey: tableStructure.find(col => col.Key === 'PRI')?.Field || Object.keys(editingData)[0],
-        primaryKeyValue: tableData[editingRow][tableStructure.find(col => col.Key === 'PRI')?.Field || Object.keys(editingData)[0]]
+         editingData,
+        primaryKey: tableColumns[0]?.Field || Object.keys(editingData)[0],
+        primaryKeyValue: tableData[editingRow][tableColumns[0]?.Field || Object.keys(editingData)[0]]
       });
 
       if (response.data.success) {
@@ -214,7 +216,7 @@ const Connect = () => {
     } catch (err) {
       setConnectionStatus(`❌ Error updating row: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
 
@@ -223,11 +225,11 @@ const Connect = () => {
     if (!isConnected || !selectedTable) return;
 
     if (window.confirm('Are you sure you want to delete this row?')) {
-      setLoading(prev => ({ ...prev, data: true }));
+      setLoading(prev => ({ ...prev,  true }));
       setConnectionStatus('Deleting row...');
 
       try {
-        const primaryKey = tableStructure.find(col => col.Key === 'PRI')?.Field || Object.keys(tableData[rowIndex])[0];
+        const primaryKey = tableColumns[0]?.Field || Object.keys(tableData[rowIndex])[0];
         const primaryKeyValue = tableData[rowIndex][primaryKey];
 
         const response = await axios.post('/api/delete-row.php', {
@@ -250,15 +252,15 @@ const Connect = () => {
       } catch (err) {
         setConnectionStatus(`❌ Error deleting row: ${err.response?.data?.error || err.message}`);
       } finally {
-        setLoading(prev => ({ ...prev, data: false }));
+        setLoading(prev => ({ ...prev,  false }));
       }
     }
   };
 
   // Start editing row
   const startEditingRow = (rowIndex) => {
-    const rowData = tableData[rowIndex];
     setEditingRow(rowIndex);
+    const rowData = tableData[rowIndex] || {};
     setEditingData({ ...rowData });
   };
 
@@ -273,7 +275,7 @@ const Connect = () => {
     if (!selectedTable) return;
 
     const newRowData = {};
-    tableStructure.forEach(col => {
+    tableColumns.forEach(col => {
       newRowData[col.Field] = '';
     });
 
@@ -682,7 +684,7 @@ const Connect = () => {
                       onClick={() => getTableData(table)}
                       disabled={loading.data && selectedTable === table}
                       style={{
-                        padding: '10px',
+                        padding: '10px 15px',
                         backgroundColor: selectedTable === table ? 'rgba(255, 217, 61, 0.3)' : 'rgba(255, 255, 255, 0.08)',
                         color: selectedTable === table ? '#ffd93d' : '#e0e0e0',
                         border: selectedTable === table ? '2px solid #ffd93d' : '1px solid rgba(255, 255, 255, 0.2)',
@@ -735,7 +737,7 @@ const Connect = () => {
                       backgroundColor: 'rgba(78, 205, 196, 0.2)',
                       color: '#4ecdc4',
                       border: '1px solid #4ecdc4',
-                      borderRadius: '20px',
+                      borderRadius: '25px',
                       fontSize: '14px',
                       fontWeight: 'bold',
                       cursor: addingRow || editingRow !== null ? 'not-allowed' : 'pointer',
@@ -767,7 +769,7 @@ const Connect = () => {
                     padding: '15px',
                     backgroundColor: 'rgba(255, 255, 255, 0.08)',
                     border: '1px solid rgba(78, 205, 196, 0.3)',
-                    borderRadius: '8px',
+                    borderRadius: '12px',
                     backdropFilter: 'blur(5px)'
                   }}>
                     <h3 style={{ 
@@ -777,7 +779,7 @@ const Connect = () => {
                       alignItems: 'center',
                       gap: '10px'
                     }}>
-                      📝 Add New Row
+                      📝 Add New Record
                     </h3>
                     <div style={{ 
                       display: 'grid', 
@@ -785,27 +787,27 @@ const Connect = () => {
                       gap: '10px',
                       marginBottom: '15px'
                     }}>
-                      {Object.keys(addingData).map((field) => (
-                        <div key={field}>
+                      {tableColumns.map((column) => (
+                        <div key={column.Field}>
                           <label style={{ 
                             display: 'block', 
                             fontSize: '11px', 
-                            marginBottom: '3px',
+                            marginBottom: '5px',
                             color: '#a0a0c0'
                           }}>
-                            {field}
+                            {column.Field}
                           </label>
                           <input
                             type="text"
-                            value={addingData[field]}
-                            onChange={(e) => handleAddingChange(field, e.target.value)}
+                            value={addingData[column.Field] || ''}
+                            onChange={(e) => handleAddingChange(column.Field, e.target.value)}
                             style={{
                               width: '100%',
                               padding: '8px',
                               backgroundColor: 'rgba(255, 255, 255, 0.1)',
                               color: '#fff',
                               border: '1px solid rgba(255, 255, 255, 0.2)',
-                              borderRadius: '4px',
+                              borderRadius: '6px',
                               fontSize: '12px'
                             }}
                           />
@@ -821,13 +823,13 @@ const Connect = () => {
                           backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
                           color: loading.data ? '#888' : '#4CAF50',
                           border: '1px solid #4CAF50',
-                          borderRadius: '15px',
+                          borderRadius: '20px',
                           fontSize: '12px',
                           fontWeight: 'bold',
                           cursor: loading.data ? 'not-allowed' : 'pointer'
                         }}
                       >
-                        {loading.data ? '💾 Saving...' : '💾 Save Row'}
+                        {loading.data ? '💾 Saving...' : '💾 Save Record'}
                       </button>
                       <button
                         onClick={cancelAdding}
@@ -836,7 +838,7 @@ const Connect = () => {
                           backgroundColor: 'rgba(255, 255, 255, 0.1)',
                           color: '#ff6b6b',
                           border: '1px solid #ff6b6b',
-                          borderRadius: '15px',
+                          borderRadius: '20px',
                           fontSize: '12px',
                           fontWeight: 'bold',
                           cursor: 'pointer'
@@ -853,9 +855,9 @@ const Connect = () => {
                   <div style={{ 
                     marginBottom: '20px',
                     padding: '15px',
-                    backgroundColor: 'rgba(255, 217, 61, 0.2)',
-                    border: '1px solid #ffd93d',
-                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 217, 61, 0.1)',
+                    border: '1px solid rgba(255, 217, 61, 0.5)',
+                    borderRadius: '12px',
                     backdropFilter: 'blur(5px)'
                   }}>
                     <h3 style={{ 
@@ -865,7 +867,7 @@ const Connect = () => {
                       alignItems: 'center',
                       gap: '10px'
                     }}>
-                      🛠️ Edit Row
+                      🛠️ Edit Record
                     </h3>
                     <div style={{ 
                       display: 'grid', 
@@ -873,27 +875,27 @@ const Connect = () => {
                       gap: '10px',
                       marginBottom: '15px'
                     }}>
-                      {Object.keys(editingData).map((field) => (
-                        <div key={field}>
+                      {tableColumns.map((column) => (
+                        <div key={column.Field}>
                           <label style={{ 
                             display: 'block', 
                             fontSize: '11px', 
-                            marginBottom: '3px',
+                            marginBottom: '5px',
                             color: '#a0a0c0'
                           }}>
-                            {field}
+                            {column.Field}
                           </label>
                           <input
                             type="text"
-                            value={editingData[field]}
-                            onChange={(e) => handleEditingChange(field, e.target.value)}
+                            value={editingData[column.Field] || ''}
+                            onChange={(e) => handleEditingChange(column.Field, e.target.value)}
                             style={{
                               width: '100%',
                               padding: '8px',
                               backgroundColor: 'rgba(255, 255, 255, 0.1)',
                               color: '#fff',
                               border: '1px solid rgba(255, 255, 255, 0.2)',
-                              borderRadius: '4px',
+                              borderRadius: '6px',
                               fontSize: '12px'
                             }}
                           />
@@ -909,13 +911,13 @@ const Connect = () => {
                           backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
                           color: loading.data ? '#888' : '#4CAF50',
                           border: '1px solid #4CAF50',
-                          borderRadius: '15px',
+                          borderRadius: '20px',
                           fontSize: '12px',
                           fontWeight: 'bold',
                           cursor: loading.data ? 'not-allowed' : 'pointer'
                         }}
                       >
-                        {loading.data ? '💾 Updating...' : '💾 Update Row'}
+                        {loading.data ? '💾 Updating...' : '💾 Update Record'}
                       </button>
                       <button
                         onClick={cancelEditing}
@@ -924,7 +926,7 @@ const Connect = () => {
                           backgroundColor: 'rgba(255, 255, 255, 0.1)',
                           color: '#ff6b6b',
                           border: '1px solid #ff6b6b',
-                          borderRadius: '15px',
+                          borderRadius: '20px',
                           fontSize: '12px',
                           fontWeight: 'bold',
                           cursor: 'pointer'
@@ -936,12 +938,11 @@ const Connect = () => {
                   </div>
                 )}
 
-                {/* Data Table */}
                 <div style={{ 
                   overflowX: 'auto',
                   maxHeight: '500px',
                   overflowY: 'auto',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   border: '1px solid rgba(255, 255, 255, 0.1)'
                 }}>
                   <table style={{
@@ -957,7 +958,7 @@ const Connect = () => {
                             key={index}
                             style={{
                               border: '1px solid rgba(255, 255, 255, 0.1)',
-                              padding: '10px',
+                              padding: '12px',
                               backgroundColor: 'rgba(78, 205, 196, 0.2)',
                               textAlign: 'left',
                               position: 'sticky',
@@ -971,14 +972,14 @@ const Connect = () => {
                               gap: '8px' 
                             }}>
                               <span>🏷️</span>
-                              <span style={{ fontWeight: 'bold' }}>{column.Field || column}</span>
+                              <span style={{ fontWeight: 'bold' }}>{column.Field}</span>
                             </div>
                           </th>
                         ))}
                         <th 
                           style={{
                             border: '1px solid rgba(255, 255, 255, 0.1)',
-                            padding: '10px',
+                            padding: '12px',
                             backgroundColor: 'rgba(78, 205, 196, 0.2)',
                             textAlign: 'center',
                             position: 'sticky',
@@ -995,8 +996,7 @@ const Connect = () => {
                         <tr 
                           key={rowIndex}
                           style={{
-                            backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
-                            transition: 'background-color 0.2s'
+                            backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)'
                           }}
                           onMouseOver={(e) => {
                             e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.1)';
@@ -1010,37 +1010,40 @@ const Connect = () => {
                               key={cellIndex}
                               style={{
                                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                                padding: '8px',
+                                padding: '10px',
                                 backgroundColor: editingRow === rowIndex ? 'rgba(255, 217, 61, 0.1)' : 'inherit'
                               }}
                             >
                               <div style={{ 
                                 display: 'flex', 
                                 alignItems: 'center', 
-                                gap: '5px' 
+                                gap: '8px' 
                               }}>
                                 <span>📋</span>
-                                <span>{row[column.Field || column] !== null ? String(row[column.Field || column]) : 'NULL'}</span>
+                                <span>{row[column.Field] !== null ? String(row[column.Field]) : 'NULL'}</span>
                               </div>
                             </td>
                           ))}
                           <td 
                             style={{
                               border: '1px solid rgba(255, 255, 255, 0.1)',
-                              padding: '8px',
+                              padding: '10px',
                               textAlign: 'center'
                             }}
                           >
                             <button
-                              onClick={() => startEditingRow(rowIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                startEditingRow(rowIndex);
+                              }}
                               disabled={editingRow !== null && editingRow !== rowIndex}
                               style={{
-                                padding: '4px 8px',
+                                padding: '5px 10px',
                                 backgroundColor: 'rgba(78, 205, 196, 0.2)',
                                 color: '#4ecdc4',
                                 border: '1px solid #4ecdc4',
-                                borderRadius: '12px',
-                                fontSize: '10px',
+                                borderRadius: '15px',
+                                fontSize: '11px',
                                 cursor: editingRow !== null && editingRow !== rowIndex ? 'not-allowed' : 'pointer',
                                 marginRight: '5px'
                               }}
@@ -1048,14 +1051,17 @@ const Connect = () => {
                               ✏️
                             </button>
                             <button
-                              onClick={() => deleteRow(rowIndex)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteRow(rowIndex);
+                              }}
                               style={{
-                                padding: '4px 8px',
+                                padding: '5px 10px',
                                 backgroundColor: 'rgba(255, 107, 107, 0.2)',
                                 color: '#ff6b6b',
                                 border: '1px solid #ff6b6b',
-                                borderRadius: '12px',
-                                fontSize: '10px',
+                                borderRadius: '15px',
+                                fontSize: '11px',
                                 cursor: 'pointer'
                               }}
                             >
@@ -1078,6 +1084,218 @@ const Connect = () => {
                 </div>
               </div>
             )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+{/*export default Connect;*/}
+            {/* Additional Styles */}
+            <style jsx>{`
+              @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+              
+              ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+              }
+              
+              ::-webkit-scrollbar-track {
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 4px;
+              }
+              
+              ::-webkit-scrollbar-thumb {
+                background: rgba(78, 205, 196, 0.5);
+                border-radius: 4px;
+              }
+              
+              ::-webkit-scrollbar-thumb:hover {
+                background: rgba(78, 205, 196, 0.8);
+              }
+              
+              input:focus, textarea:focus, select:focus {
+                outline: none;
+                border-color: #4ecdc4 !important;
+                box-shadow: 0 0 5px rgba(78, 205, 196, 0.5);
+              }
+              
+              button:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+              }
+              
+              button:active:not(:disabled) {
+                transform: translateY(0);
+              }
+              
+              table {
+                border-collapse: separate;
+                border-spacing: 0;
+              }
+              
+              th:first-child {
+                border-top-left-radius: 8px;
+              }
+              
+              th:last-child {
+                border-top-right-radius: 8px;
+              }
+              
+              tr:last-child td:first-child {
+                border-bottom-left-radius: 8px;
+              }
+              
+              tr:last-child td:last-child {
+                border-bottom-right-radius: 8px;
+              }
+              
+              @media (max-width: 768px) {
+                .container {
+                  padding: 10px;
+                }
+                
+                .grid-responsive {
+                  grid-template-columns: 1fr;
+                }
+                
+                .hide-mobile {
+                  display: none;
+                }
+              }
+              
+              .pulse {
+                animation: pulse 2s infinite;
+              }
+              
+              @keyframes pulse {
+                0% {
+                  box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.4);
+                }
+                70% {
+                  box-shadow: 0 0 0 10px rgba(78, 205, 196, 0);
+                }
+                100% {
+                  box-shadow: 0 0 0 0 rgba(78, 205, 196, 0);
+                }
+              }
+              
+              .bounce {
+                animation: bounce 1s infinite;
+              }
+              
+              @keyframes bounce {
+                0%, 20%, 50%, 80%, 100% {
+                  transform: translateY(0);
+                }
+                40% {
+                  transform: translateY(-10px);
+                }
+                60% {
+                  transform: translateY(-5px);
+                }
+              }
+              
+              .slide-in {
+                animation: slideIn 0.5s ease-out;
+              }
+              
+              @keyframes slideIn {
+                from {
+                  transform: translateX(-100%);
+                  opacity: 0;
+                }
+                to {
+                  transform: translateX(0);
+                  opacity: 1;
+                }
+              }
+              
+              .fade-in {
+                animation: fadeIn 0.5s ease-in;
+              }
+              
+              @keyframes fadeIn {
+                from {
+                  opacity: 0;
+                  transform: translateY(10px);
+                }
+                to {
+                  opacity: 1;
+                  transform: translateY(0);
+                }
+              }
+              
+              .rotate {
+                animation: rotate 2s linear infinite;
+              }
+              
+              @keyframes rotate {
+                from {
+                  transform: rotate(0deg);
+                }
+                to {
+                  transform: rotate(360deg);
+                }
+              }
+              
+              .glow {
+                animation: glow 1.5s ease-in-out infinite alternate;
+              }
+              
+              @keyframes glow {
+                from {
+                  box-shadow: 0 0 5px #4ecdc4;
+                }
+                to {
+                  box-shadow: 0 0 20px #4ecdc4, 0 0 30px #4ecdc4;
+                }
+              }
+              
+              .shake {
+                animation: shake 0.5s;
+              }
+              
+              @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                20%, 40%, 60%, 80% { transform: translateX(5px); }
+              }
+              
+              .zoom-in {
+                animation: zoomIn 0.3s ease-out;
+              }
+              
+              @keyframes zoomIn {
+                from {
+                  transform: scale(0.8);
+                  opacity: 0;
+                }
+                to {
+                  transform: scale(1);
+                  opacity: 1;
+                }
+              }
+              
+              .flip {
+                animation: flip 0.8s;
+              }
+              
+              @keyframes flip {
+                from {
+                  transform: perspective(400px) rotateY(90deg);
+                  opacity: 0;
+                }
+                to {
+                  transform: perspective(400px) rotateY(0deg);
+                  opacity: 1;
+                }
+              }
+            `}</style>
           </div>
         )}
       </div>
