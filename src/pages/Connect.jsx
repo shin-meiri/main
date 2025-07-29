@@ -129,7 +129,7 @@ const Connect = () => {
   const getTableData = async (tableName) => {
     if (!selectedProfile || !tableName) return;
 
-    setLoading(prev => ({ ...prev,  true }));
+    setLoading(prev => ({ ...prev, data: true }));
     setSelectedTable(tableName);
     setConnectionStatus(`Fetching data from ${tableName}...`);
 
@@ -146,12 +146,12 @@ const Connect = () => {
         setTableData(response.data.data || []);
         setConnectionStatus(`✅ Displaying data from ${tableName}`);
       } else {
-        setConnectionStatus(`❌ Failed to fetch  ${response.data.error}`);
+        setConnectionStatus(`❌ Failed to fetch data: ${response.data.error}`);
       }
     } catch (err) {
       setConnectionStatus(`❌ Error fetching data: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
   // CRUD Profile Functions
