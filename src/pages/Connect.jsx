@@ -4,20 +4,27 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const Connect = () => {
-  const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [profiles, setProfiles] = useState([]);
+  const [selectedProfile, setSelectedProfile] = useState(null);
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState('');
   const [tableData, setTableData] = useState([]);
-  const [tableColumns, setTableColumns] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('');
-  const [loading, setLoading] = useState({ connection: false, tables: false, data: false });
+  const [loading, setLoading] = useState({ 
+    profiles: false, 
+    connection: false, 
+    tables: false, 
+    data: false 
+  });
   const [currentUser, setCurrentUser] = useState(null);
-  const [editingRow, setEditingRow] = useState(null);
-  const [editingData, setEditingData] = useState({});
-  const [addingRow, setAddingRow] = useState(false);
-  const [addingData, setAddingData] = useState({});
-  const [searchTerm, setSearchTerm] = useState('');
+  const [editingProfile, setEditingProfile] = useState(null);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    host: '',
+    username: '',
+    password: '',
+    dbname: ''
+  });
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -30,75 +37,89 @@ const Connect = () => {
     }
   }, [navigate]);
 
-  // Fetch data users dari API
+  // Fetch profiles dari API
   useEffect(() => {
     if (currentUser) {
-      fetchData();
+      fetchProfiles();
     }
   }, [currentUser]);
 
-  const fetchData = async () => {
+  const fetchProfiles = async () => {
+    setLoading(prev => ({ ...prev, profiles: true }));
     try {
       const response = await axios.get('/api/dat.json');
-      const usersWithDb = (response.data.users || []).filter(user => 
+      // Filter profiles yang memiliki konfigurasi database lengkap
+      const dbProfiles = (response.data.users || []).filter(user => 
         user.host && user.dbname && user.username && user.password
-      );
-      setUsers(usersWithDb);
+      ).map(user => ({
+        id: user.id,
+        name: user.username,
+        host: user.host,
+        username: user.username,
+        password: user.password,
+        dbname: user.dbname
+      }));
+      setProfiles(dbProfiles);
     } catch (err) {
-      console.error('Error fetching ', err);
+      setConnectionStatus(`❌ Error fetching profiles: ${err.message}`);
+    } finally {
+      setLoading(prev => ({ ...prev, profiles: false }));
     }
   };
 
   // Test connection to MySQL
-  const testConnection = async (user) => {
+  const testConnection = async (profile) => {
     setLoading(prev => ({ ...prev, connection: true }));
-    setConnectionStatus(`Menguji koneksi untuk ${user.username}...`);
+    setConnectionStatus(`Testing connection to ${profile.name}...`);
 
     try {
       const response = await axios.post('/api/test-connection.php', {
-        host: user.host,
-        dbname: user.dbname,
-        username: user.username,
-        password: user.password
+        host: profile.host,
+        dbname: profile.dbname,
+        username: profile.username,
+        password: profile.password
       });
 
       if (response.data.success) {
-        setConnectionStatus(`✅ Koneksi berhasil untuk ${user.username}!`);
-        getTables(user);
+        setConnectionStatus(`✅ Connection successful to ${profile.name}!`);
+        setSelectedProfile(profile);
+        // Reset previous data
+        setTables([]);
+        setSelectedTable('');
+        setTableData([]);
       } else {
-        setConnectionStatus(`❌ Koneksi gagal untuk ${user.username}: ${response.data.error}`);
+        setConnectionStatus(`❌ Connection failed: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error untuk ${user.username}: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Connection error: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(prev => ({ ...prev, connection: false }));
     }
   };
 
   // Get tables from selected database
-  const getTables = async (user) => {
+  const getTables = async (profile) => {
+    if (!profile) return;
+    
     setLoading(prev => ({ ...prev, tables: true }));
+    setConnectionStatus(`Fetching tables from ${profile.name}...`);
 
     try {
       const response = await axios.post('/api/get-tables.php', {
-        host: user.host,
-        dbname: user.dbname,
-        username: user.username,
-        password: user.password
+        host: profile.host,
+        dbname: profile.dbname,
+        username: profile.username,
+        password: profile.password
       });
 
       if (response.data.success) {
         setTables(response.data.tables || []);
-        setSelectedUser(user);
-        setConnectionStatus(`✅ Ditemukan ${response.data.tables?.length || 0} tabel`);
-        setTableData([]);
-        setSelectedTable('');
-        setTableColumns([]);
+        setConnectionStatus(`✅ Found ${response.data.tables?.length || 0} tables`);
       } else {
-        setConnectionStatus(`❌ Gagal mengambil tabel: ${response.data.error}`);
+        setConnectionStatus(`❌ Failed to fetch tables: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengambil tabel: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error fetching tables: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(prev => ({ ...prev, tables: false }));
     }
@@ -106,162 +127,158 @@ const Connect = () => {
 
   // Get table data
   const getTableData = async (tableName) => {
-    if (!selectedUser || !tableName) return;
+    if (!selectedProfile || !tableName) return;
 
-    setLoading(prev => ({ ...prev, data: true }));
+    setLoading(prev => ({ ...prev,  true }));
     setSelectedTable(tableName);
-    setEditingRow(null);
-    setAddingRow(false);
+    setConnectionStatus(`Fetching data from ${tableName}...`);
 
     try {
       const response = await axios.post('/api/get-table-data.php', {
-        host: selectedUser.host,
-        dbname: selectedUser.dbname,
-        username: selectedUser.username,
-        password: selectedUser.password,
+        host: selectedProfile.host,
+        dbname: selectedProfile.dbname,
+        username: selectedProfile.username,
+        password: selectedProfile.password,
         table: tableName
       });
 
-      if (response.data && response.data.success) {
+      if (response.data.success) {
         setTableData(response.data.data || []);
-        setTableColumns(response.data.columns || []);
-        setConnectionStatus(`✅ Menampilkan data dari tabel ${tableName}`);
+        setConnectionStatus(`✅ Displaying data from ${tableName}`);
       } else {
-        const errorMessage = response.data?.error || 'Unknown error';
-        setConnectionStatus(`❌ Gagal mengambil data: ${errorMessage}`);
+        setConnectionStatus(`❌ Failed to fetch  ${response.data.error}`);
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.error || err.message || 'Unknown error';
-      setConnectionStatus(`❌ Error mengambil data: ${errorMessage}`);
-      console.error('getTableData error:', err);
+      setConnectionStatus(`❌ Error fetching data: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setLoading(prev => ({ ...prev,  false }));
     }
   };
-
-  // Start editing row
-  const startEditingRow = (rowIndex, rowData) => {
-    setEditingRow(rowIndex);
-    // Inisialisasi editing data dengan nilai dari row
-    const editData = {};
-    tableColumns.forEach(column => {
-      editData[column] = rowData[column] !== null ? String(rowData[column]) : '';
+  // CRUD Profile Functions
+  const startEditingProfile = (profile) => {
+    setEditingProfile(profile);
+    setProfileForm({
+      name: profile.name,
+      host: profile.host,
+      username: profile.username,
+      password: profile.password,
+      dbname: profile.dbname
     });
-    setEditingData(editData);
   };
 
-  // Save edited row
-  const saveEditedRow = async () => {
-    if (editingRow === null || !selectedUser || !selectedTable) return;
+  const startAddingProfile = () => {
+    setEditingProfile(null);
+    setProfileForm({
+      name: '',
+      host: '',
+      username: '',
+      password: '',
+      dbname: ''
+    });
+  };
 
-    setLoading(prev => ({ ...prev, data: true }));
+  const saveProfile = async () => {
+    if (!profileForm.name || !profileForm.host || !profileForm.username || 
+        !profileForm.password || !profileForm.dbname) {
+      setConnectionStatus('❌ All fields are required!');
+      return;
+    }
 
     try {
-      const response = await axios.post('/api/update-row.php', {
-        host: selectedUser.host,
-        dbname: selectedUser.dbname,
-        username: selectedUser.username,
-        password: selectedUser.password,
-        table: selectedTable,
-        data: editingData,
-        primaryKey: tableColumns[0],
-        primaryKeyValue: tableData[editingRow][tableColumns[0]]
+      // Get current users data
+      const response = await axios.get('/api/dat.json');
+      let users = response.data.users || [];
+      
+      if (editingProfile) {
+        // Update existing profile
+        users = users.map(user => 
+          user.id === editingProfile.id 
+            ? { 
+                ...user,
+                username: profileForm.name,
+                host: profileForm.host,
+                dbname: profileForm.dbname,
+                username: profileForm.username,
+                password: profileForm.password
+              }
+            : user
+        );
+      } else {
+        // Add new profile
+        const newId = users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1;
+        users.push({
+          id: newId,
+          username: profileForm.name,
+          host: profileForm.host,
+          dbname: profileForm.dbname,
+          username: profileForm.username,
+          password: profileForm.password
+        });
+      }
+
+      // Save to API
+      const saveResponse = await axios.post('/api/dat.php', {
+        message: response.data.message || 'welcome',
+        users: users
       });
 
-      if (response.data.success) {
-        setConnectionStatus('✅ Data berhasil diupdate!');
-        getTableData(selectedTable);
-        setEditingRow(null);
-        setEditingData({});
-      } else {
-        setConnectionStatus(`❌ Gagal mengupdate data: ${response.data.error}`);
+      if (saveResponse.data.status === 'success') {
+        setConnectionStatus(editingProfile 
+          ? '✅ Profile updated successfully!' 
+          : '✅ Profile added successfully!'
+        );
+        fetchProfiles();
+        cancelEditing();
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengupdate data: ${err.response?.data?.error || err.message}`);
-    } finally {
-      setLoading(prev => ({ ...prev, data: false }));
+      setConnectionStatus(`❌ Error saving profile: ${err.message}`);
     }
   };
 
-  // Cancel editing
+  const deleteProfile = async (profileId) => {
+    if (window.confirm('Are you sure you want to delete this profile?')) {
+      try {
+        const response = await axios.get('/api/dat.json');
+        const users = (response.data.users || []).filter(user => user.id !== profileId);
+        
+        const saveResponse = await axios.post('/api/dat.php', {
+          message: response.data.message || 'welcome',
+          users: users
+        });
+
+        if (saveResponse.data.status === 'success') {
+          setConnectionStatus('✅ Profile deleted successfully!');
+          fetchProfiles();
+          if (selectedProfile && selectedProfile.id === profileId) {
+            setSelectedProfile(null);
+            setTables([]);
+            setSelectedTable('');
+            setTableData([]);
+          }
+        }
+      } catch (err) {
+        setConnectionStatus(`❌ Error deleting profile: ${err.message}`);
+      }
+    }
+  };
+
   const cancelEditing = () => {
-    setEditingRow(null);
-    setEditingData({});
-  };
-
-  // Start adding new row
-  const startAdding = () => {
-    if (!selectedTable) return;
-
-    const newRowData = {};
-    tableColumns.forEach(col => {
-      newRowData[col] = '';
+    setEditingProfile(null);
+    setProfileForm({
+      name: '',
+      host: '',
+      username: '',
+      password: '',
+      dbname: ''
     });
-
-    setAddingRow(true);
-    setAddingData(newRowData);
   };
 
-  // Save new row
-  const saveNewRow = async () => {
-    if (!selectedUser || !selectedTable) return;
-
-    setLoading(prev => ({ ...prev, data: true }));
-
-    try {
-      const response = await axios.post('/api/insert-row.php', {
-        host: selectedUser.host,
-        dbname: selectedUser.dbname,
-        username: selectedUser.username,
-        password: selectedUser.password,
-        table: selectedTable,
-        data: addingData
-      });
-
-      if (response.data.success) {
-        setConnectionStatus('✅ Data berhasil ditambahkan!');
-        getTableData(selectedTable);
-        setAddingRow(false);
-        setAddingData({});
-      } else {
-        setConnectionStatus(`❌ Gagal menambahkan data: ${response.data.error}`);
-      }
-    } catch (err) {
-      setConnectionStatus(`❌ Error menambahkan data: ${err.response?.data?.error || err.message}`);
-    } finally {
-      setLoading(prev => ({ ...prev, data: false }));
-    }
-  };
-
-  // Cancel adding
-  const cancelAdd = () => {
-    setAddingRow(false);
-    setAddingData({});
-  };
-
-  // Handle input change for editing
-  const handleEditInputChange = (field, value) => {
-    setEditingData(prev => ({
+  const handleProfileFormChange = (field, value) => {
+    setProfileForm(prev => ({
       ...prev,
       [field]: value
     }));
   };
-
-  // Handle input change for adding
-  const handleAddInputChange = (field, value) => {
-    setAddingData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  // Filter table data based on search term
-  const filteredTableData = tableData.filter(row => {
-    if (!searchTerm) return true;
-    return Object.values(row).some(value => 
-      value !== null && String(value).toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
 
   // Logout function
   const handleLogout = () => {
@@ -279,26 +296,15 @@ const Connect = () => {
   if (!currentUser) {
     return null;
   }
+
   return (
     <div style={{ 
-      color: '#e0e0e0', 
-      backgroundColor: '#1a1a2e',
       minHeight: '100vh',
+      backgroundColor: '#1a1a2e',
+      color: '#e0e0e0',
       padding: '20px',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
     }}>
-      {/* Animated Background */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-        zIndex: -1,
-        opacity: 0.9
-      }}></div>
-
       {/* Header */}
       <div style={{ 
         display: 'flex',
@@ -309,21 +315,19 @@ const Connect = () => {
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: '15px',
         backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+        border: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
         <div style={{ 
-          fontSize: '2.5rem',
+          fontSize: '2rem',
           fontWeight: 'bold',
           background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
           WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+          WebkitTextFillColor: 'transparent'
         }}>
-          🚀 MySQL Database Manager
+          🚀 Database Connection Manager
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '16px', color: '#a0a0c0' }}>
+          <span style={{ fontSize: '14px', color: '#a0a0c0' }}>
             👤 Welcome, <strong style={{ color: '#4ecdc4' }}>{currentUser.username}</strong>
           </span>
           <button
@@ -337,8 +341,7 @@ const Connect = () => {
               fontSize: '14px',
               fontWeight: 'bold',
               cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(5px)'
+              transition: 'all 0.3s ease'
             }}
             onMouseOver={(e) => {
               e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
@@ -362,8 +365,7 @@ const Connect = () => {
               fontSize: '14px',
               fontWeight: 'bold',
               cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(5px)'
+              transition: 'all 0.3s ease'
             }}
             onMouseOver={(e) => {
               e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.3)';
@@ -381,8 +383,7 @@ const Connect = () => {
 
       <div style={{ 
         maxWidth: '1400px', 
-        margin: '0 auto',
-        padding: '20px'
+        margin: '0 auto'
       }}>
         {/* Connection Status */}
         {connectionStatus && (
@@ -394,723 +395,544 @@ const Connect = () => {
             marginBottom: '25px',
             textAlign: 'center',
             fontWeight: 'bold',
-            fontSize: '16px',
-            backdropFilter: 'blur(5px)',
-            animation: 'fadeIn 0.5s ease-in'
+            fontSize: '16px'
           }}>
             {connectionStatus}
           </div>
         )}
 
-        {/* Dashboard Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: '20px',
-          marginBottom: '30px'
-        }}>
-          <div style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            padding: '20px',
-            borderRadius: '15px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            textAlign: 'center',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>👥</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#4ecdc4' }}>{users.length}</div>
-            <div style={{ color: '#a0a0c0' }}>Database Users</div>
-          </div>
-          
-          <div style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            padding: '20px',
-            borderRadius: '15px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            textAlign: 'center',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>🗄️</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ff6b6b' }}>{tables.length}</div>
-            <div style={{ color: '#a0a0c0' }}>Tables</div>
-          </div>
-          
-          <div style={{
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            padding: '20px',
-            borderRadius: '15px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            textAlign: 'center',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>📊</div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#ffd93d' }}>{tableData.length}</div>
-            <div style={{ color: '#a0a0c0' }}>Data Rows</div>
-          </div>
-        </div>
-
-        {/* Section 1: List dat.json with test connection */}
+        {/* Profile Management Section */}
         <div style={{ 
           padding: '25px',
           backgroundColor: 'rgba(255, 255, 255, 0.05)',
           borderRadius: '15px',
           marginBottom: '30px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)'
+          border: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
-          <h2 style={{ 
-            textAlign: 'center', 
-            marginBottom: '25px',
-            color: '#4ecdc4',
-            fontSize: '1.8rem',
-            fontWeight: 'bold'
-          }}>
-            📋 Database Connections
-          </h2>
-          
-          {users.length === 0 ? (
-            <div style={{ 
-              textAlign: 'center', 
-              color: '#a0a0c0',
-              padding: '40px',
-              backgroundColor: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '10px'
-            }}>
-              <div style={{ fontSize: '3rem', marginBottom: '15px' }}>📭</div>
-              <div style={{ fontSize: '1.2rem' }}>Tidak ada user dengan konfigurasi database</div>
-            </div>
-          ) : (
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
-              gap: '20px' 
-            }}>
-              {users.map(user => (
-                <div 
-                  key={user.id}
-                  style={{
-                    padding: '20px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '12px',
-                    position: 'relative',
-                    transition: 'all 0.3s ease',
-                    backdropFilter: 'blur(5px)'
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.transform = 'translateY(-5px)';
-                    e.target.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.3)';
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = 'none';
-                  }}
-                >
-                  <div style={{ marginBottom: '15px' }}>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      marginBottom: '10px' 
-                    }}>
-                      <div style={{ 
-                        width: '40px', 
-                        height: '40px', 
-                        backgroundColor: '#4ecdc4',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginRight: '15px',
-                        fontWeight: 'bold'
-                      }}>
-                        {user.username.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' }}>
-                          {user.username}
-                        </div>
-                        <div style={{ fontSize: '0.9rem', color: '#a0a0c0' }}>
-                          Database User
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '10px',
-                      marginTop: '15px'
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '0.8rem', color: '#a0a0c0', marginBottom: '3px' }}>
-                          🌐 Host
-                        </div>
-                        <div style={{ color: '#fff', fontSize: '0.9rem' }}>{user.host}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.8rem', color: '#a0a0c0', marginBottom: '3px' }}>
-                          🗄️ Database
-                        </div>
-                        <div style={{ color: '#fff', fontSize: '0.9rem' }}>{user.dbname}</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => testConnection(user)}
-                    disabled={loading.connection}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: loading.connection ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
-                      color: loading.connection ? '#888' : '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      cursor: loading.connection ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.3s ease',
-                      background: loading.connection ? 'rgba(255, 255, 255, 0.1)' : 'linear-gradient(45deg, #ff6b6b, #4ecdc4)'
-                    }}
-                    onMouseOver={(e) => {
-                      if (!loading.connection) {
-                        e.target.style.transform = 'scale(1.02)';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (!loading.connection) {
-                        e.target.style.transform = 'scale(1)';
-                      }
-                    }}
-                  >
-                    {loading.connection ? '🔁 Testing...' : '🔁 Test Connection'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* Section 2: List tables */}
-        {selectedUser && tables.length > 0 && (
           <div style={{ 
-            padding: '25px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '15px',
-            marginBottom: '30px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)'
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            marginBottom: '25px'
           }}>
             <h2 style={{ 
-              textAlign: 'center', 
-              marginBottom: '25px',
-              color: '#ffd93d',
-              fontSize: '1.8rem',
-              fontWeight: 'bold'
+              margin: 0,
+              color: '#4ecdc4',
+              fontSize: '1.8rem'
             }}>
-              🗃️ Tables in {selectedUser.dbname}
+              📁 Database Profiles
             </h2>
-            
+            <button
+              onClick={startAddingProfile}
+              style={{
+                padding: '12px 20px',
+                backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                color: '#4ecdc4',
+                border: '1px solid #4ecdc4',
+                borderRadius: '25px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
+                e.target.style.transform = 'translateY(-2px)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
+                e.target.style.transform = 'translateY(0)';
+              }}
+            >
+              ➕ Add New Profile
+            </button>
+          </div>
+
+          {/* Profile Form */}
+          {(editingProfile || profileForm.name) && (
             <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', 
-              gap: '15px' 
+              marginBottom: '25px',
+              padding: '20px',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              borderRadius: '12px',
+              border: '1px solid rgba(78, 205, 196, 0.3)'
             }}>
-              {tables.map((table, index) => (
+              <h3 style={{ 
+                margin: '0 0 20px 0',
+                color: '#4ecdc4'
+              }}>
+                {editingProfile ? '✏️ Edit Profile' : '📝 Add New Profile'}
+              </h3>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '15px',
+                marginBottom: '20px'
+              }}>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    marginBottom: '5px',
+                    color: '#a0a0c0'
+                  }}>
+                    Profile Name
+                  </label>
+                  <input
+                    type="text"
+                    value={profileForm.name}
+                    onChange={(e) => handleProfileFormChange('name', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                    placeholder="My Database"
+                  />
+                </div>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    marginBottom: '5px',
+                    color: '#a0a0c0'
+                  }}>
+                    Host
+                  </label>
+                  <input
+                    type="text"
+                    value={profileForm.host}
+                    onChange={(e) => handleProfileFormChange('host', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                    placeholder="localhost"
+                  />
+                </div>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    marginBottom: '5px',
+                    color: '#a0a0c0'
+                  }}>
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    value={profileForm.username}
+                    onChange={(e) => handleProfileFormChange('username', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                    placeholder="db_user"
+                  />
+                </div>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    marginBottom: '5px',
+                    color: '#a0a0c0'
+                  }}>
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={profileForm.password}
+                    onChange={(e) => handleProfileFormChange('password', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                    placeholder="password"
+                  />
+                </div>
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '12px', 
+                    marginBottom: '5px',
+                    color: '#a0a0c0'
+                  }}>
+                    Database Name
+                  </label>
+                  <input
+                    type="text"
+                    value={profileForm.dbname}
+                    onChange={(e) => handleProfileFormChange('dbname', e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: '#fff',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      fontSize: '14px'
+                    }}
+                    placeholder="my_database"
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
                 <button
-                  key={index}
-                  onClick={() => getTableData(table)}
-                  disabled={loading.data && selectedTable === table}
+                  onClick={saveProfile}
                   style={{
-                    padding: '15px',
-                    backgroundColor: selectedTable === table ? 'rgba(255, 217, 61, 0.2)' : 'rgba(255, 255, 255, 0.08)',
-                    color: selectedTable === table ? '#ffd93d' : '#e0e0e0',
-                    border: selectedTable === table ? '2px solid #ffd93d' : '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '10px',
-                    cursor: loading.data && selectedTable === table ? 'not-allowed' : 'pointer',
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
-                    backdropFilter: 'blur(5px)'
-                  }}
-                  onMouseOver={(e) => {
-                    if (!(loading.data && selectedTable === table)) {
-                      e.target.style.transform = 'translateY(-3px)';
-                      e.target.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.3)';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (!(loading.data && selectedTable === table)) {
-                      e.target.style.transform = 'translateY(0)';
-                      e.target.style.boxShadow = 'none';
-                    }
+                    padding: '10px 20px',
+                    backgroundColor: 'rgba(76, 175, 80, 0.3)',
+                    color: '#4CAF50',
+                    border: '1px solid #4CAF50',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
                   }}
                 >
-                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📋</div>
-                  <div style={{ fontWeight: 'bold' }}>{table}</div>
-                  <div style={{ fontSize: '0.8rem', marginTop: '5px', opacity: 0.7 }}>
-                    {loading.data && selectedTable === table ? 'Loading...' : 'Click to view'}
-                  </div>
+                  💾 Save Profile
                 </button>
-              ))}
+                <button
+                  onClick={cancelEditing}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    color: '#ff6b6b',
+                    border: '1px solid #ff6b6b',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  ❌ Cancel
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Section 3: Table Data */}
-        {tableData.length > 0 && (
+          {/* Profiles List */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+            gap: '20px' 
+          }}>
+            {profiles.map(profile => (
+              <div 
+                key={profile.id}
+                style={{
+                  padding: '20px',
+                  backgroundColor: selectedProfile?.id === profile.id ? 'rgba(78, 205, 196, 0.2)' : 'rgba(255, 255, 255, 0.08)',
+                  border: selectedProfile?.id === profile.id ? '2px solid #4ecdc4' : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  position: 'relative',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  marginBottom: '15px' 
+                }}>
+                  <div style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    backgroundColor: '#4ecdc4',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: '15px',
+                    fontWeight: 'bold'
+                  }}>
+                    {profile.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div style={{ 
+                      fontSize: '1.2rem', 
+                      fontWeight: 'bold',
+                      color: selectedProfile?.id === profile.id ? '#4ecdc4' : '#fff'
+                    }}>
+                      {profile.name}
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.9rem', 
+                      color: '#a0a0c0' 
+                    }}>
+                      {profile.dbname}
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '10px',
+                  marginBottom: '20px'
+                }}>
+                  <div>
+                    <div style={{ 
+                      fontSize: '0.8rem', 
+                      color: '#a0a0c0',
+                      marginBottom: '3px' 
+                    }}>
+                      🌐 Host
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.9rem',
+                      color: '#fff'
+                    }}>
+                      {profile.host}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ 
+                      fontSize: '0.8rem', 
+                      color: '#a0a0c0',
+                      marginBottom: '3px' 
+                    }}>
+                      👤 User
+                    </div>
+                    <div style={{ 
+                      fontSize: '0.9rem',
+                      color: '#fff'
+                    }}>
+                      {profile.username}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '10px' 
+                }}>
+                  <button
+                    onClick={() => testConnection(profile)}
+                    disabled={loading.connection}
+                    style={{
+                      flex: 1,
+                      padding: '8px',
+                      backgroundColor: loading.connection ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 217, 61, 0.2)',
+                      color: loading.connection ? '#888' : '#ffd93d',
+                      border: '1px solid #ffd93d',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: 'bold',
+                      cursor: loading.connection ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {loading.connection ? '🔄 Testing...' : '🔁 Test'}
+                  </button>
+                  <button
+                    onClick={() => startEditingProfile(profile)}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                      color: '#4ecdc4',
+                      border: '1px solid #4ecdc4',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    onClick={() => deleteProfile(profile.id)}
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                      color: '#ff6b6b',
+                      border: '1px solid #ff6b6b',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Database Content Section */}
+        {selectedProfile && (
           <div style={{ 
             padding: '25px',
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '15px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)'
+            border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              marginBottom: '25px',
-              flexWrap: 'wrap',
-              gap: '15px'
+              marginBottom: '25px'
             }}>
-              <div>
-                <h2 style={{ 
-                  margin: 0,
-                  color: '#4ecdc4',
-                  fontSize: '1.8rem',
-                  fontWeight: 'bold'
-                }}>
-                  📊 Data from: {selectedTable}
-                </h2>
-                <div style={{ color: '#a0a0c0', marginTop: '5px' }}>
-                  Showing {filteredTableData.length} of {tableData.length} records
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    placeholder="🔍 Search data..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    style={{
-                      padding: '10px 15px 10px 40px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: '#fff',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      borderRadius: '25px',
-                      fontSize: '14px',
-                      width: '200px'
-                    }}
-                  />
-                </div>
-                
-                <button
-                  onClick={startAdding}
-                  disabled={addingRow || editingRow !== null}
-                  style={{
-                    padding: '12px 20px',
-                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                    color: '#4ecdc4',
-                    border: '1px solid #4ecdc4',
-                    borderRadius: '25px',
-                    fontSize: '14px',
-                    fontWeight: 'bold',
-                    cursor: addingRow || editingRow !== null ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseOver={(e) => {
-                    if (!(addingRow || editingRow !== null)) {
-                      e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
-                      e.target.style.transform = 'translateY(-2px)';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (!(addingRow || editingRow !== null)) {
-                      e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
-                      e.target.style.transform = 'translateY(0)';
-                    }
-                  }}
-                >
-                  ➕ Add New Row
-                </button>
-              </div>
+              <h2 style={{ 
+                margin: 0,
+                color: '#ffd93d',
+                fontSize: '1.8rem'
+              }}>
+                🗄️ {selectedProfile.name} - {selectedProfile.dbname}
+              </h2>
+              <button
+                onClick={() => getTables(selectedProfile)}
+                disabled={loading.tables}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: loading.tables ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 217, 61, 0.2)',
+                  color: loading.tables ? '#888' : '#ffd93d',
+                  border: '1px solid #ffd93d',
+                  borderRadius: '25px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: loading.tables ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {loading.tables ? '🔄 Loading...' : '📋 Refresh Tables'}
+              </button>
             </div>
-            
-            {/* Add new row form */}
-            {addingRow && (
+
+            {/* Tables List */}
+            {tables.length > 0 && (
               <div style={{ 
-                marginBottom: '25px',
-                padding: '20px',
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(78, 205, 196, 0.3)',
-                borderRadius: '12px',
-                backdropFilter: 'blur(5px)'
+                marginBottom: '30px'
               }}>
                 <h3 style={{ 
-                  margin: '0 0 20px 0',
                   color: '#4ecdc4',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px'
+                  marginBottom: '15px'
                 }}>
-                  📝 Add New Record
+                  📋 Tables ({tables.length})
                 </h3>
                 <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: `repeat(auto-fit, minmax(200px, 1fr))`,
-                  gap: '15px',
-                  marginBottom: '20px'
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: '10px' 
                 }}>
-                  {Object.keys(addingData).map((field) => (
-                    <div key={field}>
-                      <label style={{ 
-                        display: 'block', 
-                        fontSize: '12px', 
-                        marginBottom: '5px',
-                        color: '#a0a0c0'
-                      }}>
-                        {field}
-                      </label>
-                      <input
-                        type="text"
-                        value={addingData[field]}
-                        onChange={(e) => handleAddInputChange(field, e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '10px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          color: '#fff',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          borderRadius: '8px',
-                          fontSize: '14px'
-                        }}
-                      />
-                    </div>
+                  {tables.map((table, index) => (
+                    <button
+                      key={index}
+                      onClick={() => getTableData(table)}
+                      disabled={loading.data && selectedTable === table}
+                      style={{
+                        padding: '10px 15px',
+                        backgroundColor: selectedTable === table ? 'rgba(255, 217, 61, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+                        color: selectedTable === table ? '#ffd93d' : '#e0e0e0',
+                        border: selectedTable === table ? '2px solid #ffd93d' : '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '20px',
+                        cursor: loading.data && selectedTable === table ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      {loading.data && selectedTable === table ? '🔄 Loading...' : table}
+                    </button>
                   ))}
-                </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    onClick={saveNewRow}
-                    disabled={loading.data}
-                    style={{
-                      padding: '10px 20px',
-                      backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
-                      color: loading.data ? '#888' : '#4CAF50',
-                      border: '1px solid #4CAF50',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      cursor: loading.data ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    {loading.data ? '💾 Saving...' : '💾 Save Record'}
-                  </button>
-                  <button
-                    onClick={cancelAdd}
-                    style={{
-                      padding: '10px 20px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      color: '#ff6b6b',
-                      border: '1px solid #ff6b6b',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease'
-                    }}
-                  >
-                    ❌ Cancel
-                  </button>
                 </div>
               </div>
             )}
-            
-            <div style={{ 
-              overflowX: 'auto',
-              maxHeight: '600px',
-              overflowY: 'auto',
-              borderRadius: '10px',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}>
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                color: '#e0e0e0',
-                backgroundColor: 'rgba(26, 26, 46, 0.8)'
-              }}>
-                <thead>
-                  <tr>
-                    {tableColumns.map((column, index) => (
-                      <th 
-                        key={index}
-                        style={{
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          padding: '15px',
-                          backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                          textAlign: 'left',
-                          position: 'sticky',
-                          top: 0,
-                          backdropFilter: 'blur(5px)'
-                        }}
-                      >
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '8px' 
-                        }}>
-                          <span>🏷️</span>
-                          <span style={{ fontWeight: 'bold' }}>{column}</span>
-                        </div>
-                      </th>
-                    ))}
-                    <th 
-                      style={{
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        padding: '15px',
-                        backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                        textAlign: 'center',
-                        position: 'sticky',
-                        top: 0,
-                        backdropFilter: 'blur(5px)'
-                      }}
-                    >
-                      ⚙️ Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTableData.map((row, rowIndex) => (
-                    <React.Fragment key={rowIndex}>
-                      <tr 
-                        style={{
-                          backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
-                          transition: 'background-color 0.2s ease',
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => startEditingRow(rowIndex, row)}
-                        onMouseOver={(e) => {
-                          e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.1)';
-                        }}
-                        onMouseOut={(e) => {
-                          e.target.style.backgroundColor = rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)';
-                        }}
-                      >
-                        {tableColumns.map((column, cellIndex) => (
-                          <td 
-                            key={cellIndex}
+
+            {/* Table Data */}
+            {tableData.length > 0 && (
+              <div>
+                <h3 style={{ 
+                  color: '#ff6b6b',
+                  marginBottom: '15px'
+                }}>
+                  📊 Data from {selectedTable}
+                </h3>
+                <div style={{ 
+                  overflowX: 'auto',
+                  maxHeight: '400px',
+                  overflowY: 'auto',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <table style={{
+                    width: '100%',
+                    borderCollapse: 'collapse',
+                    color: '#e0e0e0',
+                    backgroundColor: 'rgba(26, 26, 46, 0.8)'
+                  }}>
+                    <thead>
+                      <tr>
+                        {Object.keys(tableData[0] || {}).map((key, index) => (
+                          <th 
+                            key={index}
                             style={{
                               border: '1px solid rgba(255, 255, 255, 0.1)',
                               padding: '12px',
-                              transition: 'all 0.2s ease'
+                              backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                              textAlign: 'left',
+                              position: 'sticky',
+                              top: 0
                             }}
                           >
-                            <div style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '8px' 
-                            }}>
-                              <span>📋</span>
-                              <span>{row[column] !== null ? String(row[column]) : 'NULL'}</span>
-                            </div>
-                          </td>
+                            {key}
+                          </th>
                         ))}
-                        <td 
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tableData.map((row, rowIndex) => (
+                        <tr 
+                          key={rowIndex}
                           style={{
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            padding: '12px',
-                            textAlign: 'center'
+                            backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)'
                           }}
                         >
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startEditingRow(rowIndex, row);
-                            }}
-                            style={{
-                              padding: '6px 12px',
-                              backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                              color: '#4ecdc4',
-                              border: '1px solid #4ecdc4',
-                              borderRadius: '20px',
-                              fontSize: '11px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            ✏️ Edit
-                          </button>
-                        </td>
-                      </tr>
-                      {/* Edit form row - muncul di bawah baris yang diklik */}
-                      {editingRow === rowIndex && (
-                        <tr>
-                          <td 
-                            colSpan={tableColumns.length + 1}
-                            style={{
-                              padding: '0',
-                              border: '1px solid rgba(255, 217, 61, 0.5)',
-                              backgroundColor: 'rgba(255, 217, 61, 0.1)'
-                            }}
-                          >
-                            <div style={{ 
-                              padding: '20px',
-                              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                              borderRadius: '0 0 8px 8px'
-                            }}>
-                              <h4 style={{ 
-                                margin: '0 0 15px 0',
-                                color: '#ffd93d',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '10px'
-                              }}>
-                                🛠️ Edit Record
-                              </h4>
-                              <div style={{ 
-                                display: 'grid', 
-                                gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
-                                gap: '15px',
-                                marginBottom: '20px'
-                              }}>
-                                {tableColumns.map((column) => (
-                                  <div key={column}>
-                                    <label style={{ 
-                                      display: 'block', 
-                                      fontSize: '11px', 
-                                      marginBottom: '5px',
-                                      color: '#a0a0c0'
-                                    }}>
-                                      {column}
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={editingData[column] || ''}
-                                      onChange={(e) => handleEditInputChange(column, e.target.value)}
-                                      style={{
-                                        width: '100%',
-                                        padding: '8px',
-                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                        color: '#fff',
-                                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                                        borderRadius: '6px',
-                                        fontSize: '13px'
-                                      }}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    saveEditedRow();
-                                  }}
-                                  disabled={loading.data}
-                                  style={{
-                                    padding: '8px 16px',
-                                    backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
-                                    color: loading.data ? '#888' : '#4CAF50',
-                                    border: '1px solid #4CAF50',
-                                    borderRadius: '20px',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    cursor: loading.data ? 'not-allowed' : 'pointer',
-                                    transition: 'all 0.3s ease'
-                                  }}
-                                >
-                                  {loading.data ? '💾 Saving...' : '💾 Save Changes'}
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    cancelEditing();
-                                  }}
-                                  style={{
-                                    padding: '8px 16px',
-                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                    color: '#ff6b6b',
-                                    border: '1px solid #ff6b6b',
-                                    borderRadius: '20px',
-                                    fontSize: '12px',
-                                    fontWeight: 'bold',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s ease'
-                                  }}
-                                >
-                                  ❌ Cancel
-                                </button>
-                              </div>
-                            </div>
-                          </td>
+                          {Object.values(row).map((cell, cellIndex) => (
+                            <td 
+                              key={cellIndex}
+                              style={{
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                padding: '10px',
+                                fontSize: '14px'
+                              }}
+                            >
+                              {cell !== null ? String(cell) : 'NULL'}
+                            </td>
+                          ))}
                         </tr>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            {filteredTableData.length === 0 && searchTerm && (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '40px', 
-                color: '#a0a0c0',
-                backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                borderRadius: '10px',
-                marginTop: '20px'
-              }}>
-                <div style={{ fontSize: '3rem', marginBottom: '15px' }}>🔍</div>
-                <div style={{ fontSize: '1.2rem' }}>No records found for "{searchTerm}"</div>
-                <button
-                  onClick={() => setSearchTerm('')}
-                  style={{
-                    marginTop: '15px',
-                    padding: '8px 16px',
-                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                    color: '#4ecdc4',
-                    border: '1px solid #4ecdc4',
-                    borderRadius: '20px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Clear Search
-                </button>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ 
+                  marginTop: '10px', 
+                  textAlign: 'center', 
+                  fontSize: '14px', 
+                  color: '#a0a0c0' 
+                }}>
+                  Showing {tableData.length} records
+                </div>
               </div>
             )}
           </div>
         )}
       </div>
-
-      {/* CSS Animations */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        
-        ::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-          background: rgba(78, 205, 196, 0.5);
-          border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-          background: rgba(78, 205, 196, 0.8);
-        }
-      `}</style>
     </div>
   );
 };
