@@ -19,7 +19,7 @@ const Connect = () => {
   const [loading, setLoading] = useState({ 
     connection: false, 
     tables: false, 
-     false 
+    data: false 
   });
   const [currentUser, setCurrentUser] = useState(null);
   const [editingRow, setEditingRow] = useState(null);
@@ -38,6 +38,25 @@ const Connect = () => {
     }
   }, [navigate]);
 
+  // Fetch data users dari API
+  useEffect(() => {
+    if (currentUser) {
+      fetchData();
+    }
+  }, [currentUser]);
+
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('/api/dat.json');
+      const usersWithDb = (response.data.users || []).filter(user => 
+        user.host && user.dbname && user.username && user.password
+      );
+      setUsers(usersWithDb);
+    } catch (err) {
+      console.error('Error fetching ', err);
+    }
+  };
+
   // Test connection to MySQL
   const testConnection = async () => {
     if (!connectionConfig.host || !connectionConfig.username || 
@@ -50,20 +69,16 @@ const Connect = () => {
     setConnectionStatus('Testing connection...');
 
     try {
-      const response = await axios.post('/api/mysql-connect.php', {
+      const response = await axios.post('/api/test-connection.php', {
         host: connectionConfig.host,
+        dbname: connectionConfig.database,
         username: connectionConfig.username,
-        password: connectionConfig.password,
-        database: connectionConfig.database
+        password: connectionConfig.password
       });
 
       if (response.data.success) {
         setConnectionStatus('✅ Connection successful!');
         setIsConnected(true);
-        setTables([]);
-        setSelectedTable('');
-        setTableData([]);
-        setTableStructure([]);
       } else {
         setConnectionStatus(`❌ Connection failed: ${response.data.error}`);
         setIsConnected(false);
@@ -84,11 +99,11 @@ const Connect = () => {
     setConnectionStatus('Fetching tables...');
 
     try {
-      const response = await axios.post('/api/mysql-get-tables.php', {
+      const response = await axios.post('/api/get-tables.php', {
         host: connectionConfig.host,
+        dbname: connectionConfig.database,
         username: connectionConfig.username,
-        password: connectionConfig.password,
-        database: connectionConfig.database
+        password: connectionConfig.password
       });
 
       if (response.data.success) {
@@ -108,69 +123,48 @@ const Connect = () => {
   const getTableData = async (tableName) => {
     if (!isConnected || !tableName) return;
 
-    setLoading(prev => ({ ...prev,  true }));
+    setLoading(prev => ({ ...prev, data: true }));
     setSelectedTable(tableName);
     setConnectionStatus(`Fetching data from ${tableName}...`);
 
     try {
-      const response = await axios.post('/api/mysql-get-data.php', {
+      const response = await axios.post('/api/get-table-data.php', {
         host: connectionConfig.host,
+        dbname: connectionConfig.database,
         username: connectionConfig.username,
         password: connectionConfig.password,
-        database: connectionConfig.database,
         table: tableName
       });
 
       if (response.data.success) {
         setTableData(response.data.data || []);
-        setTableStructure(response.data.structure || []);
+        setTableStructure(response.data.columns || []);
         setConnectionStatus(`✅ Displaying data from ${tableName}`);
       } else {
-        setConnectionStatus(`❌ Failed to fetch  ${response.data.error}`);
+        setConnectionStatus(`❌ Failed to fetch data: ${response.data.error}`);
       }
     } catch (err) {
       setConnectionStatus(`❌ Error fetching data: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
 
-  // Get table structure
-  const getTableStructure = async (tableName) => {
-    if (!isConnected || !tableName) return;
-
-    try {
-      const response = await axios.post('/api/mysql-get-structure.php', {
-        host: connectionConfig.host,
-        username: connectionConfig.username,
-        password: connectionConfig.password,
-        database: connectionConfig.database,
-        table: tableName
-      });
-
-      if (response.data.success) {
-        return response.data.structure || [];
-      }
-    } catch (err) {
-      console.error('Error getting table structure:', err);
-    }
-    return [];
-  };
   // Insert new row
   const insertRow = async () => {
     if (!isConnected || !selectedTable) return;
 
-    setLoading(prev => ({ ...prev,  true }));
+    setLoading(prev => ({ ...prev, data: true }));
     setConnectionStatus('Inserting new row...');
 
     try {
-      const response = await axios.post('/api/mysql-insert.php', {
+      const response = await axios.post('/api/insert-row.php', {
         host: connectionConfig.host,
+        dbname: connectionConfig.database,
         username: connectionConfig.username,
         password: connectionConfig.password,
-        database: connectionConfig.database,
         table: selectedTable,
-         addingData
+        data: addingData
       });
 
       if (response.data.success) {
@@ -185,7 +179,7 @@ const Connect = () => {
     } catch (err) {
       setConnectionStatus(`❌ Error inserting row: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
 
@@ -193,17 +187,17 @@ const Connect = () => {
   const updateRow = async () => {
     if (!isConnected || !selectedTable || editingRow === null) return;
 
-    setLoading(prev => ({ ...prev,  true }));
+    setLoading(prev => ({ ...prev, data: true }));
     setConnectionStatus('Updating row...');
 
     try {
-      const response = await axios.post('/api/mysql-update.php', {
+      const response = await axios.post('/api/update-row.php', {
         host: connectionConfig.host,
+        dbname: connectionConfig.database,
         username: connectionConfig.username,
         password: connectionConfig.password,
-        database: connectionConfig.database,
         table: selectedTable,
-         editingData,
+        data: editingData,
         primaryKey: tableStructure.find(col => col.Key === 'PRI')?.Field || Object.keys(editingData)[0],
         primaryKeyValue: tableData[editingRow][tableStructure.find(col => col.Key === 'PRI')?.Field || Object.keys(editingData)[0]]
       });
@@ -220,7 +214,7 @@ const Connect = () => {
     } catch (err) {
       setConnectionStatus(`❌ Error updating row: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
+      setLoading(prev => ({ ...prev, data: false }));
     }
   };
 
@@ -229,18 +223,18 @@ const Connect = () => {
     if (!isConnected || !selectedTable) return;
 
     if (window.confirm('Are you sure you want to delete this row?')) {
-      setLoading(prev => ({ ...prev,  true }));
+      setLoading(prev => ({ ...prev, data: true }));
       setConnectionStatus('Deleting row...');
 
       try {
         const primaryKey = tableStructure.find(col => col.Key === 'PRI')?.Field || Object.keys(tableData[rowIndex])[0];
         const primaryKeyValue = tableData[rowIndex][primaryKey];
 
-        const response = await axios.post('/api/mysql-delete.php', {
+        const response = await axios.post('/api/delete-row.php', {
           host: connectionConfig.host,
+          dbname: connectionConfig.database,
           username: connectionConfig.username,
           password: connectionConfig.password,
-          database: connectionConfig.database,
           table: selectedTable,
           primaryKey: primaryKey,
           primaryKeyValue: primaryKeyValue
@@ -256,13 +250,13 @@ const Connect = () => {
       } catch (err) {
         setConnectionStatus(`❌ Error deleting row: ${err.response?.data?.error || err.message}`);
       } finally {
-        setLoading(prev => ({ ...prev,  false }));
+        setLoading(prev => ({ ...prev, data: false }));
       }
     }
   };
 
   // Start editing row
-  const startEditingRow = async (rowIndex) => {
+  const startEditingRow = (rowIndex) => {
     const rowData = tableData[rowIndex];
     setEditingRow(rowIndex);
     setEditingData({ ...rowData });
@@ -274,14 +268,17 @@ const Connect = () => {
     setEditingData({});
   };
 
-  // Start adding row
+  // Start adding new row
   const startAddingRow = () => {
-    const emptyData = {};
+    if (!selectedTable) return;
+
+    const newRowData = {};
     tableStructure.forEach(col => {
-      emptyData[col.Field] = '';
+      newRowData[col.Field] = '';
     });
-    setAddingData(emptyData);
+
     setAddingRow(true);
+    setAddingData(newRowData);
   };
 
   // Cancel adding
@@ -328,7 +325,6 @@ const Connect = () => {
   if (!currentUser) {
     return null;
   }
-
   return (
     <div style={{ 
       minHeight: '100vh',
@@ -337,6 +333,18 @@ const Connect = () => {
       padding: '20px',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
     }}>
+      {/* Animated Background */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+        zIndex: -1,
+        opacity: 0.9
+      }}></div>
+
       {/* Header */}
       <div style={{ 
         display: 'flex',
@@ -347,14 +355,16 @@ const Connect = () => {
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: '15px',
         backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)'
+        border: '1px solid rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
       }}>
         <div style={{ 
           fontSize: '2rem',
           fontWeight: 'bold',
           background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
           WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent'
+          WebkitTextFillColor: 'transparent',
+          textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
         }}>
           🚀 MySQL Database Manager
         </div>
@@ -373,7 +383,16 @@ const Connect = () => {
               fontSize: '14px',
               fontWeight: 'bold',
               cursor: 'pointer',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(5px)'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
+              e.target.style.transform = 'translateY(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
+              e.target.style.transform = 'translateY(0)';
             }}
           >
             🏠 Main Page
@@ -389,7 +408,16 @@ const Connect = () => {
               fontSize: '14px',
               fontWeight: 'bold',
               cursor: 'pointer',
-              transition: 'all 0.3s ease'
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(5px)'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.3)';
+              e.target.style.transform = 'translateY(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.2)';
+              e.target.style.transform = 'translateY(0)';
             }}
           >
             🔒 Logout
@@ -399,7 +427,8 @@ const Connect = () => {
 
       <div style={{ 
         maxWidth: '1400px', 
-        margin: '0 auto'
+        margin: '0 auto',
+        padding: '20px'
       }}>
         {/* Connection Status */}
         {connectionStatus && (
@@ -411,7 +440,9 @@ const Connect = () => {
             marginBottom: '25px',
             textAlign: 'center',
             fontWeight: 'bold',
-            fontSize: '16px'
+            fontSize: '16px',
+            backdropFilter: 'blur(5px)',
+            animation: 'fadeIn 0.5s ease-in'
           }}>
             {connectionStatus}
           </div>
@@ -423,18 +454,21 @@ const Connect = () => {
           backgroundColor: 'rgba(255, 255, 255, 0.05)',
           borderRadius: '15px',
           marginBottom: '30px',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(10px)'
         }}>
           <h2 style={{ 
-            margin: '0 0 25px 0',
+            textAlign: 'center', 
+            marginBottom: '25px',
             color: '#4ecdc4',
-            fontSize: '1.8rem'
+            fontSize: '1.8rem',
+            fontWeight: 'bold'
           }}>
             🔌 Database Connection
           </h2>
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
             gap: '20px',
             marginBottom: '20px'
           }}>
@@ -551,7 +585,20 @@ const Connect = () => {
               fontSize: '14px',
               fontWeight: 'bold',
               cursor: loading.connection ? 'not-allowed' : 'pointer',
+              width: '100%',
               transition: 'all 0.3s ease'
+            }}
+            onMouseOver={(e) => {
+              if (!loading.connection) {
+                e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.4)';
+                e.target.style.transform = 'translateY(-2px)';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!loading.connection) {
+                e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
+                e.target.style.transform = 'translateY(0)';
+              }
             }}
           >
             {loading.connection ? '🔄 Connecting...' : '🔌 Connect to Database'}
@@ -564,7 +611,9 @@ const Connect = () => {
             padding: '25px',
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
             borderRadius: '15px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
+            marginBottom: '30px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)'
           }}>
             <div style={{ 
               display: 'flex', 
@@ -575,7 +624,8 @@ const Connect = () => {
               <h2 style={{ 
                 margin: 0,
                 color: '#ffd93d',
-                fontSize: '1.8rem'
+                fontSize: '1.8rem',
+                fontWeight: 'bold'
               }}>
                 🗄️ {connectionConfig.database}
               </h2>
@@ -590,12 +640,26 @@ const Connect = () => {
                   borderRadius: '25px',
                   fontSize: '14px',
                   fontWeight: 'bold',
-                  cursor: loading.tables ? 'not-allowed' : 'pointer'
+                  cursor: loading.tables ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseOver={(e) => {
+                  if (!loading.tables) {
+                    e.target.style.backgroundColor = 'rgba(255, 217, 61, 0.3)';
+                    e.target.style.transform = 'translateY(-2px)';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (!loading.tables) {
+                    e.target.style.backgroundColor = 'rgba(255, 217, 61, 0.2)';
+                    e.target.style.transform = 'translateY(0)';
+                  }
                 }}
               >
                 {loading.tables ? '🔄 Loading...' : '📋 Refresh Tables'}
               </button>
             </div>
+
             {/* Tables List */}
             {tables.length > 0 && (
               <div style={{ 
@@ -608,8 +672,8 @@ const Connect = () => {
                   📋 Tables ({tables.length})
                 </h3>
                 <div style={{ 
-                  display: 'flex', 
-                  flexWrap: 'wrap', 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
                   gap: '10px' 
                 }}>
                   {tables.map((table, index) => (
@@ -618,13 +682,26 @@ const Connect = () => {
                       onClick={() => getTableData(table)}
                       disabled={loading.data && selectedTable === table}
                       style={{
-                        padding: '10px 15px',
-                        backgroundColor: selectedTable === table ? 'rgba(255, 217, 61, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+                        padding: '10px',
+                        backgroundColor: selectedTable === table ? 'rgba(255, 217, 61, 0.3)' : 'rgba(255, 255, 255, 0.08)',
                         color: selectedTable === table ? '#ffd93d' : '#e0e0e0',
                         border: selectedTable === table ? '2px solid #ffd93d' : '1px solid rgba(255, 255, 255, 0.2)',
                         borderRadius: '20px',
                         cursor: loading.data && selectedTable === table ? 'not-allowed' : 'pointer',
+                        textAlign: 'center',
                         transition: 'all 0.3s ease'
+                      }}
+                      onMouseOver={(e) => {
+                        if (!(loading.data && selectedTable === table)) {
+                          e.target.style.transform = 'translateY(-3px)';
+                          e.target.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.3)';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        if (!(loading.data && selectedTable === table)) {
+                          e.target.style.transform = 'translateY(0)';
+                          e.target.style.boxShadow = 'none';
+                        }
                       }}
                     >
                       {loading.data && selectedTable === table ? '🔄 Loading...' : table}
@@ -633,7 +710,6 @@ const Connect = () => {
                 </div>
               </div>
             )}
-
             {/* Table Data */}
             {tableData.length > 0 && (
               <div>
@@ -641,14 +717,16 @@ const Connect = () => {
                   display: 'flex', 
                   justifyContent: 'space-between', 
                   alignItems: 'center',
-                  marginBottom: '15px'
+                  marginBottom: '20px'
                 }}>
-                  <h3 style={{ 
+                  <h2 style={{ 
                     margin: 0,
-                    color: '#ff6b6b'
+                    color: '#ff6b6b',
+                    fontSize: '1.8rem',
+                    fontWeight: 'bold'
                   }}>
                     📊 Data from {selectedTable}
-                  </h3>
+                  </h2>
                   <button
                     onClick={startAddingRow}
                     disabled={addingRow || editingRow !== null}
@@ -658,33 +736,52 @@ const Connect = () => {
                       color: '#4ecdc4',
                       border: '1px solid #4ecdc4',
                       borderRadius: '20px',
-                      fontSize: '12px',
+                      fontSize: '14px',
                       fontWeight: 'bold',
-                      cursor: addingRow || editingRow !== null ? 'not-allowed' : 'pointer'
+                      cursor: addingRow || editingRow !== null ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                    onMouseOver={(e) => {
+                      if (!(addingRow || editingRow !== null)) {
+                        e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
+                        e.target.style.transform = 'translateY(-2px)';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (!(addingRow || editingRow !== null)) {
+                        e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
+                        e.target.style.transform = 'translateY(0)';
+                      }
                     }}
                   >
                     ➕ Add New Row
                   </button>
                 </div>
 
-                {/* Add Row Form */}
+                {/* Add new row form */}
                 {addingRow && (
                   <div style={{ 
                     marginBottom: '20px',
                     padding: '15px',
                     backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(78, 205, 196, 0.3)',
                     borderRadius: '8px',
-                    border: '1px solid rgba(78, 205, 196, 0.3)'
+                    backdropFilter: 'blur(5px)'
                   }}>
-                    <h4 style={{ 
+                    <h3 style={{ 
                       margin: '0 0 15px 0',
-                      color: '#4ecdc4'
+                      color: '#4ecdc4',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
                     }}>
                       📝 Add New Row
-                    </h4>
+                    </h3>
                     <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
                       gap: '10px',
                       marginBottom: '15px'
                     }}>
@@ -708,7 +805,7 @@ const Connect = () => {
                               backgroundColor: 'rgba(255, 255, 255, 0.1)',
                               color: '#fff',
                               border: '1px solid rgba(255, 255, 255, 0.2)',
-                              borderRadius: '6px',
+                              borderRadius: '4px',
                               fontSize: '12px'
                             }}
                           />
@@ -720,11 +817,11 @@ const Connect = () => {
                         onClick={insertRow}
                         disabled={loading.data}
                         style={{
-                          padding: '8px 15px',
+                          padding: '6px 12px',
                           backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
                           color: loading.data ? '#888' : '#4CAF50',
                           border: '1px solid #4CAF50',
-                          borderRadius: '20px',
+                          borderRadius: '15px',
                           fontSize: '12px',
                           fontWeight: 'bold',
                           cursor: loading.data ? 'not-allowed' : 'pointer'
@@ -735,11 +832,11 @@ const Connect = () => {
                       <button
                         onClick={cancelAdding}
                         style={{
-                          padding: '8px 15px',
+                          padding: '6px 12px',
                           backgroundColor: 'rgba(255, 255, 255, 0.1)',
                           color: '#ff6b6b',
                           border: '1px solid #ff6b6b',
-                          borderRadius: '20px',
+                          borderRadius: '15px',
                           fontSize: '12px',
                           fontWeight: 'bold',
                           cursor: 'pointer'
@@ -751,24 +848,28 @@ const Connect = () => {
                   </div>
                 )}
 
-                {/* Edit Row Form */}
+                {/* Edit row form */}
                 {editingRow !== null && (
                   <div style={{ 
                     marginBottom: '20px',
                     padding: '15px',
-                    backgroundColor: 'rgba(255, 217, 61, 0.1)',
+                    backgroundColor: 'rgba(255, 217, 61, 0.2)',
+                    border: '1px solid #ffd93d',
                     borderRadius: '8px',
-                    border: '1px solid rgba(255, 217, 61, 0.5)'
+                    backdropFilter: 'blur(5px)'
                   }}>
-                    <h4 style={{ 
+                    <h3 style={{ 
                       margin: '0 0 15px 0',
-                      color: '#ffd93d'
+                      color: '#ffd93d',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px'
                     }}>
                       🛠️ Edit Row
-                    </h4>
+                    </h3>
                     <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                      gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
                       gap: '10px',
                       marginBottom: '15px'
                     }}>
@@ -792,7 +893,7 @@ const Connect = () => {
                               backgroundColor: 'rgba(255, 255, 255, 0.1)',
                               color: '#fff',
                               border: '1px solid rgba(255, 255, 255, 0.2)',
-                              borderRadius: '6px',
+                              borderRadius: '4px',
                               fontSize: '12px'
                             }}
                           />
@@ -804,11 +905,11 @@ const Connect = () => {
                         onClick={updateRow}
                         disabled={loading.data}
                         style={{
-                          padding: '8px 15px',
+                          padding: '6px 12px',
                           backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
                           color: loading.data ? '#888' : '#4CAF50',
                           border: '1px solid #4CAF50',
-                          borderRadius: '20px',
+                          borderRadius: '15px',
                           fontSize: '12px',
                           fontWeight: 'bold',
                           cursor: loading.data ? 'not-allowed' : 'pointer'
@@ -819,11 +920,11 @@ const Connect = () => {
                       <button
                         onClick={cancelEditing}
                         style={{
-                          padding: '8px 15px',
+                          padding: '6px 12px',
                           backgroundColor: 'rgba(255, 255, 255, 0.1)',
                           color: '#ff6b6b',
                           border: '1px solid #ff6b6b',
-                          borderRadius: '20px',
+                          borderRadius: '15px',
                           fontSize: '12px',
                           fontWeight: 'bold',
                           cursor: 'pointer'
@@ -838,9 +939,9 @@ const Connect = () => {
                 {/* Data Table */}
                 <div style={{ 
                   overflowX: 'auto',
-                  maxHeight: '400px',
+                  maxHeight: '500px',
                   overflowY: 'auto',
-                  borderRadius: '10px',
+                  borderRadius: '8px',
                   border: '1px solid rgba(255, 255, 255, 0.1)'
                 }}>
                   <table style={{
@@ -851,32 +952,41 @@ const Connect = () => {
                   }}>
                     <thead>
                       <tr>
-                        {Object.keys(tableData[0] || {}).map((key, index) => (
+                        {tableColumns.map((column, index) => (
                           <th 
                             key={index}
                             style={{
                               border: '1px solid rgba(255, 255, 255, 0.1)',
-                              padding: '12px',
+                              padding: '10px',
                               backgroundColor: 'rgba(78, 205, 196, 0.2)',
                               textAlign: 'left',
                               position: 'sticky',
-                              top: 0
+                              top: 0,
+                              backdropFilter: 'blur(5px)'
                             }}
                           >
-                            {key}
+                            <div style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '8px' 
+                            }}>
+                              <span>🏷️</span>
+                              <span style={{ fontWeight: 'bold' }}>{column.Field || column}</span>
+                            </div>
                           </th>
                         ))}
                         <th 
                           style={{
                             border: '1px solid rgba(255, 255, 255, 0.1)',
-                            padding: '12px',
+                            padding: '10px',
                             backgroundColor: 'rgba(78, 205, 196, 0.2)',
                             textAlign: 'center',
                             position: 'sticky',
-                            top: 0
+                            top: 0,
+                            backdropFilter: 'blur(5px)'
                           }}
                         >
-                          Actions
+                          ⚙️ Actions
                         </th>
                       </tr>
                     </thead>
@@ -885,25 +995,39 @@ const Connect = () => {
                         <tr 
                           key={rowIndex}
                           style={{
-                            backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)'
+                            backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseOver={(e) => {
+                            e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.1)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.target.style.backgroundColor = rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)';
                           }}
                         >
-                          {Object.values(row).map((cell, cellIndex) => (
+                          {tableColumns.map((column, cellIndex) => (
                             <td 
                               key={cellIndex}
                               style={{
                                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                                padding: '10px',
-                                fontSize: '14px'
+                                padding: '8px',
+                                backgroundColor: editingRow === rowIndex ? 'rgba(255, 217, 61, 0.1)' : 'inherit'
                               }}
                             >
-                              {cell !== null ? String(cell) : 'NULL'}
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '5px' 
+                              }}>
+                                <span>📋</span>
+                                <span>{row[column.Field || column] !== null ? String(row[column.Field || column]) : 'NULL'}</span>
+                              </div>
                             </td>
                           ))}
                           <td 
                             style={{
                               border: '1px solid rgba(255, 255, 255, 0.1)',
-                              padding: '10px',
+                              padding: '8px',
                               textAlign: 'center'
                             }}
                           >
@@ -911,12 +1035,12 @@ const Connect = () => {
                               onClick={() => startEditingRow(rowIndex)}
                               disabled={editingRow !== null && editingRow !== rowIndex}
                               style={{
-                                padding: '5px 10px',
+                                padding: '4px 8px',
                                 backgroundColor: 'rgba(78, 205, 196, 0.2)',
                                 color: '#4ecdc4',
                                 border: '1px solid #4ecdc4',
-                                borderRadius: '15px',
-                                fontSize: '11px',
+                                borderRadius: '12px',
+                                fontSize: '10px',
                                 cursor: editingRow !== null && editingRow !== rowIndex ? 'not-allowed' : 'pointer',
                                 marginRight: '5px'
                               }}
@@ -926,12 +1050,12 @@ const Connect = () => {
                             <button
                               onClick={() => deleteRow(rowIndex)}
                               style={{
-                                padding: '5px 10px',
+                                padding: '4px 8px',
                                 backgroundColor: 'rgba(255, 107, 107, 0.2)',
                                 color: '#ff6b6b',
                                 border: '1px solid #ff6b6b',
-                                borderRadius: '15px',
-                                fontSize: '11px',
+                                borderRadius: '12px',
+                                fontSize: '10px',
                                 cursor: 'pointer'
                               }}
                             >
@@ -943,13 +1067,14 @@ const Connect = () => {
                     </tbody>
                   </table>
                 </div>
+                
                 <div style={{ 
                   marginTop: '10px', 
                   textAlign: 'center', 
                   fontSize: '14px', 
                   color: '#a0a0c0' 
                 }}>
-                  Showing {tableData.length} records
+                  Menampilkan {tableData.length} baris data
                 </div>
               </div>
             )}
