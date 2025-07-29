@@ -16,17 +16,10 @@ const Connect = () => {
   const [tableData, setTableData] = useState([]);
   const [tableColumns, setTableColumns] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('');
-  const [loading, setLoading] = useState({ 
-    connection: false, 
-    tables: false, 
-     false 
-  });
+  const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [editingRow, setEditingRow] = useState(null);
   const [editingData, setEditingData] = useState({});
-  const [addingRow, setAddingRow] = useState(false);
-  const [addingData, setAddingData] = useState({});
-  const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -43,11 +36,11 @@ const Connect = () => {
   const testConnection = async () => {
     if (!connectionConfig.host || !connectionConfig.username || 
         !connectionConfig.password || !connectionConfig.database) {
-      setConnectionStatus('❌ All fields are required!');
+      setConnectionStatus('All fields are required!');
       return;
     }
 
-    setLoading(prev => ({ ...prev, connection: true }));
+    setLoading(true);
     setConnectionStatus('Testing connection...');
 
     try {
@@ -59,25 +52,25 @@ const Connect = () => {
       });
 
       if (response.data.success) {
-        setConnectionStatus('✅ Connection successful!');
+        setConnectionStatus('Connection successful!');
         setIsConnected(true);
       } else {
-        setConnectionStatus(`❌ Connection failed: ${response.data.error}`);
+        setConnectionStatus(`Connection failed: ${response.data.error}`);
         setIsConnected(false);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Connection error: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`Connection error: ${err.response?.data?.error || err.message}`);
       setIsConnected(false);
     } finally {
-      setLoading(prev => ({ ...prev, connection: false }));
+      setLoading(false);
     }
   };
 
   // Get tables from database
   const getTables = async () => {
     if (!isConnected) return;
-    
-    setLoading(prev => ({ ...prev, tables: true }));
+
+    setLoading(true);
     setConnectionStatus('Fetching tables...');
 
     try {
@@ -90,14 +83,14 @@ const Connect = () => {
 
       if (response.data.success) {
         setTables(response.data.tables || []);
-        setConnectionStatus(`✅ Found ${response.data.tables?.length || 0} tables`);
+        setConnectionStatus(`Found ${response.data.tables?.length || 0} tables`);
       } else {
-        setConnectionStatus(`❌ Failed to fetch tables: ${response.data.error}`);
+        setConnectionStatus(`Failed to fetch tables: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error fetching tables: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`Error fetching tables: ${err.response?.data?.error || err.message}`);
     } finally {
-      setLoading(prev => ({ ...prev, tables: false }));
+      setLoading(false);
     }
   };
 
@@ -105,7 +98,7 @@ const Connect = () => {
   const getTableData = async (tableName) => {
     if (!isConnected || !tableName) return;
 
-    setLoading(prev => ({ ...prev,  true }));
+    setLoading(true);
     setSelectedTable(tableName);
     setConnectionStatus(`Fetching data from ${tableName}...`);
 
@@ -121,120 +114,15 @@ const Connect = () => {
       if (response.data && response.data.success) {
         setTableData(response.data.data || []);
         setTableColumns(response.data.columns || []);
-        setConnectionStatus(`✅ Displaying data from ${tableName}`);
+        setConnectionStatus(`Displaying data from ${tableName}`);
       } else {
-        setConnectionStatus(`❌ Failed to fetch  ${response.data.error}`);
+        setConnectionStatus(`Failed to fetch data: ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error fetching  ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`Error fetching data: ${err.response?.data?.error || err.message}`);
       console.error('getTableData error:', err);
     } finally {
-      setLoading(prev => ({ ...prev,  false }));
-    }
-  };
-
-  // Insert new row
-  const insertRow = async () => {
-    if (!isConnected || !selectedTable) return;
-
-    setLoading(prev => ({ ...prev,  true }));
-    setConnectionStatus('Inserting new row...');
-
-    try {
-      const response = await axios.post('/api/insert-row.php', {
-        host: connectionConfig.host,
-        dbname: connectionConfig.database,
-        username: connectionConfig.username,
-        password: connectionConfig.password,
-        table: selectedTable,
-         addingData
-      });
-
-      if (response.data.success) {
-        setConnectionStatus('✅ Row inserted successfully!');
-        setAddingRow(false);
-        setAddingData({});
-        // Refresh table data
-        getTableData(selectedTable);
-      } else {
-        setConnectionStatus(`❌ Failed to insert row: ${response.data.error}`);
-      }
-    } catch (err) {
-      setConnectionStatus(`❌ Error inserting row: ${err.response?.data?.error || err.message}`);
-    } finally {
-      setLoading(prev => ({ ...prev,  false }));
-    }
-  };
-
-  // Update row
-  const updateRow = async () => {
-    if (!isConnected || !selectedTable || editingRow === null) return;
-
-    setLoading(prev => ({ ...prev,  true }));
-    setConnectionStatus('Updating row...');
-
-    try {
-      const response = await axios.post('/api/update-row.php', {
-        host: connectionConfig.host,
-        dbname: connectionConfig.database,
-        username: connectionConfig.username,
-        password: connectionConfig.password,
-        table: selectedTable,
-         editingData,
-        primaryKey: tableColumns[0]?.Field || Object.keys(editingData)[0],
-        primaryKeyValue: tableData[editingRow][tableColumns[0]?.Field || Object.keys(editingData)[0]]
-      });
-
-      if (response.data.success) {
-        setConnectionStatus('✅ Row updated successfully!');
-        setEditingRow(null);
-        setEditingData({});
-        // Refresh table data
-        getTableData(selectedTable);
-      } else {
-        setConnectionStatus(`❌ Failed to update row: ${response.data.error}`);
-      }
-    } catch (err) {
-      setConnectionStatus(`❌ Error updating row: ${err.response?.data?.error || err.message}`);
-    } finally {
-      setLoading(prev => ({ ...prev,  false }));
-    }
-  };
-
-  // Delete row
-  const deleteRow = async (rowIndex) => {
-    if (!isConnected || !selectedTable) return;
-
-    if (window.confirm('Are you sure you want to delete this row?')) {
-      setLoading(prev => ({ ...prev,  true }));
-      setConnectionStatus('Deleting row...');
-
-      try {
-        const primaryKey = tableColumns[0]?.Field || Object.keys(tableData[rowIndex])[0];
-        const primaryKeyValue = tableData[rowIndex][primaryKey];
-
-        const response = await axios.post('/api/delete-row.php', {
-          host: connectionConfig.host,
-          dbname: connectionConfig.database,
-          username: connectionConfig.username,
-          password: connectionConfig.password,
-          table: selectedTable,
-          primaryKey: primaryKey,
-          primaryKeyValue: primaryKeyValue
-        });
-
-        if (response.data.success) {
-          setConnectionStatus('✅ Row deleted successfully!');
-          // Refresh table data
-          getTableData(selectedTable);
-        } else {
-          setConnectionStatus(`❌ Failed to delete row: ${response.data.error}`);
-        }
-      } catch (err) {
-        setConnectionStatus(`❌ Error deleting row: ${err.response?.data?.error || err.message}`);
-      } finally {
-        setLoading(prev => ({ ...prev, data: false }));
-      }
+      setLoading(false);
     }
   };
 
@@ -245,29 +133,44 @@ const Connect = () => {
     setEditingData({ ...rowData });
   };
 
+  // Save edited row
+  const saveEditedRow = async () => {
+    if (editingRow === null || !isConnected || !selectedTable) return;
+
+    setLoading(true);
+    setConnectionStatus('Updating row...');
+
+    try {
+      const response = await axios.post('/api/update-row.php', {
+        host: connectionConfig.host,
+        dbname: connectionConfig.database,
+        username: connectionConfig.username,
+        password: connectionConfig.password,
+        table: selectedTable,
+        data: editingData,
+        primaryKey: tableColumns[0]?.Field || Object.keys(editingData)[0],
+        primaryKeyValue: tableData[editingRow][tableColumns[0]?.Field || Object.keys(editingData)[0]]
+      });
+
+      if (response.data.success) {
+        setConnectionStatus('Row updated successfully!');
+        getTableData(selectedTable);
+        setEditingRow(null);
+        setEditingData({});
+      } else {
+        setConnectionStatus(`Failed to update row: ${response.data.error}`);
+      }
+    } catch (err) {
+      setConnectionStatus(`Error updating row: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Cancel editing
   const cancelEditing = () => {
     setEditingRow(null);
     setEditingData({});
-  };
-
-  // Start adding new row
-  const startAddingRow = () => {
-    if (!selectedTable) return;
-
-    const newRowData = {};
-    tableColumns.forEach(col => {
-      newRowData[col.Field] = '';
-    });
-
-    setAddingRow(true);
-    setAddingData(newRowData);
-  };
-
-  // Cancel adding
-  const cancelAdding = () => {
-    setAddingRow(false);
-    setAddingData({});
   };
 
   // Handle input change
@@ -285,13 +188,6 @@ const Connect = () => {
     }));
   };
 
-  const handleAddInputChange = (field, value) => {
-    setAddingData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
   // Logout function
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
@@ -299,258 +195,130 @@ const Connect = () => {
     navigate('/login');
   };
 
-  // Navigate to main page
-  const goToMainPage = () => {
-    navigate('/');
-  };
-
   // Jika belum login, jangan tampilkan konten
   if (!currentUser) {
     return null;
   }
+
   return (
     <div style={{ 
-      minHeight: '100vh',
-      backgroundColor: '#1a1a2e',
-      color: '#e0e0e0',
       padding: '20px',
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+      fontFamily: 'Arial, sans-serif',
+      backgroundColor: '#f5f5f5',
+      minHeight: '100vh'
     }}>
-      {/* Animated Background */}
-      <div style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-        zIndex: -1,
-        opacity: 0.9
-      }}></div>
-
-      {/* Header */}
       <div style={{ 
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '30px',
+        maxWidth: '1200px', 
+        margin: '0 auto',
+        backgroundColor: 'white',
         padding: '20px',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: '15px',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+        borderRadius: '8px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
       }}>
         <div style={{ 
-          fontSize: '2rem',
-          fontWeight: 'bold',
-          background: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+          paddingBottom: '10px',
+          borderBottom: '1px solid #eee'
         }}>
-          🚀 MySQL Database Manager
+          <h1>MySQL Database Manager</h1>
+          <div>
+            <span>Welcome, {currentUser.username}</span>
+            <button 
+              onClick={handleLogout}
+              style={{
+                marginLeft: '15px',
+                padding: '8px 15px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Logout
+            </button>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '14px', color: '#a0a0c0' }}>
-            👤 Welcome, <strong style={{ color: '#4ecdc4' }}>{currentUser.username}</strong>
-          </span>
-          <button
-            onClick={goToMainPage}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: 'rgba(78, 205, 196, 0.2)',
-              color: '#4ecdc4',
-              border: '1px solid #4ecdc4',
-              borderRadius: '25px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(5px)'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
-              e.target.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
-              e.target.style.transform = 'translateY(0)';
-            }}
-          >
-            🏠 Main Page
-          </button>
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: 'rgba(255, 107, 107, 0.2)',
-              color: '#ff6b6b',
-              border: '1px solid #ff6b6b',
-              borderRadius: '25px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(5px)'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.3)';
-              e.target.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.2)';
-              e.target.style.transform = 'translateY(0)';
-            }}
-          >
-            🔒 Logout
-          </button>
-        </div>
-      </div>
 
-      <div style={{ 
-        maxWidth: '1400px', 
-        margin: '0 auto',
-        padding: '20px'
-      }}>
-        {/* Connection Status */}
         {connectionStatus && (
           <div style={{
-            padding: '15px 20px',
-            backgroundColor: connectionStatus.includes('✅') ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
-            border: `1px solid ${connectionStatus.includes('✅') ? '#4CAF50' : '#f44336'}`,
-            borderRadius: '10px',
-            marginBottom: '25px',
-            textAlign: 'center',
-            fontWeight: 'bold',
-            fontSize: '16px',
-            backdropFilter: 'blur(5px)',
-            animation: 'fadeIn 0.5s ease-in'
+            padding: '10px',
+            backgroundColor: connectionStatus.includes('successful') ? '#d4edda' : '#f8d7da',
+            color: connectionStatus.includes('successful') ? '#155724' : '#721c24',
+            border: `1px solid ${connectionStatus.includes('successful') ? '#c3e6cb' : '#f5c6cb'}`,
+            borderRadius: '4px',
+            marginBottom: '20px'
           }}>
             {connectionStatus}
           </div>
         )}
 
-        {/* Connection Configuration */}
-        <div style={{ 
-          padding: '25px',
-          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '15px',
-          marginBottom: '30px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <h2 style={{ 
-            textAlign: 'center', 
-            marginBottom: '25px',
-            color: '#4ecdc4',
-            fontSize: '1.8rem',
-            fontWeight: 'bold'
-          }}>
-            🔌 Database Connection
-          </h2>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '20px',
-            marginBottom: '20px'
-          }}>
+        <div style={{ marginBottom: '30px' }}>
+          <h2>Database Connection</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '15px' }}>
             <div>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '12px', 
-                marginBottom: '5px',
-                color: '#a0a0c0'
-              }}>
-                Host
-              </label>
+              <label>Host:</label>
               <input
                 type="text"
                 value={connectionConfig.host}
                 onChange={(e) => handleInputChange('host', e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  fontSize: '14px'
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
                 }}
                 placeholder="localhost"
               />
             </div>
             <div>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '12px', 
-                marginBottom: '5px',
-                color: '#a0a0c0'
-              }}>
-                Username
-              </label>
+              <label>Username:</label>
               <input
                 type="text"
                 value={connectionConfig.username}
                 onChange={(e) => handleInputChange('username', e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  fontSize: '14px'
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
                 }}
                 placeholder="root"
               />
             </div>
             <div>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '12px', 
-                marginBottom: '5px',
-                color: '#a0a0c0'
-              }}>
-                Password
-              </label>
+              <label>Password:</label>
               <input
                 type="password"
                 value={connectionConfig.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  fontSize: '14px'
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
                 }}
                 placeholder="password"
               />
             </div>
             <div>
-              <label style={{ 
-                display: 'block', 
-                fontSize: '12px', 
-                marginBottom: '5px',
-                color: '#a0a0c0'
-              }}>
-                Database
-              </label>
+              <label>Database:</label>
               <input
                 type="text"
                 value={connectionConfig.database}
                 onChange={(e) => handleInputChange('database', e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  color: '#fff',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  borderRadius: '8px',
-                  fontSize: '14px'
+                  padding: '8px',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  marginTop: '5px'
                 }}
                 placeholder="my_database"
               />
@@ -558,385 +326,71 @@ const Connect = () => {
           </div>
           <button
             onClick={testConnection}
-            disabled={loading.connection}
+            disabled={loading}
             style={{
-              padding: '12px 25px',
-              backgroundColor: loading.connection ? 'rgba(255, 255, 255, 0.1)' : 'rgba(78, 205, 196, 0.3)',
-              color: loading.connection ? '#888' : '#4ecdc4',
-              border: '1px solid #4ecdc4',
-              borderRadius: '25px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: loading.connection ? 'not-allowed' : 'pointer',
-              width: '100%',
-              transition: 'all 0.3s ease'
-            }}
-            onMouseOver={(e) => {
-              if (!loading.connection) {
-                e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.4)';
-                e.target.style.transform = 'translateY(-2px)';
-              }
-            }}
-            onMouseOut={(e) => {
-              if (!loading.connection) {
-                e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
-                e.target.style.transform = 'translateY(0)';
-              }
+              padding: '10px 20px',
+              backgroundColor: loading ? '#6c757d' : '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold'
             }}
           >
-            {loading.connection ? '🔄 Connecting...' : '🔌 Connect to Database'}
+            {loading ? 'Connecting...' : 'Test Connection'}
           </button>
         </div>
 
-        {/* Database Content */}
         {isConnected && (
-          <div style={{ 
-            padding: '25px',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '15px',
-            marginBottom: '30px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              marginBottom: '25px'
-            }}>
-              <h2 style={{ 
-                margin: 0,
-                color: '#ffd93d',
-                fontSize: '1.8rem',
-                fontWeight: 'bold'
-              }}>
-                🗄️ {connectionConfig.database}
-              </h2>
+          <div>
+            <div style={{ marginBottom: '20px' }}>
+              <h2>Tables</h2>
               <button
                 onClick={getTables}
-                disabled={loading.tables}
+                disabled={loading}
                 style={{
-                  padding: '10px 20px',
-                  backgroundColor: loading.tables ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 217, 61, 0.2)',
-                  color: loading.tables ? '#888' : '#ffd93d',
-                  border: '1px solid #ffd93d',
-                  borderRadius: '25px',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  cursor: loading.tables ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseOver={(e) => {
-                  if (!loading.tables) {
-                    e.target.style.backgroundColor = 'rgba(255, 217, 61, 0.3)';
-                    e.target.style.transform = 'translateY(-2px)';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (!loading.tables) {
-                    e.target.style.backgroundColor = 'rgba(255, 217, 61, 0.2)';
-                    e.target.style.transform = 'translateY(0)';
-                  }
+                  padding: '8px 15px',
+                  backgroundColor: loading ? '#6c757d' : '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  marginRight: '10px'
                 }}
               >
-                {loading.tables ? '🔄 Loading...' : '📋 Refresh Tables'}
+                {loading ? 'Loading...' : 'Get Tables'}
               </button>
-            </div>
-
-            {/* Tables List */}
-            {tables.length > 0 && (
-              <div style={{ 
-                marginBottom: '30px'
-              }}>
-                <h3 style={{ 
-                  color: '#4ecdc4',
-                  marginBottom: '15px'
-                }}>
-                  📋 Tables ({tables.length})
-                </h3>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
-                  gap: '10px' 
-                }}>
-                  {tables.map((table, index) => (
-                    <button
-                      key={index}
-                      onClick={() => getTableData(table)}
-                      disabled={loading.data && selectedTable === table}
-                      style={{
-                        padding: '10px',
-                        backgroundColor: selectedTable === table ? 'rgba(255, 217, 61, 0.3)' : 'rgba(255, 255, 255, 0.08)',
-                        color: selectedTable === table ? '#ffd93d' : '#e0e0e0',
-                        border: selectedTable === table ? '2px solid #ffd93d' : '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '20px',
-                        cursor: loading.data && selectedTable === table ? 'not-allowed' : 'pointer',
-                        textAlign: 'center',
-                        transition: 'all 0.3s ease',
-                        backdropFilter: 'blur(5px)'
-                      }}
-                      onMouseOver={(e) => {
-                        if (!(loading.data && selectedTable === table)) {
-                          e.target.style.transform = 'translateY(-3px)';
-                          e.target.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.3)';
-                        }
-                      }}
-                      onMouseOut={(e) => {
-                        if (!(loading.data && selectedTable === table)) {
-                          e.target.style.transform = 'translateY(0)';
-                          e.target.style.boxShadow = 'none';
-                        }
-                      }}
-                    >
-                      {loading.data && selectedTable === table ? '🔄 Loading...' : table}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {/* Table Data */}
-            {tableData.length > 0 && (
-              <div>
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  marginBottom: '20px'
-                }}>
-                  <h2 style={{ 
-                    margin: 0,
-                    color: '#ff6b6b',
-                    fontSize: '1.8rem',
-                    fontWeight: 'bold'
-                  }}>
-                    📊 Data from {selectedTable}
-                  </h2>
+              <div style={{ marginTop: '10px' }}>
+                {tables.map((table, index) => (
                   <button
-                    onClick={startAddingRow}
-                    disabled={addingRow || editingRow !== null}
+                    key={index}
+                    onClick={() => getTableData(table)}
+                    disabled={loading}
                     style={{
-                      padding: '8px 15px',
-                      backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                      color: '#4ecdc4',
-                      border: '1px solid #4ecdc4',
-                      borderRadius: '25px',
-                      fontSize: '14px',
-                      fontWeight: 'bold',
-                      cursor: addingRow || editingRow !== null ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      if (!(addingRow || editingRow !== null)) {
-                        e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
-                        e.target.style.transform = 'translateY(-2px)';
-                      }
-                    }}
-                    onMouseOut={(e) => {
-                      if (!(addingRow || editingRow !== null)) {
-                        e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
-                        e.target.style.transform = 'translateY(0)';
-                      }
+                      padding: '6px 12px',
+                      backgroundColor: selectedTable === table ? '#ffc107' : '#6c757d',
+                      color: selectedTable === table ? '#212529' : 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      marginRight: '5px',
+                      marginBottom: '5px'
                     }}
                   >
-                    ➕ Add New Row
+                    {table}
                   </button>
-                </div>
+                ))}
+              </div>
+            </div>
 
-                {/* Add new row form */}
-                {addingRow && (
-                  <div style={{ 
-                    marginBottom: '20px',
-                    padding: '15px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(78, 205, 196, 0.3)',
-                    borderRadius: '12px',
-                    backdropFilter: 'blur(5px)'
-                  }}>
-                    <h3 style={{ 
-                      margin: '0 0 15px 0',
-                      color: '#4ecdc4',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px'
-                    }}>
-                      📝 Add New Record
-                    </h3>
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
-                      gap: '10px',
-                      marginBottom: '15px'
-                    }}>
-                      {tableColumns.map((column) => (
-                        <div key={column.Field}>
-                          <label style={{ 
-                            display: 'block', 
-                            fontSize: '11px', 
-                            marginBottom: '3px',
-                            color: '#a0a0c0'
-                          }}>
-                            {column.Field}
-                          </label>
-                          <input
-                            type="text"
-                            value={addingData[column.Field] || ''}
-                            onChange={(e) => handleAddInputChange(column.Field, e.target.value)}
-                            style={{
-                              width: '100%',
-                              padding: '8px',
-                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                              color: '#fff',
-                              border: '1px solid rgba(255, 255, 255, 0.2)',
-                              borderRadius: '6px',
-                              fontSize: '12px'
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button
-                        onClick={insertRow}
-                        disabled={loading.data}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
-                          color: loading.data ? '#888' : '#4CAF50',
-                          border: '1px solid #4CAF50',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: loading.data ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.3s ease'
-                        }}
-                      >
-                        {loading.data ? '💾 Saving...' : '💾 Save Record'}
-                      </button>
-                      <button
-                        onClick={cancelAdding}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          color: '#ff6b6b',
-                          border: '1px solid #ff6b6b',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease'
-                        }}
-                      >
-                        ❌ Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Edit row form */}
-                {editingRow !== null && (
-                  <div style={{ 
-                    marginBottom: '20px',
-                    padding: '15px',
-                    backgroundColor: 'rgba(255, 217, 61, 0.1)',
-                    border: '1px solid rgba(255, 217, 61, 0.5)',
-                    borderRadius: '12px',
-                    backdropFilter: 'blur(5px)'
-                  }}>
-                    <h3 style={{ 
-                      margin: '0 0 15px 0',
-                      color: '#ffd93d',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px'
-                    }}>
-                      🛠️ Edit Record
-                    </h3>
-                    <div style={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
-                      gap: '10px',
-                      marginBottom: '15px'
-                    }}>
-                      {tableColumns.map((column) => (
-                        <div key={column.Field}>
-                          <label style={{ 
-                            display: 'block', 
-                            fontSize: '11px', 
-                            marginBottom: '3px',
-                            color: '#a0a0c0'
-                          }}>
-                            {column.Field}
-                          </label>
-                          <input
-                            type="text"
-                            value={editingData[column.Field] || ''}
-                            onChange={(e) => handleEditInputChange(column.Field, e.target.value)}
-                            style={{
-                              width: '100%',
-                              padding: '8px',
-                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                              color: '#fff',
-                              border: '1px solid rgba(255, 255, 255, 0.2)',
-                              borderRadius: '6px',
-                              fontSize: '12px'
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <button
-                        onClick={updateRow}
-                        disabled={loading.data}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: loading.data ? 'rgba(255, 255, 255, 0.1)' : 'rgba(76, 175, 80, 0.3)',
-                          color: loading.data ? '#888' : '#4CAF50',
-                          border: '1px solid #4CAF50',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: loading.data ? 'not-allowed' : 'pointer',
-                          transition: 'all 0.3s ease'
-                        }}
-                      >
-                        {loading.data ? '💾 Updating...' : '💾 Update Record'}
-                      </button>
-                      <button
-                        onClick={cancelEditing}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                          color: '#ff6b6b',
-                          border: '1px solid #ff6b6b',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          cursor: 'pointer',
-                          transition: 'all 0.3s ease'
-                        }}
-                      >
-                        ❌ Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ 
-                  overflowX: 'auto',
-                  maxHeight: '500px',
-                  overflowY: 'auto',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)'
-                }}>
+            {tableData.length > 0 && (
+              <div>
+                <h2>Data from table: {selectedTable}</h2>
+                <div style={{ overflowX: 'auto' }}>
                   <table style={{
                     width: '100%',
                     borderCollapse: 'collapse',
-                    color: '#e0e0e0',
-                    backgroundColor: 'rgba(26, 26, 46, 0.8)'
+                    border: '1px solid #ddd'
                   }}>
                     <thead>
                       <tr>
@@ -944,347 +398,149 @@ const Connect = () => {
                           <th 
                             key={index}
                             style={{
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                              padding: '12px',
-                              backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                              textAlign: 'left',
-                              position: 'sticky',
-                              top: 0,
-                              backdropFilter: 'blur(5px)'
+                              border: '1px solid #ddd',
+                              padding: '10px',
+                              backgroundColor: '#f8f9fa',
+                              textAlign: 'left'
                             }}
                           >
-                            <div style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '8px' 
-                            }}>
-                              <span>🏷️</span>
-                              <span style={{ fontWeight: 'bold' }}>{column.Field}</span>
-                            </div>
+                            {column.Field || column}
                           </th>
                         ))}
                         <th 
                           style={{
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            padding: '12px',
-                            backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                            textAlign: 'center',
-                            position: 'sticky',
-                            top: 0,
-                            backdropFilter: 'blur(5px)'
+                            border: '1px solid #ddd',
+                            padding: '10px',
+                            backgroundColor: '#f8f9fa',
+                            textAlign: 'center'
                           }}
                         >
-                          ⚙️ Actions
+                          Actions
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {tableData.map((row, rowIndex) => (
-                        <tr 
-                          key={rowIndex}
-                          style={{
-                            backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
-                            transition: 'background-color 0.2s ease',
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => startEditingRow(rowIndex)}
-                          onMouseOver={(e) => {
-                            e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.1)';
-                          }}
-                          onMouseOut={(e) => {
-                            e.target.style.backgroundColor = rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)';
-                          }}
-                        >
-                          {tableColumns.map((column, cellIndex) => (
+                        <React.Fragment key={rowIndex}>
+                          <tr>
+                            {tableColumns.map((column, cellIndex) => (
+                              <td 
+                                key={cellIndex}
+                                style={{
+                                  border: '1px solid #ddd',
+                                  padding: '8px',
+                                  backgroundColor: rowIndex % 2 === 0 ? '#fff' : '#f8f9fa'
+                                }}
+                              >
+                                {row[column.Field || column] !== null ? 
+                                 String(row[column.Field || column]) : 'NULL'}
+                              </td>
+                            ))}
                             <td 
-                              key={cellIndex}
                               style={{
-                                border: '1px solid rgba(255, 255, 255, 0.1)',
-                                padding: '10px',
-                                transition: 'all 0.2s ease'
+                                border: '1px solid #ddd',
+                                padding: '8px',
+                                textAlign: 'center'
                               }}
                             >
-                              <div style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '8px' 
-                              }}>
-                                <span>📋</span>
-                                <span>{row[column.Field] !== null ? String(row[column.Field]) : 'NULL'}</span>
-                              </div>
+                              <button
+                                onClick={() => startEditingRow(rowIndex)}
+                                style={{
+                                  padding: '4px 8px',
+                                  backgroundColor: '#007bff',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '3px',
+                                  cursor: 'pointer',
+                                  fontSize: '12px'
+                                }}
+                              >
+                                Edit
+                              </button>
                             </td>
-                          ))}
-                          <td 
-                            style={{
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                              padding: '10px',
-                              textAlign: 'center'
-                            }}
-                          >
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                startEditingRow(rowIndex);
-                              }}
-                              style={{
-                                padding: '5px 10px',
-                                backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                                color: '#4ecdc4',
-                                border: '1px solid #4ecdc4',
-                                borderRadius: '15px',
-                                fontSize: '11px',
-                                cursor: 'pointer',
-                                marginRight: '5px'
-                              }}
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteRow(rowIndex);
-                              }}
-                              style={{
-                                padding: '5px 10px',
-                                backgroundColor: 'rgba(255, 107, 107, 0.2)',
-                                color: '#ff6b6b',
-                                border: '1px solid #ff6b6b',
-                                borderRadius: '15px',
-                                fontSize: '11px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              🗑️
-                            </button>
-                          </td>
-                        </tr>
+                          </tr>
+                          
+                          {editingRow === rowIndex && (
+                            <tr>
+                              <td 
+                                colSpan={tableColumns.length + 1}
+                                style={{
+                                  padding: '15px',
+                                  backgroundColor: '#e9ecef',
+                                  border: '1px solid #ddd'
+                                }}
+                              >
+                                <h3>Edit Row</h3>
+                                <div style={{ 
+                                  display: 'grid', 
+                                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+                                  gap: '10px',
+                                  marginBottom: '15px'
+                                }}>
+                                  {tableColumns.map((column) => (
+                                    <div key={column.Field}>
+                                      <label style={{ 
+                                        display: 'block', 
+                                        fontSize: '12px', 
+                                        marginBottom: '3px' 
+                                      }}>
+                                        {column.Field}
+                                      </label>
+                                      <input
+                                        type="text"
+                                        value={editingData[column.Field] || ''}
+                                        onChange={(e) => handleEditInputChange(column.Field, e.target.value)}
+                                        style={{
+                                          width: '100%',
+                                          padding: '6px',
+                                          border: '1px solid #ddd',
+                                          borderRadius: '3px'
+                                        }}
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                  <button
+                                    onClick={saveEditedRow}
+                                    disabled={loading}
+                                    style={{
+                                      padding: '6px 12px',
+                                      backgroundColor: loading ? '#6c757d' : '#28a745',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '3px',
+                                      cursor: loading ? 'not-allowed' : 'pointer',
+                                      fontSize: '12px'
+                                    }}
+                                  >
+                                    {loading ? 'Saving...' : 'Save'}
+                                  </button>
+                                  <button
+                                    onClick={cancelEditing}
+                                    style={{
+                                      padding: '6px 12px',
+                                      backgroundColor: '#dc3545',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '3px',
+                                      cursor: 'pointer',
+                                      fontSize: '12px'
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                
-                <div style={{ 
-                  marginTop: '10px', 
-                  textAlign: 'center', 
-                  fontSize: '14px', 
-                  color: '#a0a0c0' 
-                }}>
-                  Menampilkan {tableData.length} baris data
-                </div>
               </div>
             )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-{/*export default Connect;*/}
-            {/* Additional Styles */}
-            <style jsx>{`
-              @keyframes fadeIn {
-                from { opacity: 0; transform: translateY(-10px); }
-                to { opacity: 1; transform: translateY(0); }
-              }
-              
-              ::-webkit-scrollbar {
-                width: 8px;
-                height: 8px;
-              }
-              
-              ::-webkit-scrollbar-track {
-                background: rgba(255, 255, 255, 0.05);
-                border-radius: 4px;
-              }
-              
-              ::-webkit-scrollbar-thumb {
-                background: rgba(78, 205, 196, 0.5);
-                border-radius: 4px;
-              }
-              
-              ::-webkit-scrollbar-thumb:hover {
-                background: rgba(78, 205, 196, 0.8);
-              }
-              
-              input:focus, textarea:focus, select:focus {
-                outline: none;
-                border-color: #4ecdc4 !important;
-                box-shadow: 0 0 5px rgba(78, 205, 196, 0.5);
-              }
-              
-              button:hover:not(:disabled) {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-              }
-              
-              button:active:not(:disabled) {
-                transform: translateY(0);
-              }
-              
-              table {
-                border-collapse: separate;
-                border-spacing: 0;
-              }
-              
-              th:first-child {
-                border-top-left-radius: 8px;
-              }
-              
-              th:last-child {
-                border-top-right-radius: 8px;
-              }
-              
-              tr:last-child td:first-child {
-                border-bottom-left-radius: 8px;
-              }
-              
-              tr:last-child td:last-child {
-                border-bottom-right-radius: 8px;
-              }
-              
-              @media (max-width: 768px) {
-                .container {
-                  padding: 10px;
-                }
-                
-                .grid-responsive {
-                  grid-template-columns: 1fr;
-                }
-                
-                .hide-mobile {
-                  display: none;
-                }
-              }
-              
-              .pulse {
-                animation: pulse 2s infinite;
-              }
-              
-              @keyframes pulse {
-                0% {
-                  box-shadow: 0 0 0 0 rgba(78, 205, 196, 0.4);
-                }
-                70% {
-                  box-shadow: 0 0 0 10px rgba(78, 205, 196, 0);
-                }
-                100% {
-                  box-shadow: 0 0 0 0 rgba(78, 205, 196, 0);
-                }
-              }
-              
-              .bounce {
-                animation: bounce 1s infinite;
-              }
-              
-              @keyframes bounce {
-                0%, 20%, 50%, 80%, 100% {
-                  transform: translateY(0);
-                }
-                40% {
-                  transform: translateY(-10px);
-                }
-                60% {
-                  transform: translateY(-5px);
-                }
-              }
-              
-              .slide-in {
-                animation: slideIn 0.5s ease-out;
-              }
-              
-              @keyframes slideIn {
-                from {
-                  transform: translateX(-100%);
-                  opacity: 0;
-                }
-                to {
-                  transform: translateX(0);
-                  opacity: 1;
-                }
-              }
-              
-              .fade-in {
-                animation: fadeIn 0.5s ease-in;
-              }
-              
-              @keyframes fadeIn {
-                from {
-                  opacity: 0;
-                  transform: translateY(10px);
-                }
-                to {
-                  opacity: 1;
-                  transform: translateY(0);
-                }
-              }
-              
-              .rotate {
-                animation: rotate 2s linear infinite;
-              }
-              
-              @keyframes rotate {
-                from {
-                  transform: rotate(0deg);
-                }
-                to {
-                  transform: rotate(360deg);
-                }
-              }
-              
-              .glow {
-                animation: glow 1.5s ease-in-out infinite alternate;
-              }
-              
-              @keyframes glow {
-                from {
-                  box-shadow: 0 0 5px #4ecdc4;
-                }
-                to {
-                  box-shadow: 0 0 20px #4ecdc4, 0 0 30px #4ecdc4;
-                }
-              }
-              
-              .shake {
-                animation: shake 0.5s;
-              }
-              
-              @keyframes shake {
-                0%, 100% { transform: translateX(0); }
-                10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-                20%, 40%, 60%, 80% { transform: translateX(5px); }
-              }
-              
-              .zoom-in {
-                animation: zoomIn 0.3s ease-out;
-              }
-              
-              @keyframes zoomIn {
-                from {
-                  transform: scale(0.8);
-                  opacity: 0;
-                }
-                to {
-                  transform: scale(1);
-                  opacity: 1;
-                }
-              }
-              
-              .flip {
-                animation: flip 0.8s;
-              }
-              
-              @keyframes flip {
-                from {
-                  transform: perspective(400px) rotateY(90deg);
-                  opacity: 0;
-                }
-                to {
-                  transform: perspective(400px) rotateY(0deg);
-                  opacity: 1;
-                }
-              }
-            `}</style>
           </div>
         )}
       </div>
