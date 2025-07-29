@@ -39,25 +39,6 @@ const Connect = () => {
     }
   }, [navigate]);
 
-  // Fetch data users dari API
-  useEffect(() => {
-    if (currentUser) {
-      fetchData();
-    }
-  }, [currentUser]);
-
-  const fetchData = async () => {
-    try {
-      const response = await axios.get('/api/dat.json');
-      const usersWithDb = (response.data.users || []).filter(user => 
-        user.host && user.dbname && user.username && user.password
-      );
-      setUsers(usersWithDb);
-    } catch (err) {
-      console.error('Error fetching ', err);
-    }
-  };
-
   // Test connection to MySQL
   const testConnection = async () => {
     if (!connectionConfig.host || !connectionConfig.username || 
@@ -252,7 +233,7 @@ const Connect = () => {
       } catch (err) {
         setConnectionStatus(`❌ Error deleting row: ${err.response?.data?.error || err.message}`);
       } finally {
-        setLoading(prev => ({ ...prev,  false }));
+        setLoading(prev => ({ ...prev, data: false }));
       }
     }
   };
@@ -289,22 +270,22 @@ const Connect = () => {
     setAddingData({});
   };
 
-  // Handle input changes
-  const handleConfigChange = (field, value) => {
+  // Handle input change
+  const handleInputChange = (field, value) => {
     setConnectionConfig(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleEditingChange = (field, value) => {
+  const handleEditInputChange = (field, value) => {
     setEditingData(prev => ({
       ...prev,
       [field]: value
     }));
   };
 
-  const handleAddingChange = (field, value) => {
+  const handleAddInputChange = (field, value) => {
     setAddingData(prev => ({
       ...prev,
       [field]: value
@@ -486,7 +467,7 @@ const Connect = () => {
               <input
                 type="text"
                 value={connectionConfig.host}
-                onChange={(e) => handleConfigChange('host', e.target.value)}
+                onChange={(e) => handleInputChange('host', e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -511,7 +492,7 @@ const Connect = () => {
               <input
                 type="text"
                 value={connectionConfig.username}
-                onChange={(e) => handleConfigChange('username', e.target.value)}
+                onChange={(e) => handleInputChange('username', e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -536,7 +517,7 @@ const Connect = () => {
               <input
                 type="password"
                 value={connectionConfig.password}
-                onChange={(e) => handleConfigChange('password', e.target.value)}
+                onChange={(e) => handleInputChange('password', e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -561,7 +542,7 @@ const Connect = () => {
               <input
                 type="text"
                 value={connectionConfig.database}
-                onChange={(e) => handleConfigChange('database', e.target.value)}
+                onChange={(e) => handleInputChange('database', e.target.value)}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -684,14 +665,15 @@ const Connect = () => {
                       onClick={() => getTableData(table)}
                       disabled={loading.data && selectedTable === table}
                       style={{
-                        padding: '10px 15px',
+                        padding: '10px',
                         backgroundColor: selectedTable === table ? 'rgba(255, 217, 61, 0.3)' : 'rgba(255, 255, 255, 0.08)',
                         color: selectedTable === table ? '#ffd93d' : '#e0e0e0',
                         border: selectedTable === table ? '2px solid #ffd93d' : '1px solid rgba(255, 255, 255, 0.2)',
                         borderRadius: '20px',
                         cursor: loading.data && selectedTable === table ? 'not-allowed' : 'pointer',
                         textAlign: 'center',
-                        transition: 'all 0.3s ease'
+                        transition: 'all 0.3s ease',
+                        backdropFilter: 'blur(5px)'
                       }}
                       onMouseOver={(e) => {
                         if (!(loading.data && selectedTable === table)) {
@@ -743,7 +725,8 @@ const Connect = () => {
                       cursor: addingRow || editingRow !== null ? 'not-allowed' : 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '5px'
+                      gap: '5px',
+                      transition: 'all 0.3s ease'
                     }}
                     onMouseOver={(e) => {
                       if (!(addingRow || editingRow !== null)) {
@@ -792,7 +775,7 @@ const Connect = () => {
                           <label style={{ 
                             display: 'block', 
                             fontSize: '11px', 
-                            marginBottom: '5px',
+                            marginBottom: '3px',
                             color: '#a0a0c0'
                           }}>
                             {column.Field}
@@ -800,7 +783,7 @@ const Connect = () => {
                           <input
                             type="text"
                             value={addingData[column.Field] || ''}
-                            onChange={(e) => handleAddingChange(column.Field, e.target.value)}
+                            onChange={(e) => handleAddInputChange(column.Field, e.target.value)}
                             style={{
                               width: '100%',
                               padding: '8px',
@@ -826,7 +809,8 @@ const Connect = () => {
                           borderRadius: '20px',
                           fontSize: '12px',
                           fontWeight: 'bold',
-                          cursor: loading.data ? 'not-allowed' : 'pointer'
+                          cursor: loading.data ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.3s ease'
                         }}
                       >
                         {loading.data ? '💾 Saving...' : '💾 Save Record'}
@@ -841,7 +825,8 @@ const Connect = () => {
                           borderRadius: '20px',
                           fontSize: '12px',
                           fontWeight: 'bold',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease'
                         }}
                       >
                         ❌ Cancel
@@ -880,7 +865,7 @@ const Connect = () => {
                           <label style={{ 
                             display: 'block', 
                             fontSize: '11px', 
-                            marginBottom: '5px',
+                            marginBottom: '3px',
                             color: '#a0a0c0'
                           }}>
                             {column.Field}
@@ -888,7 +873,7 @@ const Connect = () => {
                           <input
                             type="text"
                             value={editingData[column.Field] || ''}
-                            onChange={(e) => handleEditingChange(column.Field, e.target.value)}
+                            onChange={(e) => handleEditInputChange(column.Field, e.target.value)}
                             style={{
                               width: '100%',
                               padding: '8px',
@@ -914,7 +899,8 @@ const Connect = () => {
                           borderRadius: '20px',
                           fontSize: '12px',
                           fontWeight: 'bold',
-                          cursor: loading.data ? 'not-allowed' : 'pointer'
+                          cursor: loading.data ? 'not-allowed' : 'pointer',
+                          transition: 'all 0.3s ease'
                         }}
                       >
                         {loading.data ? '💾 Updating...' : '💾 Update Record'}
@@ -929,7 +915,8 @@ const Connect = () => {
                           borderRadius: '20px',
                           fontSize: '12px',
                           fontWeight: 'bold',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease'
                         }}
                       >
                         ❌ Cancel
@@ -996,8 +983,11 @@ const Connect = () => {
                         <tr 
                           key={rowIndex}
                           style={{
-                            backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)'
+                            backgroundColor: rowIndex % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)',
+                            transition: 'background-color 0.2s ease',
+                            cursor: 'pointer'
                           }}
+                          onClick={() => startEditingRow(rowIndex)}
                           onMouseOver={(e) => {
                             e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.1)';
                           }}
@@ -1011,7 +1001,7 @@ const Connect = () => {
                               style={{
                                 border: '1px solid rgba(255, 255, 255, 0.1)',
                                 padding: '10px',
-                                backgroundColor: editingRow === rowIndex ? 'rgba(255, 217, 61, 0.1)' : 'inherit'
+                                transition: 'all 0.2s ease'
                               }}
                             >
                               <div style={{ 
@@ -1036,7 +1026,6 @@ const Connect = () => {
                                 e.stopPropagation();
                                 startEditingRow(rowIndex);
                               }}
-                              disabled={editingRow !== null && editingRow !== rowIndex}
                               style={{
                                 padding: '5px 10px',
                                 backgroundColor: 'rgba(78, 205, 196, 0.2)',
@@ -1044,7 +1033,7 @@ const Connect = () => {
                                 border: '1px solid #4ecdc4',
                                 borderRadius: '15px',
                                 fontSize: '11px',
-                                cursor: editingRow !== null && editingRow !== rowIndex ? 'not-allowed' : 'pointer',
+                                cursor: 'pointer',
                                 marginRight: '5px'
                               }}
                             >
