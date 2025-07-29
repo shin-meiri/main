@@ -198,7 +198,7 @@ const Connect = () => {
                 username: profileForm.name,
                 host: profileForm.host,
                 dbname: profileForm.dbname,
-                username: profileForm.username,
+                dbUsername: profileForm.username,
                 password: profileForm.password
               }
             : user
@@ -211,7 +211,7 @@ const Connect = () => {
           username: profileForm.name,
           host: profileForm.host,
           dbname: profileForm.dbname,
-          username: profileForm.username,
+          dbUsername: profileForm.username,
           password: profileForm.password
         });
       }
