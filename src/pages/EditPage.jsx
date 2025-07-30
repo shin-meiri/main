@@ -170,7 +170,7 @@ const EditPage = () => {
       if (response.data.success) {
         setSuccess('✅ Data berhasil disimpan!');
         setTimeout(() => {
-          navigate('/post');
+          navigate('/');
         }, 1500);
       } else {
         setError(`❌ Gagal menyimpan: ${response.data.error}`);
