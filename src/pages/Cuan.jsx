@@ -8,6 +8,16 @@ const Cuan = () => {
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedTable, setSelectedTable] = useState('cuan');
+  const [editingRow, setEditingRow] = useState(null);
+  const [addingRow, setAddingRow] = useState(false);
+  const [formData, setFormData] = useState({
+    masuk: '',
+    dari: '',
+    kluar: '',
+    keperluan: ''
+  });
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -20,28 +30,27 @@ const Cuan = () => {
     }
   }, [navigate]);
 
-  // Fetch data cuan dari API - menggunakan useCallback
+  // Fetch data cuan dari API
   const fetchData = useCallback(async () => {
-    if (!currentUser) return;
+    if (!currentUser || !selectedUser) return;
     
     setLoading(true);
     setConnectionStatus('Mengambil data cuan...');
 
     try {
-      // Mengambil data dari database MySQL
-      const response = await axios.post('/api/cuan.php', {
-        host: currentUser.host,
-        dbname: currentUser.dbname,
-        username: currentUser.username,
-        password: currentUser.password,
-        table: 'cuan'
+      const response = await axios.post('/api/get-cuan-data.php', {
+        host: selectedUser.host,
+        dbname: selectedUser.dbname,
+        username: selectedUser.username,
+        password: selectedUser.password,
+        table: selectedTable
       });
 
       if (response.data && response.data.success) {
         setCuanData(response.data.data || []);
         setConnectionStatus(`✅ Menampilkan ${response.data.data?.length || 0} data cuan`);
       } else {
-        setConnectionStatus(`❌ Gagal mengambil  ${response.data.error}`);
+        setConnectionStatus(`❌ Gagal mengambil data: ${response.data.error}`);
       }
     } catch (err) {
       setConnectionStatus(`❌ Error: ${err.response?.data?.error || err.message}`);
@@ -49,41 +58,225 @@ const Cuan = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, selectedUser, selectedTable]);
 
-  // Fetch data users dari API - menggunakan useCallback
+  // Fetch data ketika user atau table berubah
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && selectedUser) {
       fetchData();
     }
-  }, [currentUser, fetchData]);
+  }, [currentUser, selectedUser, selectedTable, fetchData]);
 
-  // Format data sesuai dengan permintaan
-  const formatCuanData = (data) => {
+  // Parse JSON data
+  const parseJsonData = (jsonString) => {
+    try {
+      return JSON.parse(jsonString);
+    } catch (e) {
+      return { "0": jsonString || "N/A" };
+    }
+  };
+
+  // Format data untuk ditampilkan
+  const formatDisplayData = (data) => {
     return data.map((item, index) => {
-      // Parse JSON untuk field masuk dan kluar
-      let masukData = {};
-      let kluarData = {};
+      const masukData = parseJsonData(item.masuk);
+      const kluarData = parseJsonData(item.kluar);
       
-      try {
-        masukData = item.masuk ? JSON.parse(item.masuk) : {};
-      } catch (e) {
-        masukData = { [item.masuk || '0']: 'N/A' };
-      }
-      
-      try {
-        kluarData = item.kluar ? JSON.parse(item.kluar) : {};
-      } catch (e) {
-        kluarData = { [item.kluar || '0']: 'N/A' };
-      }
-
       return {
         No: index + 1,
-        Dari: masukData,
-        Keperluan: kluarData,
+        Masuk: masukData,
+        Dari: Object.values(masukData)[0] || 'N/A',
+        Kluar: kluarData,
+        Keperluan: Object.values(kluarData)[0] || 'N/A',
         Waktu: item.time_stamp || ''
       };
     });
+  };
+
+  // Handle form input change
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Start adding new row
+  const startAdding = () => {
+    setAddingRow(true);
+    setFormData({
+      masuk: '',
+      dari: '',
+      kluar: '',
+      keperluan: ''
+    });
+  };
+
+  // Cancel adding
+  const cancelAdding = () => {
+    setAddingRow(false);
+    setFormData({
+      masuk: '',
+      dari: '',
+      kluar: '',
+      keperluan: ''
+    });
+  };
+
+  // Save new row
+  const saveNewRow = async () => {
+    if (!selectedUser || !formData.masuk || (!formData.dari && !formData.keperluan)) {
+      setConnectionStatus('❌ Semua field wajib diisi!');
+      return;
+    }
+
+    setLoading(true);
+    setConnectionStatus('Menyimpan data baru...');
+
+    try {
+      // Format data sebagai JSON
+      const masukJson = formData.masuk ? JSON.stringify({ [formData.masuk]: formData.dari }) : '{}';
+      const kluarJson = formData.kluar ? JSON.stringify({ [formData.kluar]: formData.keperluan }) : '{}';
+
+      const response = await axios.post('/api/insert-cuan.php', {
+        host: selectedUser.host,
+        dbname: selectedUser.dbname,
+        username: selectedUser.username,
+        password: selectedUser.password,
+        table: selectedTable,
+        masuk: masukJson,
+        kluar: kluarJson
+      });
+
+      if (response.data.success) {
+        setConnectionStatus('✅ Data berhasil disimpan!');
+        setAddingRow(false);
+        setFormData({
+          masuk: '',
+          dari: '',
+          kluar: '',
+          keperluan: ''
+        });
+        fetchData();
+      } else {
+        setConnectionStatus(`❌ Gagal menyimpan data: ${response.data.error}`);
+      }
+    } catch (err) {
+      setConnectionStatus(`❌ Error menyimpan  ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Start editing row
+  const startEditing = (row) => {
+    const masukData = parseJsonData(row.masuk);
+    const kluarData = parseJsonData(row.kluar);
+    
+    const masukKey = Object.keys(masukData)[0] || '';
+    const dariValue = Object.values(masukData)[0] || '';
+    const kluarKey = Object.keys(kluarData)[0] || '';
+    const keperluanValue = Object.values(kluarData)[0] || '';
+    
+    setEditingRow(row.id);
+    setFormData({
+      masuk: masukKey,
+      dari: dariValue,
+      kluar: kluarKey,
+      keperluan: keperluanValue
+    });
+  };
+
+  // Save edited row
+  const saveEditedRow = async () => {
+    if (!selectedUser || !editingRow) {
+      setConnectionStatus('❌ Data tidak valid!');
+      return;
+    }
+
+    setLoading(true);
+    setConnectionStatus('Mengupdate data...');
+
+    try {
+      // Format data sebagai JSON
+      const masukJson = formData.masuk ? JSON.stringify({ [formData.masuk]: formData.dari }) : '{}';
+      const kluarJson = formData.kluar ? JSON.stringify({ [formData.kluar]: formData.keperluan }) : '{}';
+
+      const response = await axios.post('/api/update-cuan.php', {
+        host: selectedUser.host,
+        dbname: selectedUser.dbname,
+        username: selectedUser.username,
+        password: selectedUser.password,
+        table: selectedTable,
+        id: editingRow,
+        masuk: masukJson,
+        kluar: kluarJson
+      });
+
+      if (response.data.success) {
+        setConnectionStatus('✅ Data berhasil diupdate!');
+        setEditingRow(null);
+        setFormData({
+          masuk: '',
+          dari: '',
+          kluar: '',
+          keperluan: ''
+        });
+        fetchData();
+      } else {
+        setConnectionStatus(`❌ Gagal mengupdate  ${response.data.error}`);
+      }
+    } catch (err) {
+      setConnectionStatus(`❌ Error mengupdate  ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingRow(null);
+    setFormData({
+      masuk: '',
+      dari: '',
+      kluar: '',
+      keperluan: ''
+    });
+  };
+
+  // Delete row
+  const deleteRow = async (rowId) => {
+    if (!selectedUser || !rowId) {
+      setConnectionStatus('❌ Data tidak valid!');
+      return;
+    }
+
+    if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+      setLoading(true);
+      setConnectionStatus('Menghapus data...');
+
+      try {
+        const response = await axios.post('/api/delete-cuan.php', {
+          host: selectedUser.host,
+          dbname: selectedUser.dbname,
+          username: selectedUser.username,
+          password: selectedUser.password,
+          table: selectedTable,
+          id: rowId
+        });
+
+        if (response.data.success) {
+          setConnectionStatus('✅ Data berhasil dihapus!');
+          fetchData();
+        } else {
+          setConnectionStatus(`❌ Gagal menghapus  ${response.data.error}`);
+        }
+      } catch (err) {
+        setConnectionStatus(`❌ Error menghapus  ${err.response?.data?.error || err.message}`);
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   // Logout function
@@ -103,7 +296,7 @@ const Cuan = () => {
     return null;
   }
 
-  const formattedData = formatCuanData(cuanData);
+  const formattedData = formatDisplayData(cuanData);
 
   return (
     <div style={{ 
@@ -150,14 +343,6 @@ const Cuan = () => {
               fontWeight: 'bold',
               cursor: 'pointer'
             }}
-            onMouseOver={(e) => {
-              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
-              e.target.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
-              e.target.style.transform = 'translateY(0)';
-            }}
           >
             🏠 Main Page
           </button>
@@ -172,14 +357,6 @@ const Cuan = () => {
               fontSize: '14px',
               fontWeight: 'bold',
               cursor: 'pointer'
-            }}
-            onMouseOver={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.3)';
-              e.target.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={(e) => {
-              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.2)';
-              e.target.style.transform = 'translateY(0)';
             }}
           >
             🔒 Logout
@@ -203,282 +380,483 @@ const Cuan = () => {
         </div>
       )}
 
-      {/* Refresh Button */}
+      {/* Add New Row Form */}
       <div style={{ 
-        textAlign: 'center', 
-        marginBottom: '30px' 
-      }}>
-        <button
-          onClick={fetchData}
-          disabled={loading}
-          style={{
-            padding: '12px 25px',
-            backgroundColor: loading ? '#555' : 'pink',
-            color: loading ? '#888' : 'black',
-            border: 'none',
-            borderRadius: '25px',
-            fontSize: '16px',
-            fontWeight: 'bold',
-            cursor: loading ? 'not-allowed' : 'pointer'
-          }}
-          onMouseOver={(e) => {
-            if (!loading) {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.3)';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (!loading) {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = 'none';
-            }
-          }}
-        >
-          {loading ? '🔄 Loading...' : '🔄 Refresh Data'}
-        </button>
-      </div>
-
-      {/* Data Table */}
-      <div style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto',
         padding: '20px',
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: '15px',
+        marginBottom: '30px',
         border: '1px solid rgba(255, 255, 255, 0.1)'
       }}>
-        <h2 style={{ 
-          textAlign: 'center', 
-          marginBottom: '25px',
-          color: '#4ecdc4',
-          fontSize: '1.8rem',
-          fontWeight: 'bold'
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '20px'
         }}>
-          📈 Data Cuan ({formattedData.length} records)
-        </h2>
-        
-        {formattedData.length === 0 ? (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '50px',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '10px',
-            border: '2px dashed #e1e5e9'
+          <h2 style={{ 
+            margin: 0,
+            color: '#4ecdc4',
+            fontSize: '1.8rem'
           }}>
-            <div style={{ 
-              fontSize: '3rem',
-              marginBottom: '15px',
-              color: '#ccc'
-            }}>📭</div>
-            <div style={{ 
-              fontSize: '1.2rem',
-              color: '#666'
-            }}>Belum ada data cuan</div>
-          </div>
-        ) : (
+            {addingRow ? '📝 Tambah Data Baru' : '📊 Data Cuan'}
+          </h2>
+          {!addingRow && (
+            <button
+              onClick={startAdding}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: 'pink',
+                color: 'black',
+                border: 'none',
+                borderRadius: '25px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              ➕ Tambah Data
+            </button>
+          )}
+        </div>
+
+        {addingRow && (
           <div style={{ 
-            overflowX: 'auto',
-            maxHeight: '600px',
-            overflowY: 'auto',
-            borderRadius: '10px',
-            border: '1px solid rgba(255, 255, 255, 0.1)'
+            marginBottom: '20px',
+            padding: '20px',
+            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            borderRadius: '12px',
+            border: '1px solid pink'
           }}>
-            <table style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              color: '#e0e0e0',
-              backgroundColor: 'rgba(26, 26, 46, 0.8)'
+            <h3 style={{ margin: '0 0 20px 0', color: '#4ecdc4' }}>Form Tambah Data</h3>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '15px',
+              marginBottom: '20px'
             }}>
-              <thead>
-                <tr>
-                  <th style={{
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    padding: '15px',
-                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                    textAlign: 'center',
-                    position: 'sticky',
-                    top: 0,
-                    backdropFilter: 'blur(5px)'
-                  }}>
-                    No
-                  </th>
-                  <th style={{
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    padding: '15px',
-                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                    textAlign: 'left',
-                    position: 'sticky',
-                    top: 0,
-                    backdropFilter: 'blur(5px)'
-                  }}>
-                    Dari
-                  </th>
-                  <th style={{
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    padding: '15px',
-                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                    textAlign: 'left',
-                    position: 'sticky',
-                    top: 0,
-                    backdropFilter: 'blur(5px)'
-                  }}>
-                    Keperluan
-                  </th>
-                  <th style={{
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    padding: '15px',
-                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                    textAlign: 'left',
-                    position: 'sticky',
-                    top: 0,
-                    backdropFilter: 'blur(5px)'
-                  }}>
-                    Waktu
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {formattedData.map((item, index) => (
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Masuk (Rp)</label>
+                <input
+                  type="text"
+                  value={formData.masuk}
+                  onChange={(e) => handleInputChange('masuk', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    color: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px'
+                  }}
+                  placeholder="15000"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Dari</label>
+                <input
+                  type="text"
+                  value={formData.dari}
+                  onChange={(e) => handleInputChange('dari', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    color: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px'
+                  }}
+                  placeholder="babe"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Keluar (Rp)</label>
+                <input
+                  type="text"
+                  value={formData.kluar}
+                  onChange={(e) => handleInputChange('kluar', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    color: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px'
+                  }}
+                  placeholder="15000"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Keperluan</label>
+                <input
+                  type="text"
+                  value={formData.keperluan}
+                  onChange={(e) => handleInputChange('keperluan', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    color: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px'
+                  }}
+                  placeholder="beli bbm"
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={saveNewRow}
+                disabled={loading}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: loading ? '#555' : 'green',
+                  color: loading ? '#888' : 'white',
+                  border: 'none',
+                  borderRadius: '25px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: loading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {loading ? '💾 Menyimpan...' : '💾 Simpan'}
+              </button>
+              <button
+                onClick={cancelAdding}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#666',
+                  color: 'pink',
+                  border: '1px solid pink',
+                  borderRadius: '25px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer'
+                }}
+              >
+                ❌ Batal
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Data Table */}
+        <div style={{ 
+          overflowX: 'auto',
+          maxHeight: '500px',
+          overflowY: 'auto',
+          borderRadius: '10px',
+          border: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
+          <table style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            color: '#e0e0e0',
+            backgroundColor: 'rgba(26, 26, 46, 0.8)'
+          }}>
+            <thead>
+              <tr>
+                <th style={{
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  padding: '12px',
+                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                  textAlign: 'center',
+                  position: 'sticky',
+                  top: 0
+                }}>
+                  No
+                </th>
+                <th style={{
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  padding: '12px',
+                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                  textAlign: 'left',
+                  position: 'sticky',
+                  top: 0
+                }}>
+                  Masuk
+                </th>
+                <th style={{
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  padding: '12px',
+                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                  textAlign: 'left',
+                  position: 'sticky',
+                  top: 0
+                }}>
+                  Dari
+                </th>
+                <th style={{
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  padding: '12px',
+                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                  textAlign: 'left',
+                  position: 'sticky',
+                  top: 0
+                }}>
+                  Keluar
+                </th>
+                <th style={{
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  padding: '12px',
+                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                  textAlign: 'left',
+                  position: 'sticky',
+                  top: 0
+                }}>
+                  Keperluan
+                </th>
+                <th style={{
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  padding: '12px',
+                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                  textAlign: 'left',
+                  position: 'sticky',
+                  top: 0
+                }}>
+                  Waktu
+                </th>
+                <th style={{
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  padding: '12px',
+                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                  textAlign: 'center',
+                  position: 'sticky',
+                  top: 0
+                }}>
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {formattedData.map((item, index) => (
+                <React.Fragment key={index}>
                   <tr 
-                    key={index}
                     style={{
                       backgroundColor: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)'
-                    }}
-                    onMouseOver={(e) => {
-                      e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.1)';
-                    }}
-                    onMouseOut={(e) => {
-                      e.target.style.backgroundColor = index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)';
                     }}
                   >
                     <td style={{
                       border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '12px',
-                      textAlign: 'center'
+                    padding: '10px',
+                    textAlign: 'center'
                     }}>
                       {item.No}
                     </td>
                     <td style={{
                       border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '12px'
+                      padding: '10px'
                     }}>
-                      {Object.entries(item.Dari).map(([amount, source], i) => (
-                        <div key={i} style={{ marginBottom: '5px' }}>
-                          <span style={{ fontWeight: 'bold', color: '#4ecdc4' }}>
-                            {amount}:
-                          </span>{' '}
-                          <span style={{ color: '#a0a0c0' }}>
-                            {source}
-                          </span>
-                        </div>
-                      ))}
+                      {Object.keys(item.Masuk)[0] || '0'}
                     </td>
                     <td style={{
                       border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '12px'
+                      padding: '10px'
                     }}>
-                      {Object.entries(item.Keperluan).map(([amount, purpose], i) => (
-                        <div key={i} style={{ marginBottom: '5px' }}>
-                          <span style={{ fontWeight: 'bold', color: '#ff6b6b' }}>
-                            {amount}:
-                          </span>{' '}
-                          <span style={{ color: '#a0a0c0' }}>
-                            {purpose}
-                          </span>
-                        </div>
-                      ))}
+                      {item.Dari}
                     </td>
                     <td style={{
                       border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '12px'
+                      padding: '10px'
+                    }}>
+                      {Object.keys(item.Kluar)[0] || '0'}
+                    </td>
+                    <td style={{
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      padding: '10px'
+                    }}>
+                      {item.Keperluan}
+                    </td>
+                    <td style={{
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      padding: '10px'
                     }}>
                       {item.Waktu}
                     </td>
+                    <td style={{
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      padding: '10px',
+                      textAlign: 'center'
+                    }}>
+                      <button
+                        onClick={() => startEditing(cuanData[index])}
+                        style={{
+                          padding: '5px 10px',
+                          backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                          color: '#4ecdc4',
+                          border: '1px solid #4ecdc4',
+                          borderRadius: '15px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          marginRight: '5px'
+                        }}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        onClick={() => deleteRow(cuanData[index].id)}
+                        style={{
+                          padding: '5px 10px',
+                          backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                          color: '#ff6b6b',
+                          border: '1px solid #ff6b6b',
+                          borderRadius: '15px',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
-      {/* Summary Section */}
-      <div style={{ 
-        maxWidth: '1200px', 
-        margin: '30px auto 0 auto',
-        padding: '20px',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: '15px',
-        border: '1px solid rgba(255, 255, 255, 0.1)'
-      }}>
-        <h2 style={{ 
-          textAlign: 'center', 
-          marginBottom: '20px',
-          color: '#4ecdc4',
-          fontSize: '1.5rem',
-          fontWeight: 'bold'
-        }}>
-          📊 Summary
-        </h2>
+                  {/* Edit Form - muncul di bawah baris yang diedit */}
+                  {editingRow === cuanData[index].id && (
+                    <tr>
+                      <td 
+                        colSpan="7"
+                        style={{
+                          padding: '0',
+                          border: '1px solid rgba(255, 217, 61, 0.5)',
+                          backgroundColor: 'rgba(255, 217, 61, 0.1)'
+                        }}
+                      >
+                        <div style={{ 
+                          padding: '20px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                          borderRadius: '0 0 8px 8px'
+                        }}>
+                          <h3 style={{ 
+                            margin: '0 0 20px 0', 
+                            color: '#ffd93d' 
+                          }}>
+                            🛠️ Edit Data
+                          </h3>
+                          <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                            gap: '15px',
+                            marginBottom: '20px'
+                          }}>
+                            <div>
+                              <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Masuk (Rp)</label>
+                              <input
+                                type="text"
+                                value={formData.masuk}
+                                onChange={(e) => handleInputChange('masuk', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  color: '#fff',
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  borderRadius: '8px'
+                                }}
+                                placeholder="15000"
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Dari</label>
+                              <input
+                                type="text"
+                                value={formData.dari}
+                                onChange={(e) => handleInputChange('dari', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  color: '#fff',
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  borderRadius: '8px'
+                                }}
+                                placeholder="babe"
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Keluar (Rp)</label>
+                              <input
+                                type="text"
+                                value={formData.kluar}
+                                onChange={(e) => handleInputChange('kluar', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  color: '#fff',
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  borderRadius: '8px'
+                                }}
+                                placeholder="15000"
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Keperluan</label>
+                              <input
+                                type="text"
+                                value={formData.keperluan}
+                                onChange={(e) => handleInputChange('keperluan', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '10px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  color: '#fff',
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  borderRadius: '8px'
+                                }}
+                                placeholder="beli bbm"
+                              />
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '10px' }}>
+                            <button
+                              onClick={saveEditedRow}
+                              disabled={loading}
+                              style={{
+                                padding: '8px 15px',
+                                backgroundColor: loading ? '#555' : 'green',
+                                color: loading ? '#888' : 'white',
+                                border: 'none',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                cursor: loading ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              {loading ? '💾 Menyimpan...' : '💾 Simpan'}
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              style={{
+                                padding: '8px 15px',
+                                backgroundColor: '#666',
+                                color: 'pink',
+                                border: '1px solid pink',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ❌ Batal
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-          gap: '20px' 
+          marginTop: '15px', 
+          textAlign: 'center', 
+          fontSize: '14px', 
+          color: '#a0a0c0' 
         }}>
-          <div style={{ 
-            padding: '15px',
-            backgroundColor: 'rgba(78, 205, 196, 0.1)',
-            borderRadius: '10px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '2rem', marginBottom: '5px' }}>📥</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#4ecdc4' }}>
-              Total Masuk
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-              {formattedData.reduce((total, item) => {
-                const masukAmount = Object.keys(item.Dari)[0] || '0';
-                return total + parseFloat(masukAmount.replace(/[^0-9.-]+/g, '')) || 0;
-              }, 0).toLocaleString()}
-            </div>
-          </div>
-          <div style={{ 
-            padding: '15px',
-            backgroundColor: 'rgba(255, 107, 107, 0.1)',
-            borderRadius: '10px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '2rem', marginBottom: '5px' }}>📤</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ff6b6b' }}>
-              Total Keluar
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-              {formattedData.reduce((total, item) => {
-                const kluarAmount = Object.keys(item.Keperluan)[0] || '0';
-                return total + parseFloat(kluarAmount.replace(/[^0-9.-]+/g, '')) || 0;
-              }, 0).toLocaleString()}
-            </div>
-          </div>
-          <div style={{ 
-            padding: '15px',
-            backgroundColor: 'rgba(255, 217, 61, 0.1)',
-            borderRadius: '10px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '2rem', marginBottom: '5px' }}>💰</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#ffd93d' }}>
-              Saldo Akhir
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
-              {(formattedData.reduce((total, item) => {
-                const masukAmount = Object.keys(item.Dari)[0] || '0';
-                const kluarAmount = Object.keys(item.Keperluan)[0] || '0';
-                return total + 
-                  (parseFloat(masukAmount.replace(/[^0-9.-]+/g, '')) || 0) - 
-                  (parseFloat(kluarAmount.replace(/[^0-9.-]+/g, '')) || 0);
-              }, 0)).toLocaleString()}
-            </div>
-          </div>
+          Menampilkan {formattedData.length} data cuan
         </div>
       </div>
     </div>
