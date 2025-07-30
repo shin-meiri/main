@@ -85,7 +85,7 @@ const Post = () => {
 
   // Handle edit page
   const handleEditPage = () => {
-    navigate('/edit-page');
+    navigate('/cuan');
   };
 
   // Logout function
