@@ -66,13 +66,62 @@ const Cuan = () => {
     }
   }, [currentUser, fetchData]);
 
-  // Parse JSON data
+  // Parse JSON data dengan validasi
   const parseJsonData = (jsonString) => {
     try {
-      return JSON.parse(jsonString);
+      // Jika string kosong, kembalikan objek kosong
+      if (!jsonString || jsonString.trim() === '' || jsonString === '{}') {
+        return {};
+      }
+      
+      // Coba parse JSON
+      const parsed = JSON.parse(jsonString);
+      
+      // Validasi hasil parsing
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return {};
+      }
+      
+      return parsed;
     } catch (e) {
-      return { "0": "N/A" };
+      console.error('JSON parse error:', e, 'String:', jsonString);
+      return {};
     }
+  };
+
+  // Hitung total pemasukan, pengeluaran, dan dana
+  const calculateTotals = () => {
+    let totalPemasukan = 0;
+    let totalPengeluaran = 0;
+
+    cuanData.forEach(item => {
+      // Hitung pemasukan
+      const masukData = parseJsonData(item.masuk);
+      Object.keys(masukData).forEach(key => {
+        const value = parseFloat(key.replace(/[^0-9.-]+/g, '')) || 0;
+        totalPemasukan += value;
+      });
+
+      // Hitung pengeluaran
+      const kluarData = parseJsonData(item.kluar);
+      Object.keys(kluarData).forEach(key => {
+        const value = parseFloat(key.replace(/[^0-9.-]+/g, '')) || 0;
+        totalPengeluaran += value;
+      });
+    });
+
+    const dana = totalPemasukan - totalPengeluaran;
+
+    return {
+      pemasukan: totalPemasukan,
+      pengeluaran: totalPengeluaran,
+      dana: dana
+    };
+  };
+
+  // Format angka dengan pemisah ribuan
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('id-ID').format(amount);
   };
 
   // Format display data
@@ -81,12 +130,20 @@ const Cuan = () => {
       const masukData = parseJsonData(item.masuk);
       const kluarData = parseJsonData(item.kluar);
       
+      // Ambil nilai pertama dari objek masuk
+      const dapatKeys = Object.keys(masukData);
+      const dapatValues = Object.values(masukData);
+      
+      // Ambil nilai pertama dari objek kluar
+      const jumlahKeys = Object.keys(kluarData);
+      const jumlahValues = Object.values(kluarData);
+      
       return {
         id: item.id,
-        dapat: Object.keys(masukData)[0] || '0',
-        dari: Object.values(masukData)[0] || 'N/A',
-        jumlah: Object.keys(kluarData)[0] || '0',
-        keperluan: Object.values(kluarData)[0] || 'N/A',
+        dapat: dapatKeys.length > 0 ? dapatKeys[0] : '0',
+        dari: dapatValues.length > 0 ? dapatValues[0] : 'N/A',
+        jumlah: jumlahKeys.length > 0 ? jumlahKeys[0] : '0',
+        keperluan: jumlahValues.length > 0 ? jumlahValues[0] : 'N/A',
         time_stamp: item.time_stamp
       };
     });
@@ -95,15 +152,24 @@ const Cuan = () => {
   // Start editing row
   const startEditingRow = (row) => {
     setEditingRow(row.id);
+    
     const masukData = parseJsonData(cuanData.find(d => d.id === row.id).masuk);
     const kluarData = parseJsonData(cuanData.find(d => d.id === row.id).kluar);
     
+    // Ambil nilai pertama dari objek masuk
+    const dapatKeys = Object.keys(masukData);
+    const dapatValues = Object.values(masukData);
+    
+    // Ambil nilai pertama dari objek kluar
+    const jumlahKeys = Object.keys(kluarData);
+    const jumlahValues = Object.values(kluarData);
+    
     setEditingData({
       id: row.id,
-      dapat: Object.keys(masukData)[0] || '',
-      dari: Object.values(masukData)[0] || '',
-      jumlah: Object.keys(kluarData)[0] || '',
-      keperluan: Object.values(kluarData)[0] || '',
+      dapat: dapatKeys.length > 0 ? dapatKeys[0] : '',
+      dari: dapatValues.length > 0 ? dapatValues[0] : '',
+      jumlah: jumlahKeys.length > 0 ? jumlahKeys[0] : '',
+      keperluan: jumlahValues.length > 0 ? jumlahValues[0] : '',
       time_stamp: row.time_stamp
     });
   };
@@ -112,13 +178,43 @@ const Cuan = () => {
   const saveEditedRow = async () => {
     if (!editingData.id) return;
 
+    // Validasi data sebelum disimpan
+    if (!editingData.dapat && !editingData.jumlah) {
+      setConnectionStatus('❌ Minimal masukkan data masuk atau keluar!');
+      return;
+    }
+
     setLoading(true);
     setConnectionStatus('Menyimpan perubahan...');
 
     try {
-      // Format data sebagai JSON
-      const masukJson = editingData.dapat ? JSON.stringify({ [editingData.dapat]: editingData.dari }) : '{}';
-      const kluarJson = editingData.jumlah ? JSON.stringify({ [editingData.jumlah]: editingData.keperluan }) : '{}';
+      // Buat JSON yang valid
+      let masukJson = '{}';
+      let kluarJson = '{}';
+      
+      // Buat JSON masuk jika ada data
+      if (editingData.dapat) {
+        const masukObj = {};
+        masukObj[editingData.dapat] = editingData.dari || 'N/A';
+        masukJson = JSON.stringify(masukObj);
+      }
+      
+      // Buat JSON kluar jika ada data
+      if (editingData.jumlah) {
+        const kluarObj = {};
+        kluarObj[editingData.jumlah] = editingData.keperluan || 'N/A';
+        kluarJson = JSON.stringify(kluarObj);
+      }
+
+      // Validasi JSON sebelum dikirim
+      try {
+        JSON.parse(masukJson);
+        JSON.parse(kluarJson);
+      } catch (e) {
+        setConnectionStatus('❌ Format JSON tidak valid!');
+        setLoading(false);
+        return;
+      }
 
       const response = await axios.post('/api/cuan.php', {
         host: currentUser.host,
@@ -204,9 +300,33 @@ const Cuan = () => {
     setConnectionStatus('Menyimpan data baru...');
 
     try {
-      // Format data sebagai JSON
-      const masukJson = newData.dapat ? JSON.stringify({ [newData.dapat]: newData.dari }) : '{}';
-      const kluarJson = newData.jumlah ? JSON.stringify({ [newData.jumlah]: newData.keperluan }) : '{}';
+      // Buat JSON yang valid
+      let masukJson = '{}';
+      let kluarJson = '{}';
+      
+      // Buat JSON masuk jika ada data
+      if (newData.dapat) {
+        const masukObj = {};
+        masukObj[newData.dapat] = newData.dari || 'N/A';
+        masukJson = JSON.stringify(masukObj);
+      }
+      
+      // Buat JSON kluar jika ada data
+      if (newData.jumlah) {
+        const kluarObj = {};
+        kluarObj[newData.jumlah] = newData.keperluan || 'N/A';
+        kluarJson = JSON.stringify(kluarObj);
+      }
+
+      // Validasi JSON sebelum dikirim
+      try {
+        JSON.parse(masukJson);
+        JSON.parse(kluarJson);
+      } catch (e) {
+        setConnectionStatus('❌ Format JSON tidak valid!');
+        setLoading(false);
+        return;
+      }
 
       const response = await axios.post('/api/cuan.php', {
         host: currentUser.host,
@@ -285,6 +405,7 @@ const Cuan = () => {
   }
 
   const formattedData = formatDisplayData(cuanData);
+  const totals = calculateTotals();
 
   return (
     <div style={{ 
@@ -309,22 +430,37 @@ const Cuan = () => {
           borderBottom: '1px solid #eee'
         }}>
           <h1>Data Cuan</h1>
-          <div>
-            <span>Welcome, {currentUser.username}</span>
-            <button 
-              onClick={handleLogout}
-              style={{
-                marginLeft: '15px',
-                padding: '8px 15px',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Logout
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+            <div style={{ display: 'flex', gap: '20px', fontSize: '14px' }}>
+              <span style={{ color: '#dc3545' }}>
+                <strong>Pengeluaran:</strong> Rp {formatCurrency(totals.pengeluaran)}
+              </span>
+              <span style={{ color: '#28a745' }}>
+                <strong>Pemasukan:</strong> Rp {formatCurrency(totals.pemasukan)}
+              </span>
+              <span style={{ 
+                color: totals.dana >= 0 ? '#28a745' : '#dc3545',
+                fontWeight: 'bold'
+              }}>
+                <strong>Dana:</strong> Rp {formatCurrency(totals.dana)}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <span>Welcome, {currentUser.username}</span>
+              <button 
+                onClick={handleLogout}
+                style={{
+                  padding: '8px 15px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
 
@@ -506,6 +642,7 @@ const Cuan = () => {
           }}>
             <thead>
               <tr>
+
                 <th style={{ border: '1px solid #ddd', padding: '10px', backgroundColor: '#f8f9fa' }}>No</th>
                 <th style={{ border: '1px solid #ddd', padding: '10px', backgroundColor: '#f8f9fa' }}>Dapat</th>
                 <th style={{ border: '1px solid #ddd', padding: '10px', backgroundColor: '#f8f9fa' }}>Dari</th>
@@ -581,7 +718,6 @@ const Cuan = () => {
                               />
                             </div>
                             <div>
-                      
                               <label style={{ display: 'block', fontSize: '11px', marginBottom: '3px' }}>Dari:</label>
                               <input
                                 type="text"
