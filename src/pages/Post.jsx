@@ -1,5 +1,5 @@
 // src/pages/Post.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -20,14 +20,10 @@ const Post = () => {
     }
   }, [navigate]);
 
-  // Fetch data page dari API
-  useEffect(() => {
-    if (currentUser) {
-      fetchPageData();
-    }
-  }, [currentUser]);
-
-  const fetchPageData = async () => {
+  // Fetch data page dari API - menggunakan useCallback
+  const fetchPageData = useCallback(async () => {
+    if (!currentUser) return;
+    
     setLoading(true);
     setError(null);
 
@@ -43,23 +39,24 @@ const Post = () => {
       });
 
       if (response.data && response.data.success) {
-        setPageData(response.data.data[0]);
+        const page = response.data.data[0];
+        setPageData(page);
         
         // Update favicon jika ada
-        if (response.data.data[0].favicon) {
+        if (page?.favicon) {
           const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
           link.type = 'image/x-icon';
           link.rel = 'shortcut icon';
-          link.href = response.data.data[0].favicon;
+          link.href = page.favicon;
           document.getElementsByTagName('head')[0].appendChild(link);
         }
 
         // Update title
-        if (response.data.data[0].title) {
-          document.title = response.data.data[0].title;
+        if (page?.title) {
+          document.title = page.title;
         }
       } else {
-        setError(`Gagal mengambil data: ${response.data.error}`);
+        setError(`Gagal mengambil  ${response.data.error}`);
       }
     } catch (err) {
       setError(`Error: ${err.response?.data?.error || err.message}`);
@@ -67,7 +64,14 @@ const Post = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
+
+  // Fetch data ketika user berubah
+  useEffect(() => {
+    if (currentUser) {
+      fetchPageData();
+    }
+  }, [currentUser, fetchPageData]);
 
   // Parse JSON untuk header menu
   const parseHeaderMenu = (menuJson) => {
