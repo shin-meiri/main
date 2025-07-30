@@ -5,7 +5,7 @@ import Pages from './pages/Pages';
 import Login from './pages/Login';
 import Connect from './pages/Connect';
 import Cuan from './pages/Cuan';
-import Cuan from './pages/Post';
+import Post from './pages/Post';
 
 const App = () => {
   return (
