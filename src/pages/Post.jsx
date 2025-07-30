@@ -1,7 +1,7 @@
 // src/pages/Post.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const Post = () => {
   const [pageData, setPageData] = useState(null);
@@ -9,6 +9,7 @@ const Post = () => {
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
+  const { slug } = useParams();
 
   // Cek apakah user sudah login
   useEffect(() => {
@@ -35,15 +36,15 @@ const Post = () => {
         username: currentUser.username,
         password: currentUser.password,
         table: 'pages',
-        slug: 'beranda' // Untuk halaman beranda
+        slug: slug || 'beranda' // Gunakan slug dari URL atau default ke 'beranda'
       });
 
-      if (response.data && response.data.success) {
+      if (response.data && response.data.success && response.data.data.length > 0) {
         const page = response.data.data[0];
         setPageData(page);
         
         // Update favicon jika ada
-        if (page?.favicon) {
+        if (page.favicon) {
           const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
           link.type = 'image/x-icon';
           link.rel = 'shortcut icon';
@@ -52,11 +53,11 @@ const Post = () => {
         }
 
         // Update title
-        if (page?.title) {
+        if (page.title) {
           document.title = page.title;
         }
       } else {
-        setError(`Gagal mengambil  ${response.data.error}`);
+        setError(`Halaman tidak ditemukan`);
       }
     } catch (err) {
       setError(`Error: ${err.response?.data?.error || err.message}`);
@@ -64,14 +65,14 @@ const Post = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, slug]);
 
-  // Fetch data ketika user berubah
+  // Fetch data ketika user atau slug berubah
   useEffect(() => {
     if (currentUser) {
       fetchPageData();
     }
-  }, [currentUser, fetchPageData]);
+  }, [currentUser, slug, fetchPageData]);
 
   // Parse JSON untuk header menu
   const parseHeaderMenu = (menuJson) => {
@@ -85,7 +86,24 @@ const Post = () => {
 
   // Handle edit page
   const handleEditPage = () => {
-    navigate('/cuan');
+    navigate('/edit-page/' + (pageData?.slug || 'beranda'));
+  };
+
+  // Handle navigation
+  const handleNavigation = (url) => {
+    // Cek apakah URL adalah internal
+    if (url.startsWith('/') || url.includes(window.location.hostname)) {
+      // Cek apakah URL mengarah ke halaman yang sama
+      const currentSlug = slug || 'beranda';
+      const targetSlug = url.replace('/', '') || 'beranda';
+      
+      if (currentSlug !== targetSlug) {
+        navigate(url);
+      }
+    } else {
+      // External URL, buka di tab baru
+      window.open(url, '_blank');
+    }
   };
 
   // Logout function
@@ -186,7 +204,7 @@ const Post = () => {
           textAlign: 'center'
         }}>
           <h3>⚠️ Data Tidak Ditemukan</h3>
-          <p>Halaman beranda tidak ditemukan. Silakan periksa konfigurasi database.</p>
+          <p>Halaman tidak ditemukan. Silakan periksa URL atau konfigurasi database.</p>
         </div>
       </div>
     );
@@ -226,43 +244,206 @@ const Post = () => {
       )}
       <meta property="og:type" content="website" />
 
-      {/* Custom CSS */}
+      {/* Custom CSS dari database */}
       {pageData.css_custom && (
         <style dangerouslySetInnerHTML={{__html: pageData.css_custom}} />
       )}
 
+      {/* Custom CSS bawaan untuk tampilan konsisten */}
+      <style>
+        {`
+          .page-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-height: calc(100vh - 200px);
+          }
+          
+          .page-title {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+          }
+          
+          .post-content {
+            line-height: 1.6;
+            color: #555;
+            font-size: 16px;
+          }
+          
+          .view-counter {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #888;
+            text-align: right;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+          }
+          
+          .last-updated {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #aaa;
+            text-align: right;
+          }
+          
+          .header {
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          }
+          
+          .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+          }
+          
+          .site-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+          }
+          
+          .navigation {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+          }
+          
+          .nav-link {
+            text-decoration: none;
+            color: #333;
+            font-size: 16px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            padding: 5px 10px;
+            border-radius: 4px;
+          }
+          
+          .nav-link:hover {
+            color: #007bff;
+          }
+          
+          .user-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+          }
+          
+          .user-actions span {
+            font-size: 14px;
+            color: #666;
+          }
+          
+          .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+          }
+          
+          .btn-edit {
+            background-color: #28a745;
+            color: white;
+          }
+          
+          .btn-logout {
+            background-color: #dc3545;
+            color: white;
+          }
+          
+          .footer {
+            background-color: #333;
+            color: white;
+            padding: 30px 20px;
+            margin-top: 40px;
+          }
+          
+          .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+          }
+          
+          .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+          }
+          
+          .footer-title {
+            color: #fff;
+            margin-bottom: 15px;
+            font-size: 16px;
+          }
+          
+          .footer-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+          }
+          
+          .footer-link {
+            margin-bottom: 8px;
+          }
+          
+          .footer-link a {
+            color: #ddd;
+            text-decoration: none;
+            font-size: 14px;
+          }
+          
+          .footer-link a:hover {
+            color: #fff;
+          }
+          
+          .social-links {
+            display: flex;
+            gap: 10px;
+          }
+          
+          .social-link {
+            color: white;
+            text-decoration: none;
+            font-size: 24px;
+          }
+          
+          .footer-bottom {
+            border-top: 1px solid #555;
+            margin-top: 30px;
+            padding-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #aaa;
+          }
+          
+          .status-badge {
+            color: ${pageData.status === 'active' ? '#28a745' : '#dc3545'};
+          }
+        `}
+      </style>
+
       {/* Header */}
-      <header style={{
-        backgroundColor: 'white',
-        borderBottom: '1px solid #ddd',
-        padding: '15px 20px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 1000,
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
+      <header className="header">
+        <div className="header-content">
           {/* Logo/Nama Situs */}
-          <div style={{
-            fontSize: '24px',
-            fontWeight: 'bold',
-            color: '#333'
-          }}>
+          <div className="site-title">
             {pageData.nmsite}
           </div>
 
           {/* Navigation Menu */}
-          <nav style={{
-            display: 'flex',
-            gap: '20px',
-            alignItems: 'center'
-          }}>
+          <nav className="navigation">
             {headerMenu.length > 0 ? (
               headerMenu
                 .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -270,65 +451,36 @@ const Post = () => {
                   <a
                     key={index}
                     href={item.url}
-                    style={{
-                      textDecoration: 'none',
-                      color: '#333',
-                      fontSize: '16px',
-                      fontWeight: '500',
-                      transition: 'color 0.2s ease',
-                      padding: '5px 10px',
-                      borderRadius: '4px'
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleNavigation(item.url);
                     }}
-                    onMouseOver={(e) => e.target.style.color = '#007bff'}
-                    onMouseOut={(e) => e.target.style.color = '#333'}
+                    className="nav-link"
                   >
                     {item.title}
                   </a>
                 ))
             ) : (
-              <a href="/" style={{ textDecoration: 'none', color: '#333', fontSize: '16px' }}>
+              <a href="/" onClick={(e) => {
+                e.preventDefault();
+                handleNavigation('/');
+              }} className="nav-link">
                 Home
               </a>
             )}
 
             {/* User Actions */}
-            <div style={{
-              display: 'flex',
-              gap: '10px',
-              alignItems: 'center'
-            }}>
-              <span style={{ 
-                fontSize: '14px', 
-                color: '#666' 
-              }}>
-                Welcome, {currentUser.username}
-              </span>
+            <div className="user-actions">
+              <span>Welcome, {currentUser.username}</span>
               <button
                 onClick={handleEditPage}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: '#28a745',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold'
-                }}
+                className="btn btn-edit"
               >
                 ✏️ Edit
               </button>
               <button
                 onClick={handleLogout}
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontSize: '14px',
-                  cursor: 'pointer'
-                }}
+                className="btn btn-logout"
               >
                 🔐 Logout
               </button>
@@ -338,156 +490,72 @@ const Post = () => {
       </header>
 
       {/* Main Content */}
-      <main style={{
-        maxWidth: '1200px',
-        margin: '20px auto',
-        padding: '20px',
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-        minHeight: 'calc(100vh - 200px)'
-      }}>
-        {/* Page Title */}
-        {pageData.title && (
-          <h1 style={{
-            color: '#333',
-            marginBottom: '20px',
-            borderBottom: '2px solid #007bff',
-            paddingBottom: '10px'
-          }}>
-            {pageData.title}
-          </h1>
-        )}
+      <main>
+        <div className="page-container">
+          {/* Page Title */}
+          {pageData.title && (
+            <h1 className="page-title">
+              {pageData.title}
+            </h1>
+          )}
 
-        {/* Post Content */}
-        <div 
-          style={{
-            lineHeight: '1.6',
-            color: '#555',
-            fontSize: '16px'
-          }}
-          dangerouslySetInnerHTML={{__html: pageData.post || '<p>Belum ada konten yang tersedia.</p>'}}
-        />
+          {/* Post Content */}
+          <div 
+            className="post-content"
+            dangerouslySetInnerHTML={{__html: pageData.post || '<p>Belum ada konten yang tersedia.</p>'}}
+          />
 
-        {/* View Counter */}
-        <div style={{
-          marginTop: '20px',
-          fontSize: '14px',
-          color: '#888',
-          textAlign: 'right',
-          borderTop: '1px solid #eee',
-          paddingTop: '10px'
-        }}>
-          Dilihat: {pageData.view_count || 0} kali
-        </div>
-
-        {/* Last Updated */}
-        {pageData.updated_at && (
-          <div style={{
-            marginTop: '10px',
-            fontSize: '12px',
-            color: '#aaa',
-            textAlign: 'right'
-          }}>
-            Diperbarui: {new Date(pageData.updated_at).toLocaleString('id-ID')}
+          {/* View Counter */}
+          <div className="view-counter">
+            Dilihat: {pageData.view_count || 0} kali
           </div>
-        )}
+
+          {/* Last Updated */}
+          {pageData.updated_at && (
+            <div className="last-updated">
+              Diperbarui: {new Date(pageData.updated_at).toLocaleString('id-ID')}
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Footer */}
-      <footer style={{
-        backgroundColor: '#333',
-        color: 'white',
-        padding: '30px 20px',
-        marginTop: '40px'
-      }}>
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto'
-        }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '30px'
-          }}>
+      <footer className="footer">
+        <div className="footer-content">
+          <div className="footer-grid">
             {/* Footer Content */}
-            <div style={{
-              gridColumn: 'span 3'
-            }}>
+            <div style={{ gridColumn: 'span 3' }}>
               <div 
-                style={{
-                  lineHeight: '1.8',
-                  fontSize: '14px'
-                }}
+                className="post-content"
                 dangerouslySetInnerHTML={{__html: pageData.footer || '&copy; 2025 My Site. All rights reserved.'}}
               />
             </div>
 
             {/* Social Media Links */}
             <div>
-              <h4 style={{
-                color: '#fff',
-                marginBottom: '15px',
-                fontSize: '16px'
-              }}>
-                Ikuti Kami
-              </h4>
-              <div style={{
-                display: 'flex',
-                gap: '10px'
-              }}>
-                <a href="https://facebook.com" style={{
-                  color: 'white',
-                  textDecoration: 'none',
-                  fontSize: '24px'
-                }}>
-                  📘
-                </a>
-                <a href="https://twitter.com" style={{
-                  color: 'white',
-                  textDecoration: 'none',
-                  fontSize: '24px'
-                }}>
-                  🐦
-                </a>
-                <a href="https://instagram.com" style={{
-                  color: 'white',
-                  textDecoration: 'none',
-                  fontSize: '24px'
-                }}>
-                  📸
-                </a>
+              <h4 className="footer-title">Ikuti Kami</h4>
+              <div className="social-links">
+                <a href="https://facebook.com" className="social-link">📘</a>
+                <a href="https://twitter.com" className="social-link">🐦</a>
+                <a href="https://instagram.com" className="social-link">📸</a>
               </div>
             </div>
 
             {/* Quick Links */}
             <div>
-              <h4 style={{
-                color: '#fff',
-                marginBottom: '15px',
-                fontSize: '16px'
-              }}>
-                Tautan Cepat
-              </h4>
+              <h4 className="footer-title">Tautan Cepat</h4>
               {headerMenu.length > 0 ? (
-                <ul style={{
-                  listStyle: 'none',
-                  padding: 0,
-                  margin: 0
-                }}>
+                <ul className="footer-links">
                   {headerMenu
                     .sort((a, b) => (a.order || 0) - (b.order || 0))
                     .map((item, index) => (
-                      <li key={index} style={{ marginBottom: '8px' }}>
+                      <li key={index} className="footer-link">
                         <a
                           href={item.url}
-                          style={{
-                            color: '#ddd',
-                            textDecoration: 'none',
-                            fontSize: '14px'
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleNavigation(item.url);
                           }}
-                          onMouseOver={(e) => e.target.style.color = '#fff'}
-                          onMouseOut={(e) => e.target.style.color = '#ddd'}
                         >
                           {item.title}
                         </a>
@@ -496,16 +564,11 @@ const Post = () => {
                   }
                 </ul>
               ) : (
-                <ul style={{
-                  listStyle: 'none',
-                  padding: 0,
-                  margin: 0
-                }}>
-                  <li style={{ marginBottom: '8px' }}>
-                    <a href="/" style={{
-                      color: '#ddd',
-                      textDecoration: 'none',
-                      fontSize: '14px'
+                <ul className="footer-links">
+                  <li className="footer-link">
+                    <a href="/" onClick={(e) => {
+                      e.preventDefault();
+                      handleNavigation('/');
                     }}>
                       Home
                     </a>
@@ -516,13 +579,7 @@ const Post = () => {
 
             {/* Contact Info */}
             <div>
-              <h4 style={{
-                color: '#fff',
-                marginBottom: '15px',
-                fontSize: '16px'
-              }}>
-                Kontak
-              </h4>
+              <h4 className="footer-title">Kontak</h4>
               <div style={{
                 fontSize: '14px',
                 color: '#ddd',
@@ -536,18 +593,9 @@ const Post = () => {
           </div>
 
           {/* Bottom Bar */}
-          <div style={{
-            borderTop: '1px solid #555',
-            marginTop: '30px',
-            paddingTop: '20px',
-            textAlign: 'center',
-            fontSize: '12px',
-            color: '#aaa'
-          }}>
+          <div className="footer-bottom">
             <div style={{ marginBottom: '10px' }}>
-              Status: <span style={{
-                color: pageData.status === 'active' ? '#28a745' : '#dc3545'
-              }}>
+              Status: <span className="status-badge">
                 {pageData.status === 'active' ? 'Aktif' : 'Tidak Aktif'}
               </span>
             </div>
@@ -558,7 +606,7 @@ const Post = () => {
         </div>
       </footer>
 
-      {/* Custom JavaScript */}
+      {/* Custom JavaScript dari database */}
       {pageData.js_custom && (
         <script dangerouslySetInnerHTML={{__html: pageData.js_custom}} />
       )}
