@@ -860,4 +860,106 @@ const Cuan = () => {
                                 display: 'block', 
                                 fontSize: '11px', 
                                 marginBottom: '3px',
-                             
+                                                      color: '#a0a0c0'
+                              }}>
+                                Keluar (Rp)
+                              </label>
+                              <input
+                                type="text"
+                                value={formData.kluar}
+                                onChange={(e) => handleInputChange('kluar', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  color: '#fff',
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  borderRadius: '6px',
+                                  fontSize: '12px'
+                                }}
+                                placeholder="15000"
+                              />
+                            </div>
+                            <div>
+                              <label style={{ 
+                                display: 'block', 
+                                fontSize: '11px', 
+                                marginBottom: '3px',
+                                color: '#a0a0c0'
+                              }}>
+                                Keperluan
+                              </label>
+                              <input
+                                type="text"
+                                value={formData.keperluan}
+                                onChange={(e) => handleInputChange('keperluan', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                  color: '#fff',
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  borderRadius: '6px',
+                                  fontSize: '12px'
+                                }}
+                                placeholder="beli bbm"
+                              />
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '10px' }}>
+                            <button
+                              onClick={saveEditedRow}
+                              disabled={loading}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: loading ? '#555' : 'green',
+                                color: loading ? '#888' : '#4CAF50',
+                                border: '1px solid #4CAF50',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                cursor: loading ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              {loading ? '💾 Saving...' : '💾 Save'}
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#666',
+                                color: 'pink',
+                                border: '1px solid pink',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              ❌ Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        <div style={{ 
+          marginTop: '10px', 
+          textAlign: 'center', 
+          fontSize: '14px', 
+          color: '#a0a0c0' 
+        }}>
+          Menampilkan {formattedData.length} baris data
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Cuan;
