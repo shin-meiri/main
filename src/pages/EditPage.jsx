@@ -140,7 +140,7 @@ const EditPage = () => {
         password: currentUser.password,
         table: 'pages',
         id: pageData.id,
-         {
+          {
           ...pageData,
           header_menu: menuJson,
           updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
@@ -206,23 +206,12 @@ const EditPage = () => {
   const previewPage = () => {
     const win = window.open('', '_blank');
     if (win) {
-      win.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Preview</title>
-          <style>body{font-family:Arial,sans-serif;margin:20px;background:#f5f5f5}
-          .container{max-width:800px;margin:0 auto;background:white;padding:30px;border-radius:8px}
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <h1>${pageData.title}</h1>
-            <div>${pageData.post}</div>
-          </div>
-        </body>
-        </html>
-      `);
+      const html = '<!DOCTYPE html><html><head><title>Preview</title>' +
+        '<style>body{font-family:Arial,sans-serif;margin:20px;background:#f5f5f5}' +
+        '.container{max-width:800px;margin:0 auto;background:white;padding:30px;border-radius:8px}' +
+        '</style></head><body><div class="container"><h1>' + 
+        pageData.title + '</h1><div>' + pageData.post + '</div></div></body></html>';
+      win.document.write(html);
       win.document.close();
     }
   };
@@ -292,8 +281,8 @@ const EditPage = () => {
       </div>
 
       {/* Messages */}
-      {error && <div style={{ color: 'red' }}>{error}</div>}
-      {success && <div style={{ color: 'green' }}>{success}</div>}
+      {error && <div style={{ color: 'red', margin: '15px 20px' }}>{error}</div>}
+      {success && <div style={{ color: 'green', margin: '15px 20px' }}>{success}</div>}
 
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid #ddd', display: 'flex' }}>
