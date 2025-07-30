@@ -64,7 +64,55 @@ const Cuan = () => {
       fetchData();
     }
   }, [currentUser, fetchData]);
+  // Save new row
+  const saveNewRow = async () => {
+    if (!currentUser || (!formData.masuk && !formData.kluar)) {
+      setConnectionStatus('❌ Minimal masukkan masuk atau keluar!');
+      return;
+    }
 
+    setLoading(true);
+    setConnectionStatus('Menyimpan data baru...');
+
+    try {
+      // Format data sebagai JSON
+      const masukJson = formData.masuk ? JSON.stringify({ [formData.masuk]: formData.dari || 'N/A' }) : '{}';
+      const kluarJson = formData.kluar ? JSON.stringify({ [formData.kluar]: formData.keperluan || 'N/A' }) : '{}';
+
+      const response = await axios.post('/api/insert-cuan.php', {
+        host: currentUser.host,
+        dbname: currentUser.dbname,
+        username: currentUser.username,
+        password: currentUser.password,
+        masuk: masukJson,
+        kluar: kluarJson
+      });
+
+      console.log('Response:', response.data); // Debug log
+
+      if (response.data && response.data.success) {
+        setConnectionStatus('✅ Data berhasil disimpan!');
+        setAddingRow(false);
+        setFormData({
+          masuk: '',
+          dari: '',
+          kluar: '',
+          keperluan: ''
+        });
+        fetchData();
+      } else {
+        const errorMessage = response.data?.error || 'Unknown error';
+        setConnectionStatus(`❌ Gagal menyimpan  ${errorMessage}`);
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || err.response?.data || err.message || 'Unknown error';
+      setConnectionStatus(`❌ Error menyimpan data: ${errorMessage}`);
+      console.error('Save error:', err);
+      console.error('Error response:', err.response?.data);
+    } finally {
+      setLoading(false);
+    }
+  };
   // Format data sesuai dengan permintaan
   const formatCuanData = (data) => {
     return data.map((item, index) => {
