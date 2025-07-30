@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Connect from './pages/Connect';
 import Cuan from './pages/Cuan';
 import Post from './pages/Post';
+import EditPage from './pages/EditPage';
 
 const App = () => {
   return (
@@ -16,6 +17,7 @@ const App = () => {
         <Route path="/connect" element={<Connect />} />
         <Route path="/cuan" element={<Cuan />} />
         <Route path="/" element={<Post />} />
+        <Route path="/edit" element={<EditPage />} />
       </Routes>
     </Router>
   );
