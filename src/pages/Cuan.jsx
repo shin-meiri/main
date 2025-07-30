@@ -10,6 +10,12 @@ const Cuan = () => {
   const [connectionStatus, setConnectionStatus] = useState('');
   const [editingRow, setEditingRow] = useState(null);
   const [editingData, setEditingData] = useState({});
+  const [addingRow, setAddingRow] = useState(false);
+  const [newData, setNewData] = useState({
+    masuk: '{"0":"N/A"}',
+    kluar: '{"0":"N/A"}',
+    time_stamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
+  });
   const navigate = useNavigate();
 
   // Cek apakah user sudah login
@@ -135,6 +141,69 @@ const Cuan = () => {
     }));
   };
 
+  // Handle new data input change
+  const handleNewDataChange = (field, value) => {
+    setNewData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Start adding new row
+  const startAddingRow = () => {
+    setAddingRow(true);
+    setNewData({
+      masuk: '{"0":"N/A"}',
+      kluar: '{"0":"N/A"}',
+      time_stamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    });
+  };
+
+  // Cancel adding
+  const cancelAdding = () => {
+    setAddingRow(false);
+    setNewData({
+      masuk: '{"0":"N/A"}',
+      kluar: '{"0":"N/A"}',
+      time_stamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
+    });
+  };
+
+  // Save new row
+  const saveNewRow = async () => {
+    setLoading(true);
+    setConnectionStatus('Menyimpan data baru...');
+
+    try {
+      const response = await axios.post('/api/insert-cuan.php', {
+        host: currentUser.host,
+        dbname: currentUser.dbname,
+        username: currentUser.username,
+        password: currentUser.password,
+        masuk: newData.masuk,
+        kluar: newData.kluar,
+        time_stamp: newData.time_stamp
+      });
+
+      if (response.data.success) {
+        setConnectionStatus('✅ Data berhasil ditambahkan!');
+        setAddingRow(false);
+        setNewData({
+          masuk: '{"0":"N/A"}',
+          kluar: '{"0":"N/A"}',
+          time_stamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
+        });
+        fetchData();
+      } else {
+        setConnectionStatus(`❌ Gagal menambahkan data: ${response.data.error}`);
+      }
+    } catch (err) {
+      setConnectionStatus(`❌ Error menambahkan data: ${err.response?.data?.error || err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Logout function
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
@@ -204,7 +273,7 @@ const Cuan = () => {
           </div>
         )}
 
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
           <button
             onClick={fetchData}
             disabled={loading}
@@ -219,7 +288,115 @@ const Cuan = () => {
           >
             {loading ? 'Loading...' : 'Refresh Data'}
           </button>
+          <button
+            onClick={startAddingRow}
+            disabled={loading}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: loading ? '#6c757d' : '#28a745',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: loading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            ➕ Tambah Data
+          </button>
         </div>
+
+        {/* Add New Row Form */}
+        {addingRow && (
+          <div style={{ 
+            marginBottom: '20px',
+            padding: '15px',
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #ddd',
+            borderRadius: '8px'
+          }}>
+            <h3 style={{ margin: '0 0 15px 0' }}>Tambah Data Baru</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>Masuk (JSON):</label>
+                <textarea
+                  value={newData.masuk}
+                  onChange={(e) => handleNewDataChange('masuk', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    height: '80px'
+                  }}
+                  placeholder='{"15000":"Babe"}'
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>Keluar (JSON):</label>
+                <textarea
+                  value={newData.kluar}
+                  onChange={(e) => handleNewDataChange('kluar', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    height: '80px'
+                  }}
+                  placeholder='{"15000":"beli bbm"}'
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>Waktu:</label>
+                <input
+                  type="text"
+                  value={newData.time_stamp}
+                  onChange={(e) => handleNewDataChange('time_stamp', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '12px'
+                  }}
+                  placeholder="YYYY-MM-DD HH:MM:SS"
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={saveNewRow}
+                disabled={loading}
+                style={{
+                  padding: '8px 15px',
+                  backgroundColor: loading ? '#6c757d' : '#28a745',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  cursor: loading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={cancelAdding}
+                style={{
+                  padding: '8px 15px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         <div style={{ overflowX: 'auto' }}>
           <table style={{
