@@ -40,7 +40,8 @@ const Cuan = () => {
         host: currentUser.host,
         dbname: currentUser.dbname,
         username: currentUser.username,
-        password: currentUser.password
+        password: currentUser.password,
+        action: 'get'
       });
 
       if (response.data && response.data.success) {
@@ -101,11 +102,12 @@ const Cuan = () => {
     setConnectionStatus('Menyimpan perubahan...');
 
     try {
-      const response = await axios.post('/api/update-cuan.php', {
+      const response = await axios.post('/api/cuan.php', {
         host: currentUser.host,
         dbname: currentUser.dbname,
         username: currentUser.username,
         password: currentUser.password,
+        action: 'update',
         id: editingData.id,
         masuk: editingData.masuk,
         kluar: editingData.kluar,
@@ -175,11 +177,12 @@ const Cuan = () => {
     setConnectionStatus('Menyimpan data baru...');
 
     try {
-      const response = await axios.post('/api/insert-cuan.php', {
+      const response = await axios.post('/api/cuan.php', {
         host: currentUser.host,
         dbname: currentUser.dbname,
         username: currentUser.username,
         password: currentUser.password,
+        action: 'insert',
         masuk: newData.masuk,
         kluar: newData.kluar,
         time_stamp: newData.time_stamp
@@ -195,12 +198,44 @@ const Cuan = () => {
         });
         fetchData();
       } else {
-        setConnectionStatus(`❌ Gagal menambahkan data: ${response.data.error}`);
+        setConnectionStatus(`❌ Gagal menambahkan  ${response.data.error}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error menambahkan data: ${err.response?.data?.error || err.message}`);
+      setConnectionStatus(`❌ Error menambahkan  ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Delete row
+  const deleteRow = async (rowId) => {
+    if (!rowId) return;
+
+    if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+      setLoading(true);
+      setConnectionStatus('Menghapus data...');
+
+      try {
+        const response = await axios.post('/api/cuan.php', {
+          host: currentUser.host,
+          dbname: currentUser.dbname,
+          username: currentUser.username,
+          password: currentUser.password,
+          action: 'delete',
+          id: rowId
+        });
+
+        if (response.data.success) {
+          setConnectionStatus('✅ Data berhasil dihapus!');
+          fetchData();
+        } else {
+          setConnectionStatus(`❌ Gagal menghapus  ${response.data.error}`);
+        }
+      } catch (err) {
+        setConnectionStatus(`❌ Error menghapus  ${err.response?.data?.error || err.message}`);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -443,10 +478,25 @@ const Cuan = () => {
                           border: 'none',
                           borderRadius: '3px',
                           fontSize: '12px',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          marginRight: '5px'
                         }}
                       >
                         Edit
+                      </button>
+                      <button
+                        onClick={() => deleteRow(row.id)}
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: '#dc3545',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '3px',
+                          fontSize: '12px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -514,45 +564,4 @@ const Cuan = () => {
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
-                                fontSize: '12px',
-                                cursor: loading ? 'not-allowed' : 'pointer'
-                              }}
-                            >
-                              {loading ? 'Saving...' : 'Save'}
-                            </button>
-                            <button
-                              onClick={cancelEditing}
-                              style={{
-                                padding: '6px 12px',
-                                backgroundColor: '#6c757d',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {formattedData.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '50px', color: '#666' }}>
-            Tidak ada data cuan
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default Cuan;
+                                fontSiz
