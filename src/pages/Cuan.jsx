@@ -522,7 +522,7 @@ const Cuan = () => {
                 <strong>Dana:</strong> Rp {formatCurrency(totals.dana)}
               </span>
             </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}></div>
         {/* Add New Row Form */}
         {addingRow && (
           <div style={{ 
