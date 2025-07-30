@@ -1,4 +1,3 @@
-
 // src/pages/EditPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
@@ -116,7 +115,7 @@ const EditPage = () => {
     setMenuItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Save edited page
+     // Save edited page
   const savePage = async () => {
     if (!pageData.title || !pageData.nmsite) {
       setError('Judul dan nama situs wajib diisi!');
@@ -138,20 +137,35 @@ const EditPage = () => {
         return;
       }
 
+      // Siapkan data untuk dikirim
+      const pageDataToSend = {
+        ...pageData,
+        header_menu: menuJson,
+        updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        updated_by: currentUser.username
+      };
+
+      console.log('Sending data:', {
+        host: currentUser.host,
+        dbname: currentUser.dbname,
+        username: currentUser.username,
+        password: currentUser.password,
+        table: 'pages',
+        id: pageData.id || 1, // Gunakan ID dari data atau default ke 1
+        data: pageDataToSend
+      });
+
       const response = await axios.post('/api/update-page.php', {
         host: currentUser.host,
         dbname: currentUser.dbname,
         username: currentUser.username,
         password: currentUser.password,
         table: 'pages',
-        id: id,
-        data: {
-          ...pageData,
-          header_menu: menuJson,
-          updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-          updated_by: currentUser.username
-        }
+        id: pageData.id || 1, // Pastikan ID dikirim
+        data: pageDataToSend
       });
+
+      console.log('Response:', response.data);
 
       if (response.data.success) {
         setSuccess('✅ Data berhasil disimpan!');
@@ -162,6 +176,7 @@ const EditPage = () => {
         setError(`❌ Gagal menyimpan: ${response.data.error}`);
       }
     } catch (err) {
+      console.error('Save error:', err);
       setError(`❌ Error menyimpan: ${err.response?.data?.error || err.message}`);
     } finally {
       setLoading(false);
