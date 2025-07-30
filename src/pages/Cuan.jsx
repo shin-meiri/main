@@ -8,8 +8,6 @@ const Cuan = () => {
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [selectedTable, setSelectedTable] = useState('cuan');
   const [editingRow, setEditingRow] = useState(null);
   const [addingRow, setAddingRow] = useState(false);
   const [formData, setFormData] = useState({
@@ -30,20 +28,20 @@ const Cuan = () => {
     }
   }, [navigate]);
 
-  // Fetch data cuan dari API
+  // Fetch data cuan dari API - menggunakan useCallback
   const fetchData = useCallback(async () => {
-    if (!currentUser || !selectedUser) return;
+    if (!currentUser) return;
     
     setLoading(true);
     setConnectionStatus('Mengambil data cuan...');
 
     try {
-      const response = await axios.post('/api/get-cuan-data.php', {
-        host: selectedUser.host,
-        dbname: selectedUser.dbname,
-        username: selectedUser.username,
-        password: selectedUser.password,
-        table: selectedTable
+      // Mengambil data dari database MySQL
+      const response = await axios.post('/api/cuan.php', {
+        host: currentUser.host,
+        dbname: currentUser.dbname,
+        username: currentUser.username,
+        password: currentUser.password
       });
 
       if (response.data && response.data.success) {
@@ -58,30 +56,34 @@ const Cuan = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser, selectedUser, selectedTable]);
+  }, [currentUser]);
 
-  // Fetch data ketika user atau table berubah
+  // Fetch data ketika user berubah
   useEffect(() => {
-    if (currentUser && selectedUser) {
+    if (currentUser) {
       fetchData();
     }
-  }, [currentUser, selectedUser, selectedTable, fetchData]);
+  }, [currentUser, fetchData]);
 
-  // Parse JSON data
-  const parseJsonData = (jsonString) => {
-    try {
-      return JSON.parse(jsonString);
-    } catch (e) {
-      return { "0": jsonString || "N/A" };
-    }
-  };
-
-  // Format data untuk ditampilkan
-  const formatDisplayData = (data) => {
+  // Format data sesuai dengan permintaan
+  const formatCuanData = (data) => {
     return data.map((item, index) => {
-      const masukData = parseJsonData(item.masuk);
-      const kluarData = parseJsonData(item.kluar);
+      // Parse JSON untuk field masuk dan kluar
+      let masukData = {};
+      let kluarData = {};
       
+      try {
+        masukData = item.masuk ? JSON.parse(item.masuk) : {};
+      } catch (e) {
+        masukData = { "0": item.masuk || "N/A" };
+      }
+      
+      try {
+        kluarData = item.kluar ? JSON.parse(item.kluar) : {};
+      } catch (e) {
+        kluarData = { "0": item.kluar || "N/A" };
+      }
+
       return {
         No: index + 1,
         Masuk: masukData,
@@ -125,8 +127,8 @@ const Cuan = () => {
 
   // Save new row
   const saveNewRow = async () => {
-    if (!selectedUser || !formData.masuk || (!formData.dari && !formData.keperluan)) {
-      setConnectionStatus('❌ Semua field wajib diisi!');
+    if (!currentUser || (!formData.masuk && !formData.kluar)) {
+      setConnectionStatus('❌ Minimal masukkan masuk atau keluar!');
       return;
     }
 
@@ -139,11 +141,10 @@ const Cuan = () => {
       const kluarJson = formData.kluar ? JSON.stringify({ [formData.kluar]: formData.keperluan }) : '{}';
 
       const response = await axios.post('/api/insert-cuan.php', {
-        host: selectedUser.host,
-        dbname: selectedUser.dbname,
-        username: selectedUser.username,
-        password: selectedUser.password,
-        table: selectedTable,
+        host: currentUser.host,
+        dbname: currentUser.dbname,
+        username: currentUser.username,
+        password: currentUser.password,
         masuk: masukJson,
         kluar: kluarJson
       });
@@ -187,9 +188,18 @@ const Cuan = () => {
     });
   };
 
+  // Parse JSON data
+  const parseJsonData = (jsonString) => {
+    try {
+      return JSON.parse(jsonString);
+    } catch (e) {
+      return { "0": jsonString || "N/A" };
+    }
+  };
+
   // Save edited row
   const saveEditedRow = async () => {
-    if (!selectedUser || !editingRow) {
+    if (!currentUser || !editingRow) {
       setConnectionStatus('❌ Data tidak valid!');
       return;
     }
@@ -203,11 +213,10 @@ const Cuan = () => {
       const kluarJson = formData.kluar ? JSON.stringify({ [formData.kluar]: formData.keperluan }) : '{}';
 
       const response = await axios.post('/api/update-cuan.php', {
-        host: selectedUser.host,
-        dbname: selectedUser.dbname,
-        username: selectedUser.username,
-        password: selectedUser.password,
-        table: selectedTable,
+        host: currentUser.host,
+        dbname: currentUser.dbname,
+        username: currentUser.username,
+        password: currentUser.password,
         id: editingRow,
         masuk: masukJson,
         kluar: kluarJson
@@ -246,7 +255,7 @@ const Cuan = () => {
 
   // Delete row
   const deleteRow = async (rowId) => {
-    if (!selectedUser || !rowId) {
+    if (!currentUser || !rowId) {
       setConnectionStatus('❌ Data tidak valid!');
       return;
     }
@@ -257,11 +266,10 @@ const Cuan = () => {
 
       try {
         const response = await axios.post('/api/delete-cuan.php', {
-          host: selectedUser.host,
-          dbname: selectedUser.dbname,
-          username: selectedUser.username,
-          password: selectedUser.password,
-          table: selectedTable,
+          host: currentUser.host,
+          dbname: currentUser.dbname,
+          username: currentUser.username,
+          password: currentUser.password,
           id: rowId
         });
 
@@ -296,8 +304,7 @@ const Cuan = () => {
     return null;
   }
 
-  const formattedData = formatDisplayData(cuanData);
-
+  const formattedData = formatCuanData(cuanData);
   return (
     <div style={{ 
       minHeight: '100vh',
@@ -380,6 +387,29 @@ const Cuan = () => {
         </div>
       )}
 
+      {/* Refresh Button */}
+      <div style={{ 
+        textAlign: 'center', 
+        marginBottom: '30px' 
+      }}>
+        <button
+          onClick={fetchData}
+          disabled={loading}
+          style={{
+            padding: '12px 25px',
+            backgroundColor: loading ? '#555' : 'pink',
+            color: loading ? '#888' : 'black',
+            border: 'none',
+            borderRadius: '25px',
+            fontSize: '16px',
+            fontWeight: 'bold',
+            cursor: loading ? 'not-allowed' : 'pointer'
+          }}
+        >
+          {loading ? '🔄 Loading...' : '🔄 Refresh Data'}
+        </button>
+      </div>
+
       {/* Add New Row Form */}
       <div style={{ 
         padding: '20px',
@@ -425,10 +455,15 @@ const Cuan = () => {
             marginBottom: '20px',
             padding: '20px',
             backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            borderRadius: '12px',
-            border: '1px solid pink'
+            border: '1px solid pink',
+            borderRadius: '12px'
           }}>
-            <h3 style={{ margin: '0 0 20px 0', color: '#4ecdc4' }}>Form Tambah Data</h3>
+            <h3 style={{ 
+              margin: '0 0 20px 0',
+              color: '#4ecdc4'
+            }}>
+              Form Tambah Data
+            </h3>
             <div style={{ 
               display: 'grid', 
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -436,7 +471,14 @@ const Cuan = () => {
               marginBottom: '20px'
             }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Masuk (Rp)</label>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '12px', 
+                  marginBottom: '5px',
+                  color: '#a0a0c0'
+                }}>
+                  Masuk (Rp)
+                </label>
                 <input
                   type="text"
                   value={formData.masuk}
@@ -447,13 +489,21 @@ const Cuan = () => {
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     color: '#fff',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    fontSize: '14px'
                   }}
                   placeholder="15000"
                 />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Dari</label>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '12px', 
+                  marginBottom: '5px',
+                  color: '#a0a0c0'
+                }}>
+                  Dari
+                </label>
                 <input
                   type="text"
                   value={formData.dari}
@@ -464,13 +514,21 @@ const Cuan = () => {
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     color: '#fff',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    fontSize: '14px'
                   }}
                   placeholder="babe"
                 />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Keluar (Rp)</label>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '12px', 
+                  marginBottom: '5px',
+                  color: '#a0a0c0'
+                }}>
+                  Keluar (Rp)
+                </label>
                 <input
                   type="text"
                   value={formData.kluar}
@@ -481,13 +539,21 @@ const Cuan = () => {
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     color: '#fff',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    fontSize: '14px'
                   }}
                   placeholder="15000"
                 />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Keperluan</label>
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: '12px', 
+                  marginBottom: '5px',
+                  color: '#a0a0c0'
+                }}>
+                  Keperluan
+                </label>
                 <input
                   type="text"
                   value={formData.keperluan}
@@ -498,7 +564,8 @@ const Cuan = () => {
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     color: '#fff',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '8px'
+                    borderRadius: '8px',
+                    fontSize: '14px'
                   }}
                   placeholder="beli bbm"
                 />
@@ -638,8 +705,8 @@ const Cuan = () => {
                   >
                     <td style={{
                       border: '1px solid rgba(255, 255, 255, 0.1)',
-                    padding: '10px',
-                    textAlign: 'center'
+                      padding: '10px',
+                      textAlign: 'center'
                     }}>
                       {item.No}
                     </td>
@@ -686,7 +753,7 @@ const Cuan = () => {
                           color: '#4ecdc4',
                           border: '1px solid #4ecdc4',
                           borderRadius: '15px',
-                          fontSize: '12px',
+                          fontSize: '11px',
                           cursor: 'pointer',
                           marginRight: '5px'
                         }}
@@ -701,7 +768,7 @@ const Cuan = () => {
                           color: '#ff6b6b',
                           border: '1px solid #ff6b6b',
                           borderRadius: '15px',
-                          fontSize: '12px',
+                          fontSize: '11px',
                           cursor: 'pointer'
                         }}
                       >
@@ -710,7 +777,7 @@ const Cuan = () => {
                     </td>
                   </tr>
 
-                  {/* Edit Form - muncul di bawah baris yang diedit */}
+                  {/* Edit form row - muncul di bawah baris yang diklik */}
                   {editingRow === cuanData[index].id && (
                     <tr>
                       <td 
@@ -727,140 +794,70 @@ const Cuan = () => {
                           borderRadius: '0 0 8px 8px'
                         }}>
                           <h3 style={{ 
-                            margin: '0 0 20px 0', 
-                            color: '#ffd93d' 
+                            margin: '0 0 15px 0',
+                            color: '#ffd93d'
                           }}>
-                            🛠️ Edit Data
+                            🛠️ Edit Record
                           </h3>
                           <div style={{ 
                             display: 'grid', 
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                            gap: '15px',
-                            marginBottom: '20px'
+                            gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
+                            gap: '10px',
+                            marginBottom: '15px'
                           }}>
                             <div>
-                              <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Masuk (Rp)</label>
+                              <label style={{ 
+                                display: 'block', 
+                                fontSize: '11px', 
+                                marginBottom: '3px',
+                                color: '#a0a0c0'
+                              }}>
+                                Masuk (Rp)
+                              </label>
                               <input
                                 type="text"
                                 value={formData.masuk}
                                 onChange={(e) => handleInputChange('masuk', e.target.value)}
                                 style={{
                                   width: '100%',
-                                  padding: '10px',
+                                  padding: '8px',
                                   backgroundColor: 'rgba(255, 255, 255, 0.1)',
                                   color: '#fff',
                                   border: '1px solid rgba(255, 255, 255, 0.2)',
-                                  borderRadius: '8px'
+                                  borderRadius: '6px',
+                                  fontSize: '12px'
                                 }}
                                 placeholder="15000"
                               />
                             </div>
                             <div>
-                              <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Dari</label>
+                              <label style={{ 
+                                display: 'block', 
+                                fontSize: '11px', 
+                                marginBottom: '3px',
+                                color: '#a0a0c0'
+                              }}>
+                                Dari
+                              </label>
                               <input
                                 type="text"
                                 value={formData.dari}
                                 onChange={(e) => handleInputChange('dari', e.target.value)}
                                 style={{
                                   width: '100%',
-                                  padding: '10px',
+                                  padding: '8px',
                                   backgroundColor: 'rgba(255, 255, 255, 0.1)',
                                   color: '#fff',
                                   border: '1px solid rgba(255, 255, 255, 0.2)',
-                                  borderRadius: '8px'
+                                  borderRadius: '6px',
+                                  fontSize: '12px'
                                 }}
                                 placeholder="babe"
                               />
                             </div>
                             <div>
-                              <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Keluar (Rp)</label>
-                              <input
-                                type="text"
-                                value={formData.kluar}
-                                onChange={(e) => handleInputChange('kluar', e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '10px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  color: '#fff',
-                                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                                  borderRadius: '8px'
-                                }}
-                                placeholder="15000"
-                              />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', marginBottom: '5px', fontSize: '12px' }}>Keperluan</label>
-                              <input
-                                type="text"
-                                value={formData.keperluan}
-                                onChange={(e) => handleInputChange('keperluan', e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '10px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  color: '#fff',
-                                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                                  borderRadius: '8px'
-                                }}
-                                placeholder="beli bbm"
-                              />
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '10px' }}>
-                            <button
-                              onClick={saveEditedRow}
-                              disabled={loading}
-                              style={{
-                                padding: '8px 15px',
-                                backgroundColor: loading ? '#555' : 'green',
-                                color: loading ? '#888' : 'white',
-                                border: 'none',
-                                borderRadius: '20px',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                cursor: loading ? 'not-allowed' : 'pointer'
-                              }}
-                            >
-                              {loading ? '💾 Menyimpan...' : '💾 Simpan'}
-                            </button>
-                            <button
-                              onClick={cancelEditing}
-                              style={{
-                                padding: '8px 15px',
-                                backgroundColor: '#666',
-                                color: 'pink',
-                                border: '1px solid pink',
-                                borderRadius: '20px',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              ❌ Batal
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div style={{ 
-          marginTop: '15px', 
-          textAlign: 'center', 
-          fontSize: '14px', 
-          color: '#a0a0c0' 
-        }}>
-          Menampilkan {formattedData.length} data cuan
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default Cuan;
+                              <label style={{ 
+                                display: 'block', 
+                                fontSize: '11px', 
+                                marginBottom: '3px',
+                             
