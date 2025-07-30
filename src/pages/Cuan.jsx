@@ -1,5 +1,5 @@
 // src/pages/Cuan.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -20,14 +20,10 @@ const Cuan = () => {
     }
   }, [navigate]);
 
-  // Fetch data cuan dari API
-  useEffect(() => {
-    if (currentUser) {
-      fetchData();
-    }
-  }, [currentUser]);
-
-  const fetchData = async () => {
+  // Fetch data cuan dari API - menggunakan useCallback
+  const fetchData = useCallback(async () => {
+    if (!currentUser) return;
+    
     setLoading(true);
     setConnectionStatus('Mengambil data cuan...');
 
@@ -45,7 +41,7 @@ const Cuan = () => {
         setCuanData(response.data.data || []);
         setConnectionStatus(`✅ Menampilkan ${response.data.data?.length || 0} data cuan`);
       } else {
-        setConnectionStatus(`❌ Gagal mengambil data: ${response.data.error}`);
+        setConnectionStatus(`❌ Gagal mengambil  ${response.data.error}`);
       }
     } catch (err) {
       setConnectionStatus(`❌ Error: ${err.response?.data?.error || err.message}`);
@@ -53,7 +49,14 @@ const Cuan = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
+
+  // Fetch data users dari API - menggunakan useCallback
+  useEffect(() => {
+    if (currentUser) {
+      fetchData();
+    }
+  }, [currentUser, fetchData]);
 
   // Format data sesuai dengan permintaan
   const formatCuanData = (data) => {
@@ -139,29 +142,47 @@ const Cuan = () => {
             onClick={goToMainPage}
             style={{
               padding: '8px 15px',
-              backgroundColor: '#444',
-              color: 'pink',
-              border: '1px solid pink',
+              backgroundColor: 'rgba(78, 205, 196, 0.2)',
+              color: '#4ecdc4',
+              border: '1px solid #4ecdc4',
               borderRadius: '25px',
               fontSize: '14px',
+              fontWeight: 'bold',
               cursor: 'pointer'
             }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.3)';
+              e.target.style.transform = 'translateY(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.2)';
+              e.target.style.transform = 'translateY(0)';
+            }}
           >
-            Main Page
+            🏠 Main Page
           </button>
           <button
             onClick={handleLogout}
             style={{
               padding: '8px 15px',
-              backgroundColor: '#555',
-              color: 'pink',
-              border: '1px solid pink',
+              backgroundColor: 'rgba(255, 107, 107, 0.2)',
+              color: '#ff6b6b',
+              border: '1px solid #ff6b6b',
               borderRadius: '25px',
               fontSize: '14px',
+              fontWeight: 'bold',
               cursor: 'pointer'
             }}
+            onMouseOver={(e) => {
+              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.3)';
+              e.target.style.transform = 'translateY(-2px)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.backgroundColor = 'rgba(255, 107, 107, 0.2)';
+              e.target.style.transform = 'translateY(0)';
+            }}
           >
-            Logout
+            🔒 Logout
           </button>
         </div>
       </div>
@@ -200,6 +221,18 @@ const Cuan = () => {
             fontWeight: 'bold',
             cursor: loading ? 'not-allowed' : 'pointer'
           }}
+          onMouseOver={(e) => {
+            if (!loading) {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.3)';
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!loading) {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = 'none';
+            }
+          }}
         >
           {loading ? '🔄 Loading...' : '🔄 Refresh Data'}
         </button>
@@ -218,7 +251,8 @@ const Cuan = () => {
           textAlign: 'center', 
           marginBottom: '25px',
           color: '#4ecdc4',
-          fontSize: '1.8rem'
+          fontSize: '1.8rem',
+          fontWeight: 'bold'
         }}>
           📈 Data Cuan ({formattedData.length} records)
         </h2>
@@ -263,7 +297,8 @@ const Cuan = () => {
                     backgroundColor: 'rgba(78, 205, 196, 0.2)',
                     textAlign: 'center',
                     position: 'sticky',
-                    top: 0
+                    top: 0,
+                    backdropFilter: 'blur(5px)'
                   }}>
                     No
                   </th>
@@ -273,7 +308,8 @@ const Cuan = () => {
                     backgroundColor: 'rgba(78, 205, 196, 0.2)',
                     textAlign: 'left',
                     position: 'sticky',
-                    top: 0
+                    top: 0,
+                    backdropFilter: 'blur(5px)'
                   }}>
                     Dari
                   </th>
@@ -283,7 +319,8 @@ const Cuan = () => {
                     backgroundColor: 'rgba(78, 205, 196, 0.2)',
                     textAlign: 'left',
                     position: 'sticky',
-                    top: 0
+                    top: 0,
+                    backdropFilter: 'blur(5px)'
                   }}>
                     Keperluan
                   </th>
@@ -293,7 +330,8 @@ const Cuan = () => {
                     backgroundColor: 'rgba(78, 205, 196, 0.2)',
                     textAlign: 'left',
                     position: 'sticky',
-                    top: 0
+                    top: 0,
+                    backdropFilter: 'blur(5px)'
                   }}>
                     Waktu
                   </th>
@@ -305,6 +343,12 @@ const Cuan = () => {
                     key={index}
                     style={{
                       backgroundColor: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)'
+                    }}
+                    onMouseOver={(e) => {
+                      e.target.style.backgroundColor = 'rgba(78, 205, 196, 0.1)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.target.style.backgroundColor = index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)';
                     }}
                   >
                     <td style={{
@@ -371,7 +415,8 @@ const Cuan = () => {
           textAlign: 'center', 
           marginBottom: '20px',
           color: '#4ecdc4',
-          fontSize: '1.5rem'
+          fontSize: '1.5rem',
+          fontWeight: 'bold'
         }}>
           📊 Summary
         </h2>
