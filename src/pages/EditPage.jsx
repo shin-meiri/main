@@ -185,7 +185,7 @@ const EditPage = () => {
 
   // Cancel editing
   const cancelEditing = () => {
-    navigate('/post');
+    navigate('/');
   };
 
   // Logout function
