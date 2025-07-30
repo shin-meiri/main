@@ -141,9 +141,7 @@ const EditPage = () => {
         setError('Format menu tidak valid!');
         setLoading(false);
         return;
-      }
-
-      const response = await axios.post('/api/update-page.php', {
+    }      const response = await axios.post('/api/update-page.php', {
         host: currentUser.host,
         dbname: currentUser.dbname,
         username: currentUser.username,
@@ -297,7 +295,70 @@ const EditPage = () => {
     );
   }
 
-  // Tabs for different sections
+  if (error) {
+    return (
+      <div style={{ 
+        minHeight: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <div style={{ 
+          padding: '20px',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          border: '1px solid #f5c6cb',
+          borderRadius: '4px',
+          textAlign: 'center'
+        }}>
+          <h3>❌ Error</h3>
+          <p>{error}</p>
+          <button
+            onClick={fetchPageData}
+            style={{
+              marginTop: '10px',
+              padding: '8px 16px',
+              backgroundColor: '#007bff',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Coba Lagi
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!pageData) {
+    return (
+      <div style={{ 
+        minHeight: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+        fontFamily: 'Arial, sans-serif'
+      }}>
+        <div style={{ 
+          padding: '20px',
+          backgroundColor: '#fff3cd',
+          color: '#856404',
+          border: '1px solid #ffeaa7',
+          borderRadius: '4px',
+          textAlign: 'center'
+        }}>
+          <h3>⚠️ Data Tidak Ditemukan</h3>
+          <p>Halaman tidak ditemukan. Silakan periksa URL atau konfigurasi database.</p>
+        </div>
+      </div>
+    );
+            }
+          // Tabs for different sections
   const tabs = [
     { id: 'basic', label: 'Dasar', icon: '📝' },
     { id: 'content', label: 'Konten', icon: '📄' },
@@ -655,9 +716,8 @@ const EditPage = () => {
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Content Tab */}
+          )}                      
+                    {/* Content Tab */}
           {activeTab === 'content' && (
             <div style={{
               display: 'grid',
