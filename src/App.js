@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Pages from './pages/Pages';
 import Login from './pages/Login';
 import Connect from './pages/Connect';
+import Cuan from './pages/Cuan';
 
 const App = () => {
   return (
