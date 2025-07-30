@@ -89,39 +89,43 @@ const Cuan = () => {
     }
   };
 
-  // Hitung total pemasukan, pengeluaran, dan dana
+  // Hitung total pemasukan dan pengeluaran
   const calculateTotals = () => {
-    let totalPemasukan = 0;
-    let totalPengeluaran = 0;
+    let pemasukan = 0;
+    let pengeluaran = 0;
 
     cuanData.forEach(item => {
       // Hitung pemasukan
       const masukData = parseJsonData(item.masuk);
       Object.keys(masukData).forEach(key => {
-        const value = parseFloat(key.replace(/[^0-9.-]+/g, '')) || 0;
-        totalPemasukan += value;
+        const amount = parseFloat(key.replace(/[^0-9.-]+/g, ''));
+        if (!isNaN(amount)) {
+          pemasukan += amount;
+        }
       });
 
       // Hitung pengeluaran
       const kluarData = parseJsonData(item.kluar);
       Object.keys(kluarData).forEach(key => {
-        const value = parseFloat(key.replace(/[^0-9.-]+/g, '')) || 0;
-        totalPengeluaran += value;
+        const amount = parseFloat(key.replace(/[^0-9.-]+/g, ''));
+        if (!isNaN(amount)) {
+          pengeluaran += amount;
+        }
       });
     });
 
-    const dana = totalPemasukan - totalPengeluaran;
+    const dana = pemasukan - pengeluaran;
 
     return {
-      pemasukan: totalPemasukan,
-      pengeluaran: totalPengeluaran,
+      pemasukan: pemasukan,
+      pengeluaran: pengeluaran,
       dana: dana
     };
   };
 
   // Format angka dengan pemisah ribuan
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('id-ID').format(amount);
+    return amount.toLocaleString('id-ID');
   };
 
   // Format display data
@@ -399,13 +403,15 @@ const Cuan = () => {
     navigate('/login');
   };
 
+  // Hitung total
+  const totals = calculateTotals();
+
   // Jika belum login, jangan tampilkan konten
   if (!currentUser) {
     return null;
   }
 
   const formattedData = formatDisplayData(cuanData);
-  const totals = calculateTotals();
 
   return (
     <div style={{ 
@@ -430,37 +436,22 @@ const Cuan = () => {
           borderBottom: '1px solid #eee'
         }}>
           <h1>Data Cuan</h1>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
-            <div style={{ display: 'flex', gap: '20px', fontSize: '14px' }}>
-              <span style={{ color: '#dc3545' }}>
-                <strong>Pengeluaran:</strong> Rp {formatCurrency(totals.pengeluaran)}
-              </span>
-              <span style={{ color: '#28a745' }}>
-                <strong>Pemasukan:</strong> Rp {formatCurrency(totals.pemasukan)}
-              </span>
-              <span style={{ 
-                color: totals.dana >= 0 ? '#28a745' : '#dc3545',
-                fontWeight: 'bold'
-              }}>
-                <strong>Dana:</strong> Rp {formatCurrency(totals.dana)}
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-              <span>Welcome, {currentUser.username}</span>
-              <button 
-                onClick={handleLogout}
-                style={{
-                  padding: '8px 15px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Logout
-              </button>
-            </div>
+          <div>
+            <span>Welcome, {currentUser.username}</span>
+            <button 
+              onClick={handleLogout}
+              style={{
+                marginLeft: '15px',
+                padding: '8px 15px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Logout
+            </button>
           </div>
         </div>
 
@@ -477,52 +468,88 @@ const Cuan = () => {
           </div>
         )}
 
-        <div style={{ marginBottom: '20px', display: 'flex', gap: '10px' }}>
-          <button
-            onClick={fetchData}
-            disabled={loading}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: loading ? '#6c757d' : '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {loading ? 'Loading...' : 'Refresh Data'}
-          </button>
-          <button
-            onClick={startAddingRow}
-            disabled={loading}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: loading ? '#6c757d' : '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            ➕ Tambah Data
-          </button>
-        </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
-            <div style={{ display: 'flex', gap: '20px', fontSize: '14px' }}>
-              <span style={{ color: '#dc3545' }}>
-                <strong>Pengeluaran:</strong> Rp {formatCurrency(totals.pengeluaran)}
-              </span>
-              <span style={{ color: '#28a745' }}>
-                <strong>Pemasukan:</strong> Rp {formatCurrency(totals.pemasukan)}
-              </span>
-              <span style={{ 
-                color: totals.dana >= 0 ? '#28a745' : '#dc3545',
-                fontWeight: 'bold'
+        <div style={{ 
+          marginBottom: '20px', 
+          display: 'flex', 
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              onClick={fetchData}
+              disabled={loading}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: loading ? '#6c757d' : '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {loading ? 'Loading...' : 'Refresh Data'}
+            </button>
+            <button
+              onClick={startAddingRow}
+              disabled={loading}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: loading ? '#6c757d' : '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              ➕ Tambah Data
+            </button>
+          </div>
+
+          {/* Informasi Total */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'auto auto auto',
+            gap: '20px',
+            padding: '10px 15px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            border: '1px solid #dee2e6'
+          }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', color: '#6c757d' }}>Pengeluaran</div>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: 'bold', 
+                color: '#dc3545' 
               }}>
-                <strong>Dana:</strong> Rp {formatCurrency(totals.dana)}
-              </span>
+                Rp {formatCurrency(totals.pengeluaran)}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}></div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', color: '#6c757d' }}>Pemasukan</div>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: 'bold', 
+                color: '#28a745' 
+              }}>
+                Rp {formatCurrency(totals.pemasukan)}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '12px', color: '#6c757d' }}>Dana</div>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: 'bold', 
+                color: totals.dana >= 0 ? '#28a745' : '#dc3545' 
+              }}>
+                Rp {formatCurrency(totals.dana)}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Add New Row Form */}
         {addingRow && (
           <div style={{ 
@@ -657,7 +684,6 @@ const Cuan = () => {
           }}>
             <thead>
               <tr>
-
                 <th style={{ border: '1px solid #ddd', padding: '10px', backgroundColor: '#f8f9fa' }}>No</th>
                 <th style={{ border: '1px solid #ddd', padding: '10px', backgroundColor: '#f8f9fa' }}>Dapat</th>
                 <th style={{ border: '1px solid #ddd', padding: '10px', backgroundColor: '#f8f9fa' }}>Dari</th>
