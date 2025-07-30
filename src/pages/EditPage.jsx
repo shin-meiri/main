@@ -141,7 +141,8 @@ const EditPage = () => {
         setError('Format menu tidak valid!');
         setLoading(false);
         return;
-    }      const response = await axios.post('/api/update-page.php', {
+      }
+      const response = await axios.post('/api/update-page.php', {
         host: currentUser.host,
         dbname: currentUser.dbname,
         username: currentUser.username,
@@ -213,46 +214,48 @@ const EditPage = () => {
   // Preview page
   const previewPage = () => {
     const previewWindow = window.open('', '_blank');
-    previewWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="id">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Preview: ${pageData.title}</title>
-        ${pageData.css_custom ? `<style>${pageData.css_custom}</style>` : ''}
-        <style>
-          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
-          .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          header { background: white; padding: 20px; border-bottom: 1px solid #ddd; margin-bottom: 30px; }
-          .site-title { font-size: 24px; font-weight: bold; color: #333; }
-          nav { display: flex; gap: 20px; margin-top: 10px; }
-          nav a { text-decoration: none; color: #333; }
-          main { line-height: 1.6; color: #555; }
-          footer { background: #333; color: white; padding: 30px; margin-top: 40px; text-align: center; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <header>
-            <div class="site-title">${pageData.nmsite}</div>
-            <nav>
-              ${menuItems.map(item => `<a href="${item.url}">${item.title}</a>`).join('')}
-            </nav>
-          </header>
-          <main>
-            <h1>${pageData.title}</h1>
-            <div>${pageData.post}</div>
-          </main>
-          <footer>
-            <div>${pageData.footer}</div>
-          </footer>
-        </div>
-        ${pageData.js_custom ? `<script>${pageData.js_custom}</script>` : ''}
-      </body>
-      </html>
-    `);
-    previewWindow.document.close();
+    if (previewWindow) {
+      previewWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="id">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Preview: ${pageData.title}</title>
+          ${pageData.css_custom ? \`${pageData.css_custom}\` : ''}
+          <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+            .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            header { background: white; padding: 20px; border-bottom: 1px solid #ddd; margin-bottom: 30px; }
+            .site-title { font-size: 24px; font-weight: bold; color: #333; }
+            nav { display: flex; gap: 20px; margin-top: 10px; }
+            nav a { text-decoration: none; color: #333; }
+            main { line-height: 1.6; color: #555; }
+            footer { background: #333; color: white; padding: 30px; margin-top: 40px; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <header>
+              <div class="site-title">${pageData.nmsite}</div>
+              <nav>
+                ${menuItems.map(item => `<a href="${item.url}">${item.title}</a>`).join('')}
+              </nav>
+            </header>
+            <main>
+              <h1>${pageData.title}</h1>
+              <div>${pageData.post}</div>
+            </main>
+            <footer>
+              <div>${pageData.footer}</div>
+            </footer>
+          </div>
+          ${pageData.js_custom ? \`${pageData.js_custom}\` : ''}
+        </body>
+        </html>
+      `);
+      previewWindow.document.close();
+    }
   };
 
   // Logout function
@@ -357,8 +360,8 @@ const EditPage = () => {
         </div>
       </div>
     );
-            }
-          // Tabs for different sections
+  }
+  // Tabs for different sections
   const tabs = [
     { id: 'basic', label: 'Dasar', icon: '📝' },
     { id: 'content', label: 'Konten', icon: '📄' },
@@ -716,8 +719,8 @@ const EditPage = () => {
                 </div>
               </div>
             </div>
-          )}                      
-                    {/* Content Tab */}
+          )}
+          {/* Content Tab */}
           {activeTab === 'content' && (
             <div style={{
               display: 'grid',
