@@ -48,7 +48,7 @@ const Login = () => {
         // Simpan data user di localStorage/sessionStorage (opsional)
         localStorage.setItem('currentUser', JSON.stringify(user));
         // Redirect ke halaman utama
-        navigate('/');
+        navigate('/admin');
       } else {
         // Login gagal
         setError('Username atau Password salah!');
