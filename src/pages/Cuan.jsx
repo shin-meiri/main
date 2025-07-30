@@ -507,7 +507,22 @@ const Cuan = () => {
             ➕ Tambah Data
           </button>
         </div>
-
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '5px' }}>
+            <div style={{ display: 'flex', gap: '20px', fontSize: '14px' }}>
+              <span style={{ color: '#dc3545' }}>
+                <strong>Pengeluaran:</strong> Rp {formatCurrency(totals.pengeluaran)}
+              </span>
+              <span style={{ color: '#28a745' }}>
+                <strong>Pemasukan:</strong> Rp {formatCurrency(totals.pemasukan)}
+              </span>
+              <span style={{ 
+                color: totals.dana >= 0 ? '#28a745' : '#dc3545',
+                fontWeight: 'bold'
+              }}>
+                <strong>Dana:</strong> Rp {formatCurrency(totals.dana)}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
         {/* Add New Row Form */}
         {addingRow && (
           <div style={{ 
