@@ -12,8 +12,10 @@ const Cuan = () => {
   const [editingData, setEditingData] = useState({});
   const [addingRow, setAddingRow] = useState(false);
   const [newData, setNewData] = useState({
-    masuk: '{"0":"N/A"}',
-    kluar: '{"0":"N/A"}',
+    dapat: '',
+    dari: '',
+    jumlah: '',
+    keperluan: '',
     time_stamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
   });
   const navigate = useNavigate();
@@ -69,27 +71,39 @@ const Cuan = () => {
     try {
       return JSON.parse(jsonString);
     } catch (e) {
-      return { "0": jsonString || "N/A" };
+      return { "0": "N/A" };
     }
   };
 
   // Format display data
   const formatDisplayData = (data) => {
-    return data.map((item, index) => ({
-      id: item.id,
-      masuk: parseJsonData(item.masuk),
-      kluar: parseJsonData(item.kluar),
-      time_stamp: item.time_stamp
-    }));
+    return data.map((item, index) => {
+      const masukData = parseJsonData(item.masuk);
+      const kluarData = parseJsonData(item.kluar);
+      
+      return {
+        id: item.id,
+        dapat: Object.keys(masukData)[0] || '0',
+        dari: Object.values(masukData)[0] || 'N/A',
+        jumlah: Object.keys(kluarData)[0] || '0',
+        keperluan: Object.values(kluarData)[0] || 'N/A',
+        time_stamp: item.time_stamp
+      };
+    });
   };
 
   // Start editing row
   const startEditingRow = (row) => {
     setEditingRow(row.id);
+    const masukData = parseJsonData(cuanData.find(d => d.id === row.id).masuk);
+    const kluarData = parseJsonData(cuanData.find(d => d.id === row.id).kluar);
+    
     setEditingData({
       id: row.id,
-      masuk: JSON.stringify(row.masuk),
-      kluar: JSON.stringify(row.kluar),
+      dapat: Object.keys(masukData)[0] || '',
+      dari: Object.values(masukData)[0] || '',
+      jumlah: Object.keys(kluarData)[0] || '',
+      keperluan: Object.values(kluarData)[0] || '',
       time_stamp: row.time_stamp
     });
   };
@@ -102,6 +116,10 @@ const Cuan = () => {
     setConnectionStatus('Menyimpan perubahan...');
 
     try {
+      // Format data sebagai JSON
+      const masukJson = editingData.dapat ? JSON.stringify({ [editingData.dapat]: editingData.dari }) : '{}';
+      const kluarJson = editingData.jumlah ? JSON.stringify({ [editingData.jumlah]: editingData.keperluan }) : '{}';
+
       const response = await axios.post('/api/cuan.php', {
         host: currentUser.host,
         dbname: currentUser.dbname,
@@ -109,8 +127,8 @@ const Cuan = () => {
         password: currentUser.password,
         action: 'update',
         id: editingData.id,
-        masuk: editingData.masuk,
-        kluar: editingData.kluar,
+        masuk: masukJson,
+        kluar: kluarJson,
         time_stamp: editingData.time_stamp
       });
 
@@ -155,8 +173,10 @@ const Cuan = () => {
   const startAddingRow = () => {
     setAddingRow(true);
     setNewData({
-      masuk: '{"0":"N/A"}',
-      kluar: '{"0":"N/A"}',
+      dapat: '',
+      dari: '',
+      jumlah: '',
+      keperluan: '',
       time_stamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
     });
   };
@@ -165,26 +185,37 @@ const Cuan = () => {
   const cancelAdding = () => {
     setAddingRow(false);
     setNewData({
-      masuk: '{"0":"N/A"}',
-      kluar: '{"0":"N/A"}',
+      dapat: '',
+      dari: '',
+      jumlah: '',
+      keperluan: '',
       time_stamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
     });
   };
 
   // Save new row
   const saveNewRow = async () => {
+    if (!newData.dapat && !newData.jumlah) {
+      setConnectionStatus('❌ Minimal masukkan data masuk atau keluar!');
+      return;
+    }
+
     setLoading(true);
     setConnectionStatus('Menyimpan data baru...');
 
     try {
+      // Format data sebagai JSON
+      const masukJson = newData.dapat ? JSON.stringify({ [newData.dapat]: newData.dari }) : '{}';
+      const kluarJson = newData.jumlah ? JSON.stringify({ [newData.jumlah]: newData.keperluan }) : '{}';
+
       const response = await axios.post('/api/cuan.php', {
         host: currentUser.host,
         dbname: currentUser.dbname,
         username: currentUser.username,
         password: currentUser.password,
         action: 'insert',
-        masuk: newData.masuk,
-        kluar: newData.kluar,
+        masuk: masukJson,
+        kluar: kluarJson,
         time_stamp: newData.time_stamp
       });
 
@@ -192,8 +223,10 @@ const Cuan = () => {
         setConnectionStatus('✅ Data berhasil ditambahkan!');
         setAddingRow(false);
         setNewData({
-          masuk: '{"0":"N/A"}',
-          kluar: '{"0":"N/A"}',
+          dapat: '',
+          dari: '',
+          jumlah: '',
+          keperluan: '',
           time_stamp: new Date().toISOString().slice(0, 19).replace('T', ' ')
         });
         fetchData();
@@ -349,40 +382,72 @@ const Cuan = () => {
             borderRadius: '8px'
           }}>
             <h3 style={{ margin: '0 0 15px 0' }}>Tambah Data Baru</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '15px', marginBottom: '15px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>Masuk (JSON):</label>
-                <textarea
-                  value={newData.masuk}
-                  onChange={(e) => handleNewDataChange('masuk', e.target.value)}
+                <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>Dapat (Rp):</label>
+                <input
+                  type="text"
+                  value={newData.dapat}
+                  onChange={(e) => handleNewDataChange('dapat', e.target.value)}
                   style={{
                     width: '100%',
                     padding: '8px',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    fontSize: '12px',
-                    height: '80px'
+                    fontSize: '12px'
                   }}
-                  placeholder='{"15000":"Babe"}'
+                  placeholder="15000"
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>Keluar (JSON):</label>
-                <textarea
-                  value={newData.kluar}
-                  onChange={(e) => handleNewDataChange('kluar', e.target.value)}
+                <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>Dari:</label>
+                <input
+                  type="text"
+                  value={newData.dari}
+                  onChange={(e) => handleNewDataChange('dari', e.target.value)}
                   style={{
                     width: '100%',
                     padding: '8px',
                     border: '1px solid #ddd',
                     borderRadius: '4px',
-                    fontSize: '12px',
-                    height: '80px'
+                    fontSize: '12px'
                   }}
-                  placeholder='{"15000":"beli bbm"}'
+                  placeholder="babe"
                 />
               </div>
               <div>
+                <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>Jumlah (Rp):</label>
+                <input
+                  type="text"
+                  value={newData.jumlah}
+                  onChange={(e) => handleNewDataChange('jumlah', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '12px'
+                  }}
+                  placeholder="15000"
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>Keperluan:</label>
+                <input
+                  type="text"
+                  value={newData.keperluan}
+                  onChange={(e) => handleNewDataChange('keperluan', e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '12px'
+                  }}
+                  placeholder="beli bbm"
+                />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
                 <label style={{ display: 'block', fontSize: '12px', marginBottom: '5px' }}>Waktu:</label>
                 <input
                   type="text"
@@ -455,18 +520,10 @@ const Cuan = () => {
                 <React.Fragment key={row.id}>
                   <tr style={{ backgroundColor: index % 2 === 0 ? '#fff' : '#f8f9fa' }}>
                     <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>{row.id}</td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                      {Object.keys(row.masuk)[0] || '0'}
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                      {Object.values(row.masuk)[0] || 'N/A'}
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                      {Object.keys(row.kluar)[0] || '0'}
-                    </td>
-                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                      {Object.values(row.kluar)[0] || 'N/A'}
-                    </td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.dapat}</td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.dari}</td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.jumlah}</td>
+                    <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.keperluan}</td>
                     <td style={{ border: '1px solid #ddd', padding: '8px' }}>{row.time_stamp}</td>
                     <td style={{ border: '1px solid #ddd', padding: '8px', textAlign: 'center' }}>
                       <button
@@ -507,48 +564,79 @@ const Cuan = () => {
                       <td colSpan="7" style={{ padding: '0', border: '1px solid #007bff' }}>
                         <div style={{ padding: '15px', backgroundColor: '#e3f2fd' }}>
                           <h3>Edit Record</h3>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '15px' }}>
                             <div>
-                              <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px' }}>Masuk (JSON):</label>
-                              <textarea
-                                value={editingData.masuk || ''}
-                                onChange={(e) => handleInputChange('masuk', e.target.value)}
+                              <label style={{ display: 'block', fontSize: '11px', marginBottom: '3px' }}>Dapat (Rp):</label>
+                              <input
+                                type="text"
+                                value={editingData.dapat || ''}
+                                onChange={(e) => handleInputChange('dapat', e.target.value)}
                                 style={{
                                   width: '100%',
-                                  padding: '8px',
+                                  padding: '6px',
                                   border: '1px solid #ddd',
-                                  borderRadius: '4px',
-                                  fontSize: '12px',
-                                  height: '80px'
+                                  borderRadius: '3px',
+                                  fontSize: '12px'
                                 }}
                               />
                             </div>
                             <div>
-                              <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px' }}>Keluar (JSON):</label>
-                              <textarea
-                                value={editingData.kluar || ''}
-                                onChange={(e) => handleInputChange('kluar', e.target.value)}
+                      
+                              <label style={{ display: 'block', fontSize: '11px', marginBottom: '3px' }}>Dari:</label>
+                              <input
+                                type="text"
+                                value={editingData.dari || ''}
+                                onChange={(e) => handleInputChange('dari', e.target.value)}
                                 style={{
                                   width: '100%',
-                                  padding: '8px',
+                                  padding: '6px',
                                   border: '1px solid #ddd',
-                                  borderRadius: '4px',
-                                  fontSize: '12px',
-                                  height: '80px'
+                                  borderRadius: '3px',
+                                  fontSize: '12px'
                                 }}
                               />
                             </div>
                             <div>
-                              <label style={{ display: 'block', fontSize: '12px', marginBottom: '3px' }}>Waktu:</label>
+                              <label style={{ display: 'block', fontSize: '11px', marginBottom: '3px' }}>Jumlah (Rp):</label>
+                              <input
+                                type="text"
+                                value={editingData.jumlah || ''}
+                                onChange={(e) => handleInputChange('jumlah', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '6px',
+                                  border: '1px solid #ddd',
+                                  borderRadius: '3px',
+                                  fontSize: '12px'
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: '11px', marginBottom: '3px' }}>Keperluan:</label>
+                              <input
+                                type="text"
+                                value={editingData.keperluan || ''}
+                                onChange={(e) => handleInputChange('keperluan', e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '6px',
+                                  border: '1px solid #ddd',
+                                  borderRadius: '3px',
+                                  fontSize: '12px'
+                                }}
+                              />
+                            </div>
+                            <div style={{ gridColumn: 'span 2' }}>
+                              <label style={{ display: 'block', fontSize: '11px', marginBottom: '3px' }}>Waktu:</label>
                               <input
                                 type="text"
                                 value={editingData.time_stamp || ''}
                                 onChange={(e) => handleInputChange('time_stamp', e.target.value)}
                                 style={{
                                   width: '100%',
-                                  padding: '8px',
+                                  padding: '6px',
                                   border: '1px solid #ddd',
-                                  borderRadius: '4px',
+                                  borderRadius: '3px',
                                   fontSize: '12px'
                                 }}
                               />
@@ -564,4 +652,45 @@ const Cuan = () => {
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '4px',
-                                fontSiz
+                                fontSize: '12px',
+                                cursor: loading ? 'not-allowed' : 'pointer'
+                              }}
+                            >
+                              {loading ? 'Saving...' : 'Save'}
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              style={{
+                                padding: '6px 12px',
+                                backgroundColor: '#6c757d',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {formattedData.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '50px', color: '#666' }}>
+            Tidak ada data cuan
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Cuan;
