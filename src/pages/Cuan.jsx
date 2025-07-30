@@ -29,7 +29,7 @@ const Cuan = () => {
 
     try {
       // Mengambil data dari database MySQL
-      const response = await axios.post('/api/get-cuan-data.php', {
+      const response = await axios.post('/api/cuan.php', {
         host: currentUser.host,
         dbname: currentUser.dbname,
         username: currentUser.username,
