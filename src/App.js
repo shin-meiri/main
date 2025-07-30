@@ -5,6 +5,7 @@ import Pages from './pages/Pages';
 import Login from './pages/Login';
 import Connect from './pages/Connect';
 import Cuan from './pages/Cuan';
+import Cuan from './pages/Post';
 
 const App = () => {
   return (
@@ -14,6 +15,7 @@ const App = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/connect" element={<Connect />} />
         <Route path="/cuan" element={<Cuan />} />
+        <Route path="/" element={<Post />} />
       </Routes>
     </Router>
   );
