@@ -1,5 +1,5 @@
 // src/pages/Cuan.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
@@ -22,14 +22,10 @@ const Cuan = () => {
     }
   }, [navigate]);
 
-  // Fetch data cuan dari API
-  useEffect(() => {
-    if (currentUser) {
-      fetchData();
-    }
-  }, [currentUser]);
-
-  const fetchData = async () => {
+  // Fetch data cuan dari API - menggunakan useCallback
+  const fetchData = useCallback(async () => {
+    if (!currentUser) return;
+    
     setLoading(true);
     setConnectionStatus('Mengambil data cuan...');
 
@@ -52,7 +48,14 @@ const Cuan = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
+
+  // Fetch data ketika user berubah
+  useEffect(() => {
+    if (currentUser) {
+      fetchData();
+    }
+  }, [currentUser, fetchData]);
 
   // Parse JSON data
   const parseJsonData = (jsonString) => {
