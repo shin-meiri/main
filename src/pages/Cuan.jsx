@@ -48,7 +48,7 @@ const Cuan = () => {
         setCuanData(response.data.data || []);
         setConnectionStatus(`✅ Menampilkan ${response.data.data?.length || 0} data cuan`);
       } else {
-        setConnectionStatus(`❌ Gagal mengambil data: ${response.data.error}`);
+        setConnectionStatus(`❌ Gagal mengambil  ${response.data.error}`);
       }
     } catch (err) {
       setConnectionStatus(`❌ Error: ${err.response?.data?.error || err.message}`);
@@ -64,55 +64,7 @@ const Cuan = () => {
       fetchData();
     }
   }, [currentUser, fetchData]);
-  // Save new row
-  const saveNewRow = async () => {
-    if (!currentUser || (!formData.masuk && !formData.kluar)) {
-      setConnectionStatus('❌ Minimal masukkan masuk atau keluar!');
-      return;
-    }
 
-    setLoading(true);
-    setConnectionStatus('Menyimpan data baru...');
-
-    try {
-      // Format data sebagai JSON
-      const masukJson = formData.masuk ? JSON.stringify({ [formData.masuk]: formData.dari || 'N/A' }) : '{}';
-      const kluarJson = formData.kluar ? JSON.stringify({ [formData.kluar]: formData.keperluan || 'N/A' }) : '{}';
-
-      const response = await axios.post('/api/insert-cuan.php', {
-        host: currentUser.host,
-        dbname: currentUser.dbname,
-        username: currentUser.username,
-        password: currentUser.password,
-        masuk: masukJson,
-        kluar: kluarJson
-      });
-
-      console.log('Response:', response.data); // Debug log
-
-      if (response.data && response.data.success) {
-        setConnectionStatus('✅ Data berhasil disimpan!');
-        setAddingRow(false);
-        setFormData({
-          masuk: '',
-          dari: '',
-          kluar: '',
-          keperluan: ''
-        });
-        fetchData();
-      } else {
-        const errorMessage = response.data?.error || 'Unknown error';
-        setConnectionStatus(`❌ Gagal menyimpan  ${errorMessage}`);
-      }
-    } catch (err) {
-      const errorMessage = err.response?.data?.error || err.response?.data || err.message || 'Unknown error';
-      setConnectionStatus(`❌ Error menyimpan data: ${errorMessage}`);
-      console.error('Save error:', err);
-      console.error('Error response:', err.response?.data);
-    } finally {
-      setLoading(false);
-    }
-  };
   // Format data sesuai dengan permintaan
   const formatCuanData = (data) => {
     return data.map((item, index) => {
@@ -134,10 +86,8 @@ const Cuan = () => {
 
       return {
         No: index + 1,
-        Masuk: masukData,
-        Dari: Object.values(masukData)[0] || 'N/A',
-        Kluar: kluarData,
-        Keperluan: Object.values(kluarData)[0] || 'N/A',
+        Dari: masukData,
+        Keperluan: kluarData,
         Waktu: item.time_stamp || ''
       };
     });
@@ -185,8 +135,8 @@ const Cuan = () => {
 
     try {
       // Format data sebagai JSON
-      const masukJson = formData.masuk ? JSON.stringify({ [formData.masuk]: formData.dari }) : '{}';
-      const kluarJson = formData.kluar ? JSON.stringify({ [formData.kluar]: formData.keperluan }) : '{}';
+      const masukJson = formData.masuk ? JSON.stringify({ [formData.masuk]: formData.dari || 'N/A' }) : '{}';
+      const kluarJson = formData.kluar ? JSON.stringify({ [formData.kluar]: formData.keperluan || 'N/A' }) : '{}';
 
       const response = await axios.post('/api/insert-cuan.php', {
         host: currentUser.host,
@@ -197,7 +147,9 @@ const Cuan = () => {
         kluar: kluarJson
       });
 
-      if (response.data.success) {
+      console.log('Response:', response.data); // Debug log
+
+      if (response.data && response.data.success) {
         setConnectionStatus('✅ Data berhasil disimpan!');
         setAddingRow(false);
         setFormData({
@@ -208,10 +160,14 @@ const Cuan = () => {
         });
         fetchData();
       } else {
-        setConnectionStatus(`❌ Gagal menyimpan data: ${response.data.error}`);
+        const errorMessage = response.data?.error || 'Unknown error';
+        setConnectionStatus(`❌ Gagal menyimpan  ${errorMessage}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error menyimpan  ${err.response?.data?.error || err.message}`);
+      const errorMessage = err.response?.data?.error || err.response?.data || err.message || 'Unknown error';
+      setConnectionStatus(`❌ Error menyimpan  ${errorMessage}`);
+      console.error('Save error:', err);
+      console.error('Error response:', err.response?.data);
     } finally {
       setLoading(false);
     }
@@ -257,8 +213,8 @@ const Cuan = () => {
 
     try {
       // Format data sebagai JSON
-      const masukJson = formData.masuk ? JSON.stringify({ [formData.masuk]: formData.dari }) : '{}';
-      const kluarJson = formData.kluar ? JSON.stringify({ [formData.kluar]: formData.keperluan }) : '{}';
+      const masukJson = formData.masuk ? JSON.stringify({ [formData.masuk]: formData.dari || 'N/A' }) : '{}';
+      const kluarJson = formData.kluar ? JSON.stringify({ [formData.kluar]: formData.keperluan || 'N/A' }) : '{}';
 
       const response = await axios.post('/api/update-cuan.php', {
         host: currentUser.host,
@@ -270,7 +226,7 @@ const Cuan = () => {
         kluar: kluarJson
       });
 
-      if (response.data.success) {
+      if (response.data && response.data.success) {
         setConnectionStatus('✅ Data berhasil diupdate!');
         setEditingRow(null);
         setFormData({
@@ -281,10 +237,14 @@ const Cuan = () => {
         });
         fetchData();
       } else {
-        setConnectionStatus(`❌ Gagal mengupdate  ${response.data.error}`);
+        const errorMessage = response.data?.error || 'Unknown error';
+        setConnectionStatus(`❌ Gagal mengupdate  ${errorMessage}`);
       }
     } catch (err) {
-      setConnectionStatus(`❌ Error mengupdate  ${err.response?.data?.error || err.message}`);
+      const errorMessage = err.response?.data?.error || err.response?.data || err.message || 'Unknown error';
+      setConnectionStatus(`❌ Error mengupdate  ${errorMessage}`);
+      console.error('Update error:', err);
+      console.error('Error response:', err.response?.data);
     } finally {
       setLoading(false);
     }
@@ -321,14 +281,18 @@ const Cuan = () => {
           id: rowId
         });
 
-        if (response.data.success) {
+        if (response.data && response.data.success) {
           setConnectionStatus('✅ Data berhasil dihapus!');
           fetchData();
         } else {
-          setConnectionStatus(`❌ Gagal menghapus  ${response.data.error}`);
+          const errorMessage = response.data?.error || 'Unknown error';
+          setConnectionStatus(`❌ Gagal menghapus  ${errorMessage}`);
         }
       } catch (err) {
-        setConnectionStatus(`❌ Error menghapus  ${err.response?.data?.error || err.message}`);
+        const errorMessage = err.response?.data?.error || err.response?.data || err.message || 'Unknown error';
+        setConnectionStatus(`❌ Error menghapus  ${errorMessage}`);
+        console.error('Delete error:', err);
+        console.error('Error response:', err.response?.data);
       } finally {
         setLoading(false);
       }
@@ -460,7 +424,7 @@ const Cuan = () => {
 
       {/* Add New Row Form */}
       <div style={{ 
-        padding: '20px',
+        padding: '25px',
         backgroundColor: 'rgba(255, 255, 255, 0.05)',
         borderRadius: '15px',
         marginBottom: '30px',
@@ -470,7 +434,7 @@ const Cuan = () => {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
-          marginBottom: '20px'
+          marginBottom: '25px'
         }}>
           <h2 style={{ 
             margin: 0,
@@ -500,7 +464,7 @@ const Cuan = () => {
 
         {addingRow && (
           <div style={{ 
-            marginBottom: '20px',
+            marginBottom: '25px',
             padding: '20px',
             backgroundColor: 'rgba(255, 255, 255, 0.08)',
             border: '1px solid pink',
@@ -510,11 +474,11 @@ const Cuan = () => {
               margin: '0 0 20px 0',
               color: '#4ecdc4'
             }}>
-              Form Tambah Data
+              📝 Form Tambah Data
             </h3>
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gridTemplateColumns: `repeat(auto-fit, minmax(200px, 1fr))`,
               gap: '15px',
               marginBottom: '20px'
             }}>
@@ -627,8 +591,8 @@ const Cuan = () => {
                   padding: '10px 20px',
                   backgroundColor: loading ? '#555' : 'green',
                   color: loading ? '#888' : 'white',
-                  border: 'none',
-                  borderRadius: '25px',
+                  border: '1px solid green',
+                  borderRadius: '20px',
                   fontSize: '14px',
                   fontWeight: 'bold',
                   cursor: loading ? 'not-allowed' : 'pointer'
@@ -643,371 +607,267 @@ const Cuan = () => {
                   backgroundColor: '#666',
                   color: 'pink',
                   border: '1px solid pink',
-                  borderRadius: '25px',
+                  borderRadius: '20px',
                   fontSize: '14px',
                   fontWeight: 'bold',
                   cursor: 'pointer'
                 }}
               >
-                ❌ Batal
+                ❌ Cancel
               </button>
             </div>
           </div>
         )}
+      </div>
 
-        {/* Data Table */}
-        <div style={{ 
-          overflowX: 'auto',
-          maxHeight: '500px',
-          overflowY: 'auto',
-          borderRadius: '10px',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+      {/* Data Table */}
+      <div style={{ 
+        padding: '25px',
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderRadius: '15px',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <h2 style={{ 
+          textAlign: 'center', 
+          marginBottom: '25px',
+          color: '#4ecdc4',
+          fontSize: '1.8rem'
         }}>
-          <table style={{
-            width: '100%',
-            borderCollapse: 'collapse',
-            color: '#e0e0e0',
-            backgroundColor: 'rgba(26, 26, 46, 0.8)'
+          📈 Data Cuan ({formattedData.length} records)
+        </h2>
+        
+        {formattedData.length === 0 ? (
+          <div style={{ 
+            textAlign: 'center', 
+            padding: '50px',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '10px',
+            border: '2px dashed #e1e5e9'
           }}>
-            <thead>
-              <tr>
-                <th style={{
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  padding: '12px',
-                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                  textAlign: 'center',
-                  position: 'sticky',
-                  top: 0
-                }}>
-                  No
-                </th>
-                <th style={{
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  padding: '12px',
-                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                  textAlign: 'left',
-                  position: 'sticky',
-                  top: 0
-                }}>
-                  Masuk
-                </th>
-                <th style={{
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  padding: '12px',
-                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                  textAlign: 'left',
-                  position: 'sticky',
-                  top: 0
-                }}>
-                  Dari
-                </th>
-                <th style={{
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  padding: '12px',
-                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                  textAlign: 'left',
-                  position: 'sticky',
-                  top: 0
-                }}>
-                  Keluar
-                </th>
-                <th style={{
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  padding: '12px',
-                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                  textAlign: 'left',
-                  position: 'sticky',
-                  top: 0
-                }}>
-                  Keperluan
-                </th>
-                <th style={{
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  padding: '12px',
-                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                  textAlign: 'left',
-                  position: 'sticky',
-                  top: 0
-                }}>
-                  Waktu
-                </th>
-                <th style={{
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  padding: '12px',
-                  backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                  textAlign: 'center',
-                  position: 'sticky',
-                  top: 0
-                }}>
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {formattedData.map((item, index) => (
-                <React.Fragment key={index}>
-                  <tr 
-                    style={{
-                      backgroundColor: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)'
-                    }}
-                  >
-                    <td style={{
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '10px',
-                      textAlign: 'center'
-                    }}>
-                      {item.No}
-                    </td>
-                    <td style={{
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '10px'
-                    }}>
-                      {Object.keys(item.Masuk)[0] || '0'}
-                    </td>
-                    <td style={{
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '10px'
-                    }}>
-                      {item.Dari}
-                    </td>
-                    <td style={{
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '10px'
-                    }}>
-                      {Object.keys(item.Kluar)[0] || '0'}
-                    </td>
-                    <td style={{
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '10px'
-                    }}>
-                      {item.Keperluan}
-                    </td>
-                    <td style={{
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '10px'
-                    }}>
-                      {item.Waktu}
-                    </td>
-                    <td style={{
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      padding: '10px',
-                      textAlign: 'center'
-                    }}>
-                      <button
-                        onClick={() => startEditing(cuanData[index])}
-                        style={{
-                          padding: '5px 10px',
-                          backgroundColor: 'rgba(78, 205, 196, 0.2)',
-                          color: '#4ecdc4',
-                          border: '1px solid #4ecdc4',
-                          borderRadius: '15px',
-                          fontSize: '11px',
-                          cursor: 'pointer',
-                          marginRight: '5px'
-                        }}
-                      >
-                        ✏️
-                      </button>
-                      <button
-                        onClick={() => deleteRow(cuanData[index].id)}
-                        style={{
-                          padding: '5px 10px',
-                          backgroundColor: 'rgba(255, 107, 107, 0.2)',
-                          color: '#ff6b6b',
-                          border: '1px solid #ff6b6b',
-                          borderRadius: '15px',
-                          fontSize: '11px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🗑️
-                      </button>
-                    </td>
-                  </tr>
-
-                  {/* Edit form row - muncul di bawah baris yang diklik */}
-                  {editingRow === cuanData[index].id && (
-                    <tr>
-                      <td 
-                        colSpan="7"
-                        style={{
-                          padding: '0',
-                          border: '1px solid rgba(255, 217, 61, 0.5)',
-                          backgroundColor: 'rgba(255, 217, 61, 0.1)'
-                        }}
-                      >
-                        <div style={{ 
-                          padding: '20px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                          borderRadius: '0 0 8px 8px'
-                        }}>
-                          <h3 style={{ 
-                            margin: '0 0 15px 0',
-                            color: '#ffd93d'
-                          }}>
-                            🛠️ Edit Record
-                          </h3>
-                          <div style={{ 
-                            display: 'grid', 
-                            gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
-                            gap: '10px',
-                            marginBottom: '15px'
-                          }}>
-                            <div>
-                              <label style={{ 
-                                display: 'block', 
-                                fontSize: '11px', 
-                                marginBottom: '3px',
-                                color: '#a0a0c0'
-                              }}>
-                                Masuk (Rp)
-                              </label>
-                              <input
-                                type="text"
-                                value={formData.masuk}
-                                onChange={(e) => handleInputChange('masuk', e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  color: '#fff',
-                                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                                  borderRadius: '6px',
-                                  fontSize: '12px'
-                                }}
-                                placeholder="15000"
-                              />
-                            </div>
-                            <div>
-                              <label style={{ 
-                                display: 'block', 
-                                fontSize: '11px', 
-                                marginBottom: '3px',
-                                color: '#a0a0c0'
-                              }}>
-                                Dari
-                              </label>
-                              <input
-                                type="text"
-                                value={formData.dari}
-                                onChange={(e) => handleInputChange('dari', e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  color: '#fff',
-                                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                                  borderRadius: '6px',
-                                  fontSize: '12px'
-                                }}
-                                placeholder="babe"
-                              />
-                            </div>
-                            <div>
-                              <label style={{ 
-                                display: 'block', 
-                                fontSize: '11px', 
-                                marginBottom: '3px',
-                                                      color: '#a0a0c0'
-                              }}>
-                                Keluar (Rp)
-                              </label>
-                              <input
-                                type="text"
-                                value={formData.kluar}
-                                onChange={(e) => handleInputChange('kluar', e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  color: '#fff',
-                                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                                  borderRadius: '6px',
-                                  fontSize: '12px'
-                                }}
-                                placeholder="15000"
-                              />
-                            </div>
-                            <div>
-                              <label style={{ 
-                                display: 'block', 
-                                fontSize: '11px', 
-                                marginBottom: '3px',
-                                color: '#a0a0c0'
-                              }}>
-                                Keperluan
-                              </label>
-                              <input
-                                type="text"
-                                value={formData.keperluan}
-                                onChange={(e) => handleInputChange('keperluan', e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                                  color: '#fff',
-                                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                                  borderRadius: '6px',
-                                  fontSize: '12px'
-                                }}
-                                placeholder="beli bbm"
-                              />
-                            </div>
+            <div style={{ 
+              fontSize: '3rem',
+              marginBottom: '15px',
+              color: '#ccc'
+            }}>📭</div>
+            <div style={{ 
+              fontSize: '1.2rem',
+              color: '#666'
+            }}>Belum ada data cuan</div>
+          </div>
+        ) : (
+          <div style={{ 
+            overflowX: 'auto',
+            maxHeight: '500px',
+            overflowY: 'auto',
+            borderRadius: '10px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
+            <table style={{
+              width: '100%',
+              borderCollapse: 'collapse',
+              color: '#e0e0e0',
+              backgroundColor: 'rgba(26, 26, 46, 0.8)'
+            }}>
+              <thead>
+                <tr>
+                  <th style={{
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    padding: '15px',
+                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                    textAlign: 'center',
+                    position: 'sticky',
+                    top: 0
+                  }}>
+                    No
+                  </th>
+                  <th style={{
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    padding: '15px',
+                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                    textAlign: 'left',
+                    position: 'sticky',
+                    top: 0
+                  }}>
+                    Dari
+                  </th>
+                  <th style={{
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    padding: '15px',
+                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                    textAlign: 'left',
+                    position: 'sticky',
+                    top: 0
+                  }}>
+                    Keperluan
+                  </th>
+                  <th style={{
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    padding: '15px',
+                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                    textAlign: 'left',
+                    position: 'sticky',
+                    top: 0
+                  }}>
+                    Waktu
+                  </th>
+                  <th style={{
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    padding: '15px',
+                    backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                    textAlign: 'center',
+                    position: 'sticky',
+                    top: 0
+                  }}>
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {formattedData.map((item, index) => (
+                  <React.Fragment key={index}>
+                    <tr 
+                      style={{
+                        backgroundColor: index % 2 === 0 ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)'
+                      }}
+                    >
+                      <td style={{
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: '12px',
+                        textAlign: 'center'
+                      }}>
+                        {item.No}
+                      </td>
+                      <td style={{
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: '12px'
+                      }}>
+                        {Object.entries(item.Dari).map(([amount, source], i) => (
+                          <div key={i} style={{ marginBottom: '5px' }}>
+                            <span style={{ fontWeight: 'bold', color: '#4ecdc4' }}>
+                              {amount}:
+                            </span>{' '}
+                            <span style={{ color: '#a0a0c0' }}>
+                              {source}
+                            </span>
                           </div>
-                          <div style={{ display: 'flex', gap: '10px' }}>
-                            <button
-                              onClick={saveEditedRow}
-                              disabled={loading}
-                              style={{
-                                padding: '6px 12px',
-                                backgroundColor: loading ? '#555' : 'green',
-                                color: loading ? '#888' : '#4CAF50',
-                                border: '1px solid #4CAF50',
-                                borderRadius: '20px',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                cursor: loading ? 'not-allowed' : 'pointer'
-                              }}
-                            >
-                              {loading ? '💾 Saving...' : '💾 Save'}
-                            </button>
-                            <button
-                              onClick={cancelEditing}
-                              style={{
-                                padding: '6px 12px',
-                                backgroundColor: '#666',
-                                color: 'pink',
-                                border: '1px solid pink',
-                                borderRadius: '20px',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              ❌ Cancel
-                            </button>
+                        ))}
+                      </td>
+                      <td style={{
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: '12px'
+                      }}>
+                        {Object.entries(item.Keperluan).map(([amount, purpose], i) => (
+                          <div key={i} style={{ marginBottom: '5px' }}>
+                            <span style={{ fontWeight: 'bold', color: '#ff6b6b' }}>
+                              {amount}:
+                            </span>{' '}
+                            <span style={{ color: '#a0a0c0' }}>
+                              {purpose}
+                            </span>
                           </div>
-                        </div>
+                        ))}
+                      </td>
+                      <td style={{
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: '12px'
+                      }}>
+                        {item.Waktu}
+                      </td>
+                      <td style={{
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: '12px',
+                        textAlign: 'center'
+                      }}>
+                        <button
+                          onClick={() => startEditing(cuanData[index])}
+                          style={{
+                            padding: '5px 10px',
+                            backgroundColor: 'rgba(78, 205, 196, 0.2)',
+                            color: '#4ecdc4',
+                            border: '1px solid #4ecdc4',
+                            borderRadius: '15px',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            marginRight: '5px'
+                          }}
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => deleteRow(cuanData[index].id)}
+                          style={{
+                            padding: '5px 10px',
+                            backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                            color: '#ff6b6b',
+                            border: '1px solid #ff6b6b',
+                            borderRadius: '15px',
+                            fontSize: '11px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          🗑️
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        <div style={{ 
-          marginTop: '10px', 
-          textAlign: 'center', 
-          fontSize: '14px', 
-          color: '#a0a0c0' 
-        }}>
-          Menampilkan {formattedData.length} baris data
-        </div>
-      </div>
-    </div>
-  );
-};
 
-export default Cuan;
+                    {/* Edit form row - muncul di bawah baris yang diklik */}
+                    {editingRow === cuanData[index].id && (
+                      <tr>
+                        <td 
+                          colSpan="5"
+                          style={{
+                            padding: '0',
+                            border: '1px solid rgba(255, 217, 61, 0.5)',
+                            backgroundColor: 'rgba(255, 217, 61, 0.1)'
+                          }}
+                        >
+                          <div style={{ 
+                            padding: '20px',
+                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                            borderRadius: '0 0 8px 8px'
+                          }}>
+                            <h3 style={{ 
+                              margin: '0 0 15px 0',
+                              color: '#ffd93d'
+                            }}>
+                              🛠️ Edit Record
+                            </h3>
+                            <div style={{ 
+                              display: 'grid', 
+                              gridTemplateColumns: `repeat(auto-fit, minmax(150px, 1fr))`,
+                              gap: '10px',
+                              marginBottom: '15px'
+                            }}>
+                              <div>
+                                <label style={{ 
+                                  display: 'block', 
+                                  fontSize: '11px', 
+                                  marginBottom: '3px',
+                                  color: '#a0a0c0'
+                                }}>
+                                  Masuk (Rp)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={formData.masuk}
+                                  onChange={(e) => handleInputChange('masuk', e.target.value)}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    color: '#fff',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    borderRadius: '6px',
+                                    fontSize: '12px'
+                                  }}
+                                  placeholder="15000"
+                                />
+                              </div>
+                              <div>
+                                <label style={{ 
+                                  display: 'block', 
+                                  fontSize: '11px', 
+                                  marginBottom: '3px',
+                                  color: '#a0a0c0'
+                                }}>
+     
