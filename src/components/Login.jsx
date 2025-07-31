@@ -58,3 +58,48 @@ function Login() {
 }
 
 // ... styles tetap sama
+const styles = {
+  container: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 'calc(100vh - 120px)',
+    backgroundColor: '#f4f6f9',
+    padding: '20px',
+  },
+  formBox: {
+    backgroundColor: 'white',
+    padding: '40px',
+    borderRadius: '10px',
+    boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+    width: '300px',
+    textAlign: 'center',
+  },
+  input: {
+    width: '100%',
+    padding: '12px',
+    margin: '10px 0',
+    border: '1px solid #ccc',
+    borderRadius: '5px',
+    fontSize: '16px',
+    boxSizing: 'border-box',
+  },
+  button: {
+    padding: '12px 20px',
+    backgroundColor: '#007bff',
+    color: 'white',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    fontSize: '16px',
+    width: '100%',
+    marginTop: '10px',
+  },
+  error: {
+    color: 'red',
+    marginTop: '10px',
+    fontSize: '14px',
+  },
+};
+
+export default Login;
