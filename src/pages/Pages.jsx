@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import axios from 'axios';
-import Login from '../admin/Login';  // ← di-import dan DIPAKAI
 
 const Pages = () => {
   const [style, setStyle] = useState({});
@@ -14,8 +13,24 @@ const Pages = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<div style={style}>Home</div>} />
-      <Route path="/login" element={<Login />} />  {/* ← DIGUNAKAN DI SINI */}
+      <Route path="/" element={
+        <div style={style}>
+          <h1>Halaman Utama</h1>
+          <p>Ini halaman home dengan style dari MySQL.</p>
+        </div>
+      } />
+      <Route path="/about" element={
+        <div style={style}>
+          <h1>Tentang Kami</h1>
+          <p>Kami adalah aplikasi dinamis.</p>
+        </div>
+      } />
+      <Route path="/contact" element={
+        <div style={style}>
+          <h1>Kontak</h1>
+          <p>Email: info@app.com</p>
+        </div>
+      } />
     </Routes>
   );
 };
