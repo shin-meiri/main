@@ -6,13 +6,13 @@ import Pages from './pages/Pages';
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Header />
       <main>
         <Pages />
       </main>
       <Footer />
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
