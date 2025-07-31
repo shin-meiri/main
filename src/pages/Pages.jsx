@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import axios from 'axios';  // ← BARIS INI YANG KAMU LUPA!
 
 const Pages = () => {
   const [style, setStyle] = useState({});
