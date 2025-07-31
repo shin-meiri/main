@@ -8,8 +8,8 @@ function Login() {
   const navigate = useNavigate();
 
   // 🔐 Username dan password disimpan di sini (bisa diganti)
-  const validUsername = 'admin';
-  const validPassword = '1234';
+  const validUsername = 'root';
+  const validPassword = '12348765';
 
   const handleLogin = (e) => {
     e.preventDefault();
