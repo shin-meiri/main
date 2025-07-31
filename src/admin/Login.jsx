@@ -1,44 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const Login = () => {
   const [input, setInput] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [style, setStyle] = useState({});
+  const [hover, setHover] = useState(false);
+
+  useEffect(() => {
+    axios.get('/api/get-css.php')
+      .then(res => setStyle(res.data.login || {}))
+      .catch(() => setStyle({}));
+  }, []);
 
   const handleChange = (e) => {
     setInput({ ...input, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
-    try {
-      const res = await axios.post('/api/login.php', input);
-      if (res.data.success) {
-        setSuccess('Login berhasil!');
-        localStorage.setItem('user', res.data.username);
-        setTimeout(() => { window.location.href = '#/'; }, 1000);
-      } else {
-        setError(res.data.message);
-      }
-    } catch {
-      setError('Gagal koneksi');
-    }
+    // Proses login
   };
 
+  if (!style.form) return <div>Memuat...</div>;
+
   return (
-    <div style={{ padding: '40px' }}>
-      <h2>Login</h2>
+    <div style={style.form}>
+      <h2 style={style.title}>Masuk</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
-      {success && <p style={{ color: 'green' }}>{success}</p>}
       <form onSubmit={handleSubmit}>
-        <input name="username" placeholder="Username" value={input.username} onChange={handleChange} required style={{ padding: '8px', margin: '5px 0', width: '100%', display: 'block' }} />
-        <input name="password" type="password" placeholder="Password" value={input.password} onChange={handleChange} required style={{ padding: '8px', margin: '5px 0', width: '100%', display: 'block' }} />
-        <button type="submit" style={{ padding: '10px 20px', margin: '10px 0' }}>Login</button>
+        <input
+          name="username"
+          placeholder="Username"
+          value={input.username}
+          onChange={handleChange}
+          style={style.input}
+          required
+        />
+        <input
+          name="password"
+          type="password"
+          placeholder="Password"
+          value={input.password}
+          onChange={handleChange}
+          style={style.input}
+          required
+        />
+        <button
+          type="submit"
+          style={hover ? { ...style.button, ...style.buttonHover } : style.button}
+          onMouseEnter={() => setHover(true)}
+          onMouseLeave={() => setHover(false)}
+        >
+          Login
+        </button>
       </form>
-      <p><a href="#/">Kembali</a></p>
+      <a href="#/" style={style.link}>Kembali ke Beranda</a>
     </div>
   );
 };
