@@ -7,14 +7,10 @@ const Footer = () => {
   useEffect(() => {
     axios.get('/api/get-css.php')
       .then(res => setStyle(res.data.footer || {}))
-      .catch(() => setStyle({}));
+      .catch(() => setStyle({ textAlign: 'center', padding: '10px' }));
   }, []);
 
-  return (
-    <footer style={style}>
-      &copy; 2025 Aplikasi Dinamis
-    </footer>
-  );
+  return <footer style={style}>&copy; 2025 Aplikasi</footer>;
 };
 
 export default Footer;
