@@ -7,14 +7,14 @@ const Pages = () => {
   useEffect(() => {
     axios.get('/api/get-css.php')
       .then(res => setStyle(res.data.body || {}))
-      .catch(() => setStyle({}));
+      .catch(() => setStyle({ padding: '20px' }));
   }, []);
 
   return (
     <div style={style}>
       <h1>Halaman Utama</h1>
-      <p>Selamat datang di aplikasi dinamis.</p>
-      <p><a href="#/login">Masuk di sini</a></p>
+      <p>Selamat datang di aplikasi.</p>
+      <p><a href="#/login">Login di sini</a></p>
     </div>
   );
 };
