@@ -14,7 +14,7 @@ const Login = () => {
     setMessage('');
 
     try {
-      const response = await axios.post('https://namakamu.infinityfreeapp.com/api/login.php', {
+      const response = await axios.post('https://bos.free.nf/api/login.php', {
         username,
         password,
       });
