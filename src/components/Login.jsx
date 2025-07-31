@@ -10,7 +10,7 @@ const Login = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch('https://your-site.000webhostapp.com/api/login.php', {
+      const response = await fetch('https://bos.free.nf/api/login.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
