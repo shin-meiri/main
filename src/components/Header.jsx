@@ -3,7 +3,7 @@ function Header() {
     <header style={styles.header}>
       <h1>🔐 SecureApp</h1>
       <nav>
-        <a href="#/" style={styles.navLink}>Home</a>
+        {/* Hanya satu link: Beranda */}
         <a href="#/dashboard" style={styles.navLink}>Beranda</a>
       </nav>
     </header>
