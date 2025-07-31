@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import axios from 'axios';  // ← BARIS INI YANG KAMU LUPA!
-import Login from '../admin/Login';
 
 const Pages = () => {
   const [style, setStyle] = useState({});
