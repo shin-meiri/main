@@ -12,7 +12,7 @@ function Login() {
     setMessage(''); // Reset pesan
 
     try {
-      const response = await fetch('https://namakamu.000webhostapp.com/api/login.php', {
+      const response = await fetch('https://bos.free.nf/api/login.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
