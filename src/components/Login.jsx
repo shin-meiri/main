@@ -1,6 +1,6 @@
 // Login.jsx
 import React, { useState } from 'react';
-import axios from 'axios';  // Import axios
+import axios from 'axios';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -13,8 +13,11 @@ const Login = () => {
     setLoading(true);
     setMessage('');
 
+    // 🔁 GANTI INI DENGAN DOMAIN KAMU YANG BENAR
+    const API_URL = 'https://namakamu.infinityfreeapp.com/api/login.php';
+
     try {
-      const response = await axios.post('https://bos.free.nf/api/login.php', {
+      const response = await axios.post(API_URL, {
         username,
         password,
       });
@@ -22,20 +25,21 @@ const Login = () => {
       if (response.data.success) {
         setMessage('✅ Login berhasil!');
       } else {
-        setMessage('❌ ' + response.data.message);
+        setMessage('❌ ' + (response.data.message || 'Login gagal'));
       }
     } catch (error) {
+      // 🔍 Debug error secara detail
       if (error.response) {
-        // Server merespons dengan status selain 2xx
-        setMessage(`❌ Error: ${error.response.data.message || 'Gagal login'}`);
+        // Server merespons tapi error (4xx, 5xx)
+        setMessage(`❌ Server error: ${error.response.status} - ${error.response.data.message || 'Gagal login'}`);
       } else if (error.request) {
-        // Tidak ada respons dari server (timeout, URL salah, dll)
-        setMessage('❌ Tidak bisa terhubung ke server. Cek URL atau koneksi.');
+        // Tidak ada respons sama sekali (timeout, network)
+        setMessage('❌ Tidak bisa terhubung ke server. Cek URL atau koneksi internet.');
+        console.log('Request:', error.request);
       } else {
         // Kesalahan lain
-        setMessage('❌ Kesalahan: ' + error.message);
+        setMessage('❌ Error: ' + error.message);
       }
-      console.error('Axios error:', error);
     } finally {
       setLoading(false);
     }
@@ -43,7 +47,7 @@ const Login = () => {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-      <h2>Login (Axios)</h2>
+      <h2>Login dengan Axios</h2>
       <form onSubmit={handleLogin}>
         <div style={{ margin: '10px 0' }}>
           <label>Username:</label>
@@ -66,14 +70,14 @@ const Login = () => {
           />
         </div>
         <button type="submit" disabled={loading}>
-          {loading ? 'Loading...' : 'Login'}
+          {loading ? 'Mengirim...' : 'Login'}
         </button>
       </form>
       {message && (
         <p
           style={{
-            color: message.includes('berhasil') ? 'green' : 'red',
             marginTop: '10px',
+            color: message.includes('berhasil') ? 'green' : 'red',
             fontWeight: 'bold',
           }}
         >
