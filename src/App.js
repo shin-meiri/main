@@ -1,21 +1,19 @@
 import React from 'react';
+import { BrowserRouter } from 'react-router-dom';
 import Header from './pages/Header';
 import Footer from './pages/Footer';
 import Pages from './pages/Pages';
-import { BrowserRouter } from 'react-router-dom';
-import Login from './admin/Login';
 
-const App = () => {
+function App() {
   return (
     <BrowserRouter>
       <Header />
       <main>
         <Pages />
       </main>
-<Route path="/login" element={<Login />} />
       <Footer />
     </BrowserRouter>
   );
-};
+}
 
 export default App;
