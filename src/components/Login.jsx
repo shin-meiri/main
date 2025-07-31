@@ -14,7 +14,7 @@ const Login = () => {
     setMessage('');
 
     // 🔁 GANTI INI DENGAN DOMAIN KAMU YANG BENAR
-    const API_URL = 'https://namakamu.infinityfreeapp.com/api/login.php';
+    const API_URL = 'https://bos.free.nf/api/login.php';
 
     try {
       const response = await axios.post(API_URL, {
