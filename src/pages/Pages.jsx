@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import axios from 'axios';
-import Login from './admin/Login';  // ← di-import dan DIPAKAI
+import Login from '../admin/Login';  // ← di-import dan DIPAKAI
 
 const Pages = () => {
   const [style, setStyle] = useState({});
