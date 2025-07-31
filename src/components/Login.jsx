@@ -1,39 +1,49 @@
 // Login.jsx
 import React, { useState } from 'react';
+import axios from 'axios';  // Import axios
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setMessage('');
 
     try {
-      const response = await fetch('https://bos.free.nf/api/login.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
+      const response = await axios.post('https://namakamu.infinityfreeapp.com/api/login.php', {
+        username,
+        password,
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        setMessage('Login berhasil!');
+      if (response.data.success) {
+        setMessage('✅ Login berhasil!');
       } else {
-        setMessage(result.message || 'Login gagal');
+        setMessage('❌ ' + response.data.message);
       }
     } catch (error) {
-      setMessage('Gagal terhubung ke server.');
-      console.error('Error:', error);
+      if (error.response) {
+        // Server merespons dengan status selain 2xx
+        setMessage(`❌ Error: ${error.response.data.message || 'Gagal login'}`);
+      } else if (error.request) {
+        // Tidak ada respons dari server (timeout, URL salah, dll)
+        setMessage('❌ Tidak bisa terhubung ke server. Cek URL atau koneksi.');
+      } else {
+        // Kesalahan lain
+        setMessage('❌ Kesalahan: ' + error.message);
+      }
+      console.error('Axios error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-      <h2>Login Demo</h2>
+      <h2>Login (Axios)</h2>
       <form onSubmit={handleLogin}>
         <div style={{ margin: '10px 0' }}>
           <label>Username:</label>
@@ -41,7 +51,7 @@ const Login = () => {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Masukkan username"
+            placeholder="root"
             required
           />
         </div>
@@ -51,13 +61,25 @@ const Login = () => {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Masukkan password"
+            placeholder="12348765"
             required
           />
         </div>
-        <button type="submit">Login</button>
+        <button type="submit" disabled={loading}>
+          {loading ? 'Loading...' : 'Login'}
+        </button>
       </form>
-      {message && <p style={{ color: message.includes('berhasil') ? 'green' : 'red' }}>{message}</p>}
+      {message && (
+        <p
+          style={{
+            color: message.includes('berhasil') ? 'green' : 'red',
+            marginTop: '10px',
+            fontWeight: 'bold',
+          }}
+        >
+          {message}
+        </p>
+      )}
     </div>
   );
 };
