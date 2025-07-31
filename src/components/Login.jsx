@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function Login() {
@@ -10,7 +10,7 @@ function Login() {
   const validUsername = 'admin';
   const validPassword = '1234';
 
-  // 🔐 Cek: jika sudah login, langsung ke dashboard
+  // Cek jika sudah login → arahkan ke dashboard
   useEffect(() => {
     if (localStorage.getItem('isLoggedIn')) {
       navigate('/dashboard');
@@ -57,7 +57,6 @@ function Login() {
   );
 }
 
-// ... styles tetap sama
 const styles = {
   container: {
     display: 'flex',
