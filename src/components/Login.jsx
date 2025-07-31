@@ -7,7 +7,7 @@ function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const res = await fetch('https://namakamu.000webhostapp.com/api/login.php', {
+    const res = await fetch('https://bos.free.nf/api/login.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
