@@ -24,11 +24,24 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Deploy to InfinityFree via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.3
         with:
-          github_token: ${{ secrets.TOKEN }}
-          publish_dir: ./build
-          publish_branch: build
-          user_name: github-actions[bot]
-          user_email: github-actions[bot]@users.noreply.github.com
+          server: ${{ secrets.OMAH }}
+          username: ${{ secrets.AKU }}
+          password: ${{ secrets.KUNCI }}
+          local-dir: ./build/
+          server-dir: /htdocs/
+          protocol: ftp
+          port: ${{ secrets.PORT }}
+          exclude: |
+            **/.gitignore
+            .git/
+            .github/
+            node_modules/
+            package.json
+            package-lock.json
+            src/
+            public/
+            .git*
+            !.nojekyll
