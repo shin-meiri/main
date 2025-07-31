@@ -2,19 +2,35 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const Pages = () => {
-  const [style, setStyle] = useState({});
+  const [data, setData] = useState({});
+  const [hover, setHover] = useState(false);
 
   useEffect(() => {
     axios.get('/api/get-css.php')
-      .then(res => setStyle(res.data.body || {}))
-      .catch(() => setStyle({ padding: '20px' }));
+      .then(res => setData(res.data))
+      .catch(() => setData({}));
   }, []);
+
+  const style = data.body || {};
+  const cardStyle = data.card_style || {};
+  const btnStyle = data.button_style || {};
+  const btnHover = data.button_hover || {};
 
   return (
     <div style={style}>
-      <h1>Halaman Utama</h1>
-      <p>Selamat datang di aplikasi.</p>
-      <p><a href="#/login">Login di sini</a></p>
+      <div
+        style={cardStyle}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+      >
+        <h1>{data.home?.title || 'Selamat Datang'}</h1>
+        <p>{data.home?.subtitle || 'Deskripsi halaman'}</p>
+        <button
+          style={hover ? { ...btnStyle, ...btnHover } : btnStyle}
+        >
+          {data.home?.button || 'Mulai'}
+        </button>
+      </div>
     </div>
   );
 };
