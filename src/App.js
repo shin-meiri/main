@@ -1,55 +1,19 @@
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
-import PrivateRoute from './components/PrivateRoute';
+import React from 'react';
+import Header from './pages/Header';
+import Footer from './pages/Footer';
+import Pages from './pages/Pages';
+import { BrowserRouter } from 'react-router-dom';
 
-function App() {
+const App = () => {
   return (
-    <Router>
-      <div style={styles.app}>
-        <Header />
-        <main style={styles.main}>
-          <Routes>
-            {/* Jika sudah login, / langsung ke dashboard */}
-            <Route
-              path="/"
-              element={
-                localStorage.getItem('isLoggedIn') ? (
-                  <Navigate to="/dashboard" />
-                ) : (
-                  <Login />
-                )
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-    </Router>
+    <BrowserRouter>
+      <Header />
+      <main>
+        <Pages />
+      </main>
+      <Footer />
+    </BrowserRouter>
   );
-}
-
-const styles = {
-  app: {
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: '100vh',
-    fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-  },
-  main: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
 };
 
 export default App;
