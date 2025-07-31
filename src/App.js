@@ -1,26 +1,16 @@
-// src/App.jsx
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Pages from './pages/Pages';
-import Login from './pages/Login';
-import Connect from './pages/Connect';
-import Cuan from './pages/Cuan';
-import Post from './pages/Post';
-import EditPage from './pages/EditPage';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Login from './components/Login';
+import Dashboard from './components/Dashboard';
 
-const App = () => {
+function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        <Route path="/admin" element={<Pages />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/connect" element={<Connect />} />
-        <Route path="/cuan" element={<Cuan />} />
-        <Route path="/" element={<Post />} />
-        <Route path="/edit" element={<EditPage />} />
+        <Route path="/" element={<Login />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
-};
+}
 
 export default App;
