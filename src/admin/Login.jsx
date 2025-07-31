@@ -14,7 +14,6 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
-
     try {
       const res = await axios.post('/api/login.php', input);
       if (res.data.success) {
@@ -25,40 +24,21 @@ const Login = () => {
         setError(res.data.message);
       }
     } catch {
-      setError('Gagal koneksi ke server');
+      setError('Gagal koneksi');
     }
   };
 
   return (
     <div style={{ padding: '40px' }}>
-      <h2>Masuk</h2>
+      <h2>Login</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {success && <p style={{ color: 'green' }}>{success}</p>}
       <form onSubmit={handleSubmit}>
-        <input
-          name="username"
-          placeholder="Username"
-          value={input.username}
-          onChange={handleChange}
-          required
-          style={{ padding: '8px', margin: '5px 0', display: 'block', width: '200px' }}
-        />
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          value={input.password}
-          onChange={handleChange}
-          required
-          style={{ padding: '8px', margin: '5px 0', display: 'block', width: '200px' }}
-        />
-        <button type="submit" style={{ padding: '10px 20px', marginTop: '10px' }}>
-          Login
-        </button>
+        <input name="username" placeholder="Username" value={input.username} onChange={handleChange} required style={{ padding: '8px', margin: '5px 0', width: '100%', display: 'block' }} />
+        <input name="password" type="password" placeholder="Password" value={input.password} onChange={handleChange} required style={{ padding: '8px', margin: '5px 0', width: '100%', display: 'block' }} />
+        <button type="submit" style={{ padding: '10px 20px', margin: '10px 0' }}>Login</button>
       </form>
-      <p>
-        <a href="#/">Kembali ke Beranda</a>
-      </p>
+      <p><a href="#/">Kembali</a></p>
     </div>
   );
 };
