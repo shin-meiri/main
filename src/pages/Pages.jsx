@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import axios from 'axios';
-import Login from '../admin/Login';  // ← Harus ada
+import Login from '../admin/Login';  // ← di-import dan DIPAKAI
 
 const Pages = () => {
   const [style, setStyle] = useState({});
@@ -14,9 +14,8 @@ const Pages = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<div style={style}>Halaman Utama</div>} />
-      <Route path="/about" element={<div style={style}>Tentang Kami</div>} />
-      <Route path="/login" element={<div style={style}>Form Login</div>} />
+      <Route path="/" element={<div style={style}>Home</div>} />
+      <Route path="/login" element={<Login />} />  {/* ← DIGUNAKAN DI SINI */}
     </Routes>
   );
 };
