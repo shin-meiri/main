@@ -7,12 +7,12 @@ const Footer = () => {
   useEffect(() => {
     axios.get('/api/get-css.php')
       .then(res => setStyle(res.data.footer || {}))
-      .catch(err => console.error('Gagal ambil CSS untuk Footer:', err));
+      .catch(() => setStyle({}));
   }, []);
 
   return (
     <footer style={style}>
-      &copy; {new Date().getFullYear()} Aplikasi Dinamis. Semua gaya dari MySQL.
+      &copy; 2025 Aplikasi Dinamis
     </footer>
   );
 };
