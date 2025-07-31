@@ -11,6 +11,7 @@ const App = () => {
       <main>
         <Pages />
       </main>
+<Route path="/login" element={<Login />} />
       <Footer />
     </BrowserRouter>
   );
