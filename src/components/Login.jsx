@@ -1,51 +1,46 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';  // ✅ WAJIB di-import
+import { useNavigate } from 'react-router-dom';
 
-function Login() {
+export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const navigate = useNavigate(); // ✅ Inisialisasi navigate
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setMessage(''); // Reset pesan
+    setError('');
 
     try {
-      const response = await fetch('https://bos.free.nf/api/login.php', {
+      const res = await fetch('https://bos.free.nf/api/login.php', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
 
-      const data = await response.json();
+      const data = await res.json();
 
       if (data.success) {
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('username', username);
-        console.log('Login sukses, arahkan ke /dashboard'); // 🔍 Debug
-        navigate('/dashboard'); // ✅ Ini yang pindahkan halaman
+        navigate('/dashboard'); // ← PASTI pindah
       } else {
-        setMessage(data.message || 'Login gagal');
+        setError(data.message || 'Login gagal');
       }
     } catch (err) {
-      console.error('Error login:', err); // 🔍 Lihat error
-      setMessage('Gagal terhubung ke server. Cek console (F12)');
+      setError('Gagal koneksi ke server. Cek URL API.');
     }
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.formBox}>
-        <h2>Masuk ke Akun</h2>
+    <div style={css.container}>
+      <div style={css.box}>
+        <h2>Masuk</h2>
         <form onSubmit={handleLogin}>
           <input
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            style={styles.input}
+            style={css.input}
             required
           />
           <input
@@ -53,58 +48,58 @@ function Login() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            style={styles.input}
+            style={css.input}
             required
           />
-          <button type="submit" style={styles.button}>
-            Login
-          </button>
+          <button type="submit" style={css.btn}>Login</button>
         </form>
-        {message && <p style={styles.error}>{message}</p>}
+        {error && <div style={css.error}>{error}</div>}
       </div>
     </div>
   );
 }
 
-// ✅ Style tetap sama
-const styles = {
+// CSS sederhana
+const css = {
   container: {
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 'calc(100vh - 120px)',
-    backgroundColor: '#f4f6f9',
-    padding: '20px',
+    minHeight: '100vh',
+    backgroundColor: '#f0f2f5',
+    margin: 0,
+    padding: 0,
   },
-  formBox: {
+  box: {
     backgroundColor: 'white',
     padding: '40px',
     borderRadius: '10px',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-    width: '300px',
+    width: '320px',
     textAlign: 'center',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
   },
   input: {
     width: '100%',
     padding: '12px',
     margin: '8px 0',
-    border: '1px solid #ccc',
-    borderRadius: '5px',
+    border: '1px solid #ddd',
+    borderRadius: '6px',
     boxSizing: 'border-box',
   },
-  button: {
+  btn: {
     width: '100%',
     padding: '12px',
-    backgroundColor: '#007bff',
+    backgroundColor: '#1877f2',
     color: 'white',
     border: 'none',
-    borderRadius: '5px',
+    borderRadius: '6px',
+    fontSize: '16px',
     cursor: 'pointer',
+    marginTop: '10px',
   },
   error: {
     color: 'red',
+    fontSize: '14px',
     marginTop: '10px',
   },
 };
-
-export default Login;
