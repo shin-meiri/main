@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 function Login() {
@@ -7,8 +7,15 @@ function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const validUsername = 'root';
-  const validPassword = '12348765';
+  const validUsername = 'admin';
+  const validPassword = '1234';
+
+  // 🔐 Cek: jika sudah login, langsung ke dashboard
+  useEffect(() => {
+    if (localStorage.getItem('isLoggedIn')) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -50,48 +57,4 @@ function Login() {
   );
 }
 
-const styles = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 'calc(100vh - 120px)',
-    backgroundColor: '#f4f6f9',
-    padding: '20px',
-  },
-  formBox: {
-    backgroundColor: 'white',
-    padding: '40px',
-    borderRadius: '10px',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
-    width: '300px',
-    textAlign: 'center',
-  },
-  input: {
-    width: '100%',
-    padding: '12px',
-    margin: '10px 0',
-    border: '1px solid #ccc',
-    borderRadius: '5px',
-    fontSize: '16px',
-    boxSizing: 'border-box',
-  },
-  button: {
-    padding: '12px 20px',
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    fontSize: '16px',
-    width: '100%',
-    marginTop: '10px',
-  },
-  error: {
-    color: 'red',
-    marginTop: '10px',
-    fontSize: '14px',
-  },
-};
-
-export default Login;
+// ... styles tetap sama
