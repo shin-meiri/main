@@ -7,8 +7,8 @@ function Login() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const validUsername = 'admin';
-  const validPassword = '1234';
+  const validUsername = 'root';
+  const validPassword = '12348765';
 
   // Cek jika sudah login → arahkan ke dashboard
   useEffect(() => {
