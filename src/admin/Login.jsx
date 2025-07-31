@@ -1,89 +1,58 @@
-// Login.jsx
 import React, { useState } from 'react';
 import axios from 'axios';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const [input, setInput] = useState({ username: '', password: '' });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const handleLogin = async (e) => {
+  const handleChange = (e) => {
+    setInput({ ...input, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage('');
-
-    // 🔁 GANTI INI DENGAN DOMAIN KAMU YANG BENAR
-    const API_URL = 'https://bos.free.nf/api/login.php';
-
+    setError('');
+    setSuccess('');
+    const url = isLogin ? '/api/login.php' : '/api/register.php';
     try {
-      const response = await axios.post(API_URL, {
-        username,
-        password,
-      });
-
-      if (response.data.success) {
-        setMessage('✅ Login berhasil!');
+      const res = await axios.post(url, input);
+      if (res.data.success) {
+        setSuccess(res.data.message);
+        if (isLogin) {
+          localStorage.setItem('user', res.data.username);
+          window.location.href = '/';
+        } else {
+          setIsLogin(true);
+        }
       } else {
-        setMessage('❌ ' + (response.data.message || 'Login gagal'));
+        setError(res.data.message);
       }
-    } catch (error) {
-      // 🔍 Debug error secara detail
-      if (error.response) {
-        // Server merespons tapi error (4xx, 5xx)
-        setMessage(`❌ Server error: ${error.response.status} - ${error.response.data.message || 'Gagal login'}`);
-      } else if (error.request) {
-        // Tidak ada respons sama sekali (timeout, network)
-        setMessage('❌ Tidak bisa terhubung ke server. Cek URL atau koneksi internet.');
-        console.log('Request:', error.request);
-      } else {
-        // Kesalahan lain
-        setMessage('❌ Error: ' + error.message);
-      }
-    } finally {
-      setLoading(false);
+    } catch {
+      setError('Gagal koneksi');
     }
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial' }}>
-      <h2>Login dengan Axios</h2>
-      <form onSubmit={handleLogin}>
-        <div style={{ margin: '10px 0' }}>
-          <label>Username:</label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="root"
-            required
-          />
-        </div>
-        <div style={{ margin: '10px 0' }}>
-          <label>Password:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="12348765"
-            required
-          />
-        </div>
-        <button type="submit" disabled={loading}>
-          {loading ? 'Mengirim...' : 'Login'}
-        </button>
+    <div style={{ padding: '40px' }}>
+      <h2>{isLogin ? 'Masuk' : 'Daftar'}</h2>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {success && <p style={{ color: 'green' }}>{success}</p>}
+      <form onSubmit={handleSubmit}>
+        <input name="username" placeholder="Username" value={input.username} onChange={handleChange} required style={{ padding: '8px', margin: '5px 0', width: '200px' }} />
+        <br />
+        <input name="password" type="password" placeholder="Password" value={input.password} onChange={handleChange} required style={{ padding: '8px', margin: '5px 0', width: '200px' }} />
+        <br />
+        <button type="submit" style={{ padding: '10px 20px', margin: '10px 0' }}>{isLogin ? 'Login' : 'Daftar'}</button>
       </form>
-      {message && (
-        <p
-          style={{
-            marginTop: '10px',
-            color: message.includes('berhasil') ? 'green' : 'red',
-            fontWeight: 'bold',
-          }}
-        >
-          {message}
-        </p>
-      )}
+      <p>
+        {isLogin ? (
+          <>Belum daftar? <span onClick={() => setIsLogin(false)} style={{ color: 'blue', cursor: 'pointer' }}>Daftar</span></>
+        ) : (
+          <>Sudah punya akun? <span onClick={() => setIsLogin(true)} style={{ color: 'blue', cursor: 'pointer' }}>Login</span></>
+        )}
+      </p>
     </div>
   );
 };
