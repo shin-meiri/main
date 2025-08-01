@@ -1,26 +1,20 @@
-import React, { lazy, Suspense } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { HashRouter } from 'react-router-dom';
+import Header from './pages/Header';
+import Footer from './pages/Footer';
+import Pages from './pages/Pages';
+import Login from './admin/Login';
 
-const Header = lazy(() => import('./pages/Header'));
-const Footer = lazy(() => import('./pages/Footer'));
-const Pages = lazy(() => import('./pages/Pages'));
-const Login = lazy(() => import('./admin/Login'));
-
-function App() {
+const App = () => {
   return (
     <HashRouter>
-      <Suspense fallback={<div>Memuat...</div>}>
-        <Header />
-        <main>
-          <Routes>
-            <Route path="/" element={<Pages />} />
-            <Route path="/login" element={<Login />} />
-          </Routes>
-        </main>
-        <Footer />
-      </Suspense>
+      <Header />
+      <main>
+        <Pages />
+      </main>
+      <Footer />
     </HashRouter>
   );
-}
+};
 
 export default App;
