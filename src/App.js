@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import Login from './admin/Login';
-import Header from './paged/Header';
-import Footer from './paged/Footer';
-import Pages from './paged/Pages';
+import Header from './pages/Header';
+import Footer from './pages/Footer';
+import Pages from './pages/Pages';
 
 const App = () => {
   // Cek login saat aplikasi jalan
