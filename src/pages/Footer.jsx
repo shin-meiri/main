@@ -5,14 +5,14 @@ const Footer = () => {
   const [data, setData] = useState({});
 
   useEffect(() => {
-    axios.get('/api/get-css.php')
+    axios.get('/api/theme.php')
       .then(res => setData(res.data))
       .catch(() => setData({}));
   }, []);
 
   return (
-    <footer style={data.footer?.style || {}}>
-      {data.footer?.content || '© 2025'}
+    <footer style={data.footer || {}}>
+      {data.footer?.content || '© 2025 Aplikasi Dinamis'}
     </footer>
   );
 };
