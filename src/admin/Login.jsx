@@ -12,53 +12,35 @@ const Login = () => {
       .catch(() => setData({}));
   }, []);
 
-  const formStyle = {
-    maxWidth: '400px',
-    margin: '50px auto',
-    padding: '30px',
-    background: data.login?.formBg || 'white',
-    borderRadius: '12px',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
-  };
-
-  const buttonStyle = {
-    background: data.login?.buttonBg || '#007BFF',
-    color: 'white',
-    border: 'none',
-    padding: '12px',
-    width: '100%',
-    borderRadius: '8px',
-    fontSize: '16px',
-    cursor: 'pointer'
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: '12px',
-    margin: '10px 0',
-    border: `1px solid ${data.login?.inputBorder || '#ddd'}`,
-    borderRadius: '8px',
-    fontSize: '16px'
-  };
-
   const handleChange = (e) => {
     setInput({ ...input, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (input.username && input.password) {
-      localStorage.setItem('user', input.username);
-      window.location.href = '#/';
-    } else {
-      setError('Isi semua field');
+    
+    try {
+      const res = await axios.post('/api/login.php', input);
+      
+      if (res.data.success) {
+        localStorage.setItem('user', res.data.username);
+        window.location.href = '#/';
+      } else {
+        setError(res.data.message);
+      }
+    } catch (err) {
+      setError('Gagal koneksi ke server');
     }
   };
 
+  const style = data.login || {};
+  const formStyle = { ...style.form };
+  const buttonStyle = { ...style.button };
+
   return (
     <div style={formStyle}>
-      <h2 style={{ textAlign: 'center' }}>Login</h2>
+      <h2 style={style.title}>Login</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleSubmit}>
         <input
@@ -66,7 +48,7 @@ const Login = () => {
           placeholder="Username"
           value={input.username}
           onChange={handleChange}
-          style={inputStyle}
+          style={style.input}
           required
         />
         <input
@@ -75,7 +57,7 @@ const Login = () => {
           placeholder="Password"
           value={input.password}
           onChange={handleChange}
-          style={inputStyle}
+          style={style.input}
           required
         />
         <button type="submit" style={buttonStyle}>Login</button>
