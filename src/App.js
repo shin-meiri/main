@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import Login from './admin/Login';
-import Dashboard from './pages/Dashboard'; // ← Ini yang harus kamu buat dulu
+import Header from './paged/Header';
+import Footer from './paged/Footer';
+import Pages from './paged/Pages';
 
 const App = () => {
   // Cek login saat aplikasi jalan
@@ -16,8 +18,8 @@ const App = () => {
     <HashRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<Pages />} />
+        <Route path="/login" element={<Login />} />
       </Routes>
     </HashRouter>
   );
