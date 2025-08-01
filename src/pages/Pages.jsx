@@ -3,32 +3,53 @@ import axios from 'axios';
 
 const Pages = () => {
   const [data, setData] = useState({});
-  const [hover, setHover] = useState(false);
+  const [bodyStyle, setBodyStyle] = useState({});
 
   useEffect(() => {
-    axios.get('/api/get-css.php')
-      .then(res => setData(res.data))
-      .catch(() => setData({}));
+    axios.get('/api/theme.php')
+      .then(res => {
+        setData(res.data);
+        setBodyStyle(res.data.body || {});
+      })
+      .catch(() => setBodyStyle({}));
   }, []);
 
-  const style = data.body || {};
-  const cardStyle = data.card_style || {};
-  const btnStyle = data.button_style || {};
-  const btnHover = data.button_hover || {};
+  const hero = data.home?.heroImage;
+  const title = data.home?.title;
+  const subtitle = data.home?.subtitle;
+  const button = data.home?.button;
 
   return (
-    <div style={style}>
-      <div
-        style={cardStyle}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
-        <h1>{data.home?.title || 'Selamat Datang'}</h1>
-        <p>{data.home?.subtitle || 'Deskripsi halaman'}</p>
-        <button
-          style={hover ? { ...btnStyle, ...btnHover } : btnStyle}
-        >
-          {data.home?.button || 'Mulai'}
+    <div style={bodyStyle}>
+      {hero && (
+        <div style={{
+          backgroundImage: `url(${hero})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          height: '400px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          textAlign: 'center',
+          textShadow: '2px 2px 8px rgba(0,0,0,0.7)'
+        }}>
+          <div>
+            <h1 style={{ fontSize: '3em', margin: '0' }}>{title}</h1>
+            <p style={{ fontSize: '1.2em' }}>{subtitle}</p>
+          </div>
+        </div>
+      )}
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <button style={{
+          background: 'var(--button-bg, #007BFF)',
+          border: 'none',
+          padding: '12px 30px',
+          fontSize: '18px',
+          borderRadius: '8px',
+          color: 'white'
+        }}>
+          {button}
         </button>
       </div>
     </div>
