@@ -1,21 +1,24 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
-import Header from './pages/Header';
-import Footer from './pages/Footer';
-import Pages from './pages/Pages';
 import Login from './admin/Login';
+import Cashier from './pages/Cashier';
 
 const App = () => {
+  // Cek login saat aplikasi jalan
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (!user && window.location.hash !== '#/login') {
+      window.location.href = '#/login';
+    }
+  }, []);
+
   return (
     <HashRouter>
-      <Header />
-      <main>
-        <Routes>
-          <Route path="/" element={<Pages />} />
-          <Route path="/login" element={<Login />} />
-        </Routes>
-      </main>
-      <Footer />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/cashier" element={<Cashier />} />
+        <Route path="/" element={<Login />} /> {/* Default: login */}
+      </Routes>
     </HashRouter>
   );
 };
