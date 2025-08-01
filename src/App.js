@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import Login from './admin/Login';
-import Cashier from './pages/Cashier';
+import Dashboard from './pages/Dashboard'; // ← Ini yang harus kamu buat dulu
 
 const App = () => {
   // Cek login saat aplikasi jalan
@@ -16,8 +16,8 @@ const App = () => {
     <HashRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/cashier" element={<Cashier />} />
-        <Route path="/" element={<Login />} /> {/* Default: login */}
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/" element={<Login />} />
       </Routes>
     </HashRouter>
   );
