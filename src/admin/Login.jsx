@@ -26,7 +26,7 @@ const Login = () => {
       const res = await axios.post('/api/login.php', { username, password });
       if (res.data.success) {
         localStorage.setItem('user', res.data.username);
-        window.location.href = '#/cashier';
+        window.location.href = '#/pages';
       } else {
         setError(res.data.message);
       }
