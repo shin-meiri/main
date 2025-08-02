@@ -19,14 +19,12 @@ const App = () => {
 
   return (
     <HashRouter>
-      <Header />
       <main>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Dashboard />} />
         </Routes>
       </main>
-      <Footer />
     </HashRouter>
   );
 };
