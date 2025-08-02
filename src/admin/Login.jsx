@@ -8,11 +8,10 @@ const Login = () => {
   const [method, setMethod] = useState('form');
   const [theme, setTheme] = useState({});
 
-  // 🔒 Cek login saat komponen muncul
   useEffect(() => {
     const user = localStorage.getItem('user');
     if (user) {
-      window.location.href = '#/';
+      window.location.replace('#/');
     }
   }, []);
 
@@ -32,12 +31,12 @@ const Login = () => {
       const res = await axios.post('/api/login.php', { username, password });
       if (res.data.success) {
         localStorage.setItem('user', res.data.username);
-        window.location.href = '#/';
+        window.location.replace('#/');
       } else {
         setError(res.data.message);
       }
     } catch {
-      setError('Gagal koneksi');
+      setError('Gagal koneksi ke server');
     }
   };
 
@@ -51,48 +50,36 @@ const Login = () => {
     login(input.phone, input.password);
   };
 
-  const formStyle = theme.login?.form || {};
-  const titleStyle = theme.login?.title || {};
-  const tabContainerStyle = theme.login?.tabContainer || {};
-  const tabStyle = (active) => ({
-    ...(active ? theme.login?.tabActive : theme.login?.tabInactive),
-    cursor: 'pointer'
-  });
-  const inputStyle = theme.login?.input || {};
-  const buttonStyle = theme.login?.button || {};
-  const errorStyle = theme.login?.error || {};
-  const qrContainerStyle = theme.login?.qrContainer || {};
-
   return (
-    <div style={formStyle}>
-      <h2 style={titleStyle}>🔐 Login</h2>
-      {error && <p style={errorStyle}>{error}</p>}
+    <div style={theme.login?.form || {}}>
+      <h2 style={theme.login?.title || {}}>🔐 Login</h2>
+      {error && <p style={theme.login?.error || {}}>{error}</p>}
 
-      <div style={tabContainerStyle}>
-        <button onClick={() => setMethod('form')} style={tabStyle(method === 'form')}>Form</button>
-        <button onClick={() => setMethod('qrcode')} style={tabStyle(method === 'qrcode')}>QR Code</button>
-        <button onClick={() => setMethod('phone')} style={tabStyle(method === 'phone')}>No HP</button>
+      <div style={theme.login?.tabContainer || {}}>
+        <button onClick={() => setMethod('form')} style={method === 'form' ? theme.login?.tabActive : theme.login?.tabInactive}>Form</button>
+        <button onClick={() => setMethod('qrcode')} style={method === 'qrcode' ? theme.login?.tabActive : theme.login?.tabInactive}>QR Code</button>
+        <button onClick={() => setMethod('phone')} style={method === 'phone' ? theme.login?.tabActive : theme.login?.tabInactive}>No HP</button>
       </div>
 
       {method === 'form' && (
         <form onSubmit={handleSubmit}>
-          <input name="username" placeholder="Username" value={input.username} onChange={handleChange} required style={inputStyle} />
-          <input name="password" type="password" placeholder="Password" value={input.password} onChange={handleChange} required style={inputStyle} />
-          <button type="submit" style={buttonStyle}>Login</button>
+          <input name="username" placeholder="Username" value={input.username} onChange={handleChange} required style={theme.login?.input || {}} />
+          <input name="password" type="password" placeholder="Password" value={input.password} onChange={handleChange} required style={theme.login?.input || {}} />
+          <button type="submit" style={theme.login?.button || {}}>Login</button>
         </form>
       )}
 
       {method === 'qrcode' && (
-        <div style={qrContainerStyle}>
+        <div style={theme.login?.qrContainer || {}}>
           <QrScanner onScan={login} />
         </div>
       )}
 
       {method === 'phone' && (
         <form onSubmit={handlePhoneSubmit}>
-          <input name="phone" placeholder="Nomor HP" value={input.phone} onChange={handleChange} required style={inputStyle} />
-          <input name="password" type="password" placeholder="Password" value={input.password} onChange={handleChange} required style={inputStyle} />
-          <button type="submit" style={buttonStyle}>Login</button>
+          <input name="phone" placeholder="Nomor HP" value={input.phone} onChange={handleChange} required style={theme.login?.input || {}} />
+          <input name="password" type="password" placeholder="Password" value={input.password} onChange={handleChange} required style={theme.login?.input || {}} />
+          <button type="submit" style={theme.login?.button || {}}>Login</button>
         </form>
       )}
     </div>
