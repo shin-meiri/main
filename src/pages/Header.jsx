@@ -3,11 +3,15 @@ import axios from 'axios';
 
 const Header = () => {
   const [data, setData] = useState({});
+  const [user, setUser] = useState('');
 
   useEffect(() => {
     axios.get('/api/theme.php')
       .then(res => setData(res.data))
       .catch(() => setData({}));
+
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) setUser(savedUser);
   }, []);
 
   const style = data.header || {};
@@ -16,6 +20,13 @@ const Header = () => {
 
   return (
     <header style={style}>
+      {/* Profil User (kiri atas) */}
+      {user && (
+        <div style={{ textAlign: 'left', padding: '0 20px', color: 'white', fontSize: '14px' }}>
+          🧑‍💼 {user}
+        </div>
+      )}
+
       <nav>
         <ul style={{ ...menuStyle, margin: 0, padding: 0 }}>
           {data.menu?.map((item, i) => (
