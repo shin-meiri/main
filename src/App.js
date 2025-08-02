@@ -14,11 +14,12 @@ function App() {
   };
 
   useEffect(() => {
-    if (sessionStorage.getItem('isLoggedIn')) {
-      setIsLoggedIn(true);
-    }
+    // Gunakan variabel ini secara eksplisit agar ESLint tahu digunakan
+    const loggedIn = sessionStorage.getItem('isLoggedIn');
+    setIsLoggedIn(!!loggedIn);
   }, []);
 
+  // Tidak perlu render isLoggedIn, cukup kirim ke PrivateRoute
   return (
     <Router>
       <Routes>
