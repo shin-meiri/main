@@ -1,59 +1,28 @@
 // pages/Login.jsx
 import React from 'react';
-import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import Auth from './Auth';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const navigate = useNavigate();
-  const { isLoggedIn, login } = useAuth();
+  const router = useRouter();
 
-  // Jika sudah login, arahkan ke /
-  if (isLoggedIn) {
-    return <Navigate to="/" />;
+  // Cek jika sudah login, redirect ke dashboard
+  if (Auth.isAuthenticated()) {
+    router.push('/');
+    return <p>Redirecting...</p>;
   }
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Simulasi login (bisa diganti dengan API)
-    if (username === 'admin' && password === '1234') {
-      login();
-      navigate('/');
-    } else {
-      alert('Login gagal! Coba admin / 1234');
-    }
+  const handleLogin = () => {
+    // Simulasi login (simpan ke localStorage)
+    localStorage.setItem('isLoggedIn', 'true');
+    router.push('/');
   };
 
   return (
-    <div style={{ padding: '40px', textAlign: 'center' }}>
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit}>
-        <div>
-          <input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            style={{ margin: '10px', padding: '8px' }}
-          />
-        </div>
-        <div>
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ margin: '10px', padding: '8px' }}
-          />
-        </div>
-        <button type="submit" style={{ padding: '10px 20px' }}>
-          Login
-        </button>
-      </form>
+    <div style={{ padding: '20px', textAlign: 'center' }}>
+      <h1>Login</h1>
+      <button onClick={handleLogin}>Login</button>
     </div>
   );
 };
