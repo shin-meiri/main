@@ -1,7 +1,7 @@
 // App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './pages/Auth';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 
