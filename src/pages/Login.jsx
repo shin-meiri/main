@@ -1,54 +1,44 @@
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+// pages/Login.jsx
+import React, { useState } from 'react';
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const router = useRouter();
 
-  // Cek jika sudah login, redirect ke /
-  useEffect(() => {
-    if (localStorage.getItem('isLoggedIn') === 'true') {
-      router.push('/');
-    }
-  }, [router]);
-
-  const handleLogin = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulasi login sukses (bisa diganti dengan API)
-    if (username && password) {
-      localStorage.setItem('isLoggedIn', 'true');
-      router.push('/');
+    const res = await fetch('/api/login.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      window.location.href = '/';
     } else {
-      alert('Username dan password wajib diisi');
+      alert('Login gagal!');
     }
   };
 
   return (
-    <div>
-      <h2>Login</h2>
-      <form onSubmit={handleLogin}>
-        <div>
-          <label>Username</label>
-          <input
-            type="text"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-        </div>
-        <div>
-          <label>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <button type="submit">Login</button>
-      </form>
-    </div>
+    <form onSubmit={handleSubmit}>
+      <input
+        type="text"
+        placeholder="Username"
+        value={username}
+        onChange={(e) => setUsername(e.target.value)}
+        required
+      />
+      <input
+        type="password"
+        placeholder="Password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        required
+      />
+      <button type="submit">Login</button>
+    </form>
   );
 };
 
