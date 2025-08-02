@@ -8,6 +8,14 @@ const Login = () => {
   const [method, setMethod] = useState('form');
   const [theme, setTheme] = useState({});
 
+  // 🔒 Cek login saat komponen muncul
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      window.location.href = '#/';
+    }
+  }, []);
+
   useEffect(() => {
     axios.get('/api/theme.php')
       .then(res => setTheme(res.data))
@@ -29,7 +37,7 @@ const Login = () => {
         setError(res.data.message);
       }
     } catch {
-      setError('Gagal koneksi ke server');
+      setError('Gagal koneksi');
     }
   };
 
