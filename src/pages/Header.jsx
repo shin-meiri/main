@@ -11,30 +11,21 @@ const Header = () => {
   }, []);
 
   const style = data.header || {};
-  const logo = data.home?.logo || '';
-  const menu = data.menu || [];
+  const menuStyle = data.menuStyle || {};
+  const hover = data.menuHover || {};
 
   return (
     <header style={style}>
-      {logo && (
-        <img 
-          src={logo} 
-          alt="Logo" 
-          style={{ height: '40px', display: 'block', margin: '0 auto 10px' }} 
-        />
-      )}
       <nav>
-        <ul style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          gap: '30px', 
-          listStyle: 'none', 
-          padding: '10px', 
-          margin: '0' 
-        }}>
-          {menu.map((item, i) => (
+        <ul style={{ ...menuStyle, margin: 0, padding: 0 }}>
+          {data.menu?.map((item, i) => (
             <li key={i}>
-              <a href={item.url} style={{ color: 'inherit', textDecoration: 'none' }}>
+              <a
+                href={item.url}
+                style={{ color: 'inherit', textDecoration: 'none' }}
+                onMouseEnter={e => Object.assign(e.target.style, hover)}
+                onMouseLeave={e => Object.assign(e.target.style, { color: 'inherit' })}
+              >
                 {item.label}
               </a>
             </li>
