@@ -8,12 +8,12 @@ const App = () => {
     const user = localStorage.getItem('user');
     const hash = window.location.hash;
 
-    if (user && (hash === '' || hash === '#/login')) {
-      window.location.replace('#/');
+    if (user && (hash === '' || hash === 'd/login')) {
+      window.location.replace('d/');
     }
 
-    if (!user && hash !== '#/login') {
-      window.location.replace('#/login');
+    if (!user && hash !== 'd/login') {
+      window.location.replace('d/login');
     }
   }, []);
 
