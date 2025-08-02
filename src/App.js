@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
-import Login from './admin/Login';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 
 const App = () => {
