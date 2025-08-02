@@ -8,14 +8,14 @@ import Footer from './pages/Footer';
 const App = () => {
   useEffect(() => {
     const user = localStorage.getItem('user');
-    const isLogin = window.location.hash === '#/login';
+    const hash = window.location.hash;
 
-    if (!user && !isLogin) {
-      window.location.href = '#/login';
+    if (user && (hash === '' || hash === '#/' || hash === '#/login')) {
+      window.location.href = '#/';
     }
 
-    if (user && isLogin) {
-      window.location.href = '#/';
+    if (!user && hash !== '#/login') {
+      window.location.href = '#/login';
     }
   }, []);
 
