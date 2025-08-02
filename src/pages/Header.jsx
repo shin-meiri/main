@@ -18,12 +18,41 @@ const Header = () => {
   const menuStyle = data.menuStyle || {};
   const hover = data.menuHover || {};
 
+  const handleLogout = () => {
+    if (window.confirm('Yakin ingin keluar?')) {
+      localStorage.removeItem('user');
+      window.location.href = '#/login';
+    }
+  };
+
   return (
     <header style={style}>
-      {/* Profil User (kiri atas) */}
+      {/* Profil + Logout (kiri atas) */}
       {user && (
-        <div style={{ textAlign: 'left', padding: '0 20px', color: 'white', fontSize: '14px' }}>
-          🧑‍💼 {user}
+        <div style={{ 
+          textAlign: 'left', 
+          padding: '0 20px', 
+          color: 'white', 
+          fontSize: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          🧑‍💼 <strong>{user}</strong>
+          <button
+            onClick={handleLogout}
+            style={{
+              background: 'rgba(255,255,255,0.2)',
+              color: 'white',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              cursor: 'pointer',
+              fontSize: '12px'
+            }}
+          >
+            Logout
+          </button>
         </div>
       )}
 
