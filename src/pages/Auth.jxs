@@ -1,28 +1,19 @@
-// contexts/AuthContext.jsx
-import React, { createContext, useContext, useState } from 'react';
+// pages/Auth.jsx
+import React, { useEffect } from 'react';
 
-const AuthContext = createContext();
+const Auth = ({ children }) => {
+  useEffect(() => {
+    // Cek apakah user sudah login via API
+    fetch('/api/check-auth.php')
+      .then(res => res.json())
+      .then(data => {
+        if (!data.authenticated && window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      });
+  }, []);
 
-export const AuthProvider = ({ children }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('isLoggedIn'));
-
-  const login = () => {
-    localStorage.setItem('isLoggedIn', 'true');
-    setIsLoggedIn(true);
-  };
-
-  const logout = () => {
-    localStorage.removeItem('isLoggedIn');
-    setIsLoggedIn(false);
-  };
-
-  return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <>{children}</>;
 };
 
-export const useAuth = () => {
-  return useContext(AuthContext);
-};
+export default Auth;
