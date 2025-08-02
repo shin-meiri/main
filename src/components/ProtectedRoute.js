@@ -4,7 +4,7 @@ import { Navigate } from 'react-router-dom';
 
 function PrivateRoute({ children }) {
   const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-  return isLoggedIn ? children : <Navigate to="/login" />;
+  return isLoggedIn ? children : <Navigate to="/login" replace />;
 }
 
 export default PrivateRoute;
