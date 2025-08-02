@@ -11,8 +11,8 @@ const Footer = () => {
   }, []);
 
   return (
-    <footer style={data.footer || {}}>
-      {data.footer?.content || '© 2025 Aplikasi Dinamis'}
+    <footer style={data.footer?.style || {}}>
+      {data.footer?.content || '© 2025'}
     </footer>
   );
 };
