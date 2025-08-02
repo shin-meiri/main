@@ -1,9 +1,7 @@
 import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import Login from './admin/Login';
-import Pages from './pages/Pages';
-import Header from './pages/Header';
-import Footer from './pages/Footer';
+import Dashboard from './pages/Dashboard';
 
 const App = () => {
   useEffect(() => {
@@ -25,7 +23,7 @@ const App = () => {
       <main>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Pages />} />
+          <Route path="/" element={<Dashboard />} />
         </Routes>
       </main>
       <Footer />
