@@ -2,60 +2,42 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
 const Header = () => {
-  const [data, setData] = useState({});
   const [user, setUser] = useState('');
+  const [theme, setTheme] = useState({});
 
   useEffect(() => {
-    axios.get('/api/theme.php')
-      .then(res => setData(res.data))
-      .catch(() => setData({}));
-
     const savedUser = localStorage.getItem('user');
-    if (savedUser) setUser(savedUser);
+    if (savedUser) {
+      setUser(savedUser);
+    } else {
+      setUser('');
+    }
+
+    axios.get('/api/theme.php')
+      .then(res => setTheme(res.data))
+      .catch(() => setTheme({}));
   }, []);
 
-  const headerStyle = data.header || {};
-  const menuStyle = data.menuStyle || {};
-  const menuItemStyle = data.menuItemStyle || {};
-  const menuHover = data.menuHover || {};
-  const profileStyle = data.profileContainer || {};
-  const profileTextStyle = data.profileText || {};
-  const logoutButtonStyle = data.logoutButton || {};
-
   const handleLogout = () => {
-    if (window.confirm('Yakin ingin keluar?')) {
-      localStorage.removeItem('user');
-      window.location.replace('#/login');
-    }
+    localStorage.removeItem('user');
+    window.location.replace('#/login');
   };
+
+  // Jika belum login, jangan tampilkan header
+  if (!user) return null;
+
+  const headerStyle = theme.header?.container || {};
+  const profileStyle = theme.header?.profile || {};
+  const logoutButtonStyle = theme.header?.logoutButton || {};
 
   return (
     <header style={headerStyle}>
-      {user && (
-        <div style={profileStyle}>
-          <span style={profileTextStyle}>🧑‍💼 {user}</span>
-          <button onClick={handleLogout} style={logoutButtonStyle}>
-            Logout
-          </button>
-        </div>
-      )}
-
-      <nav>
-        <ul style={menuStyle}>
-          {data.menu?.map((item, i) => (
-            <li key={i}>
-              <a
-                href={item.url}
-                style={menuItemStyle}
-                onMouseEnter={e => Object.assign(e.target.style, menuHover)}
-                onMouseLeave={e => Object.assign(e.target.style, { color: 'inherit' })}
-              >
-                {item.label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <div style={profileStyle}>
+        🧑‍💼 <strong>{user}</strong>
+        <button onClick={handleLogout} style={logoutButtonStyle}>
+          Logout
+        </button>
+      </div>
     </header>
   );
 };
