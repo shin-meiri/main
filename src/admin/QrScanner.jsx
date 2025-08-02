@@ -1,34 +1,49 @@
-import React, { useEffect } from 'react';
+/* eslint-disable no-undef */
+
+import React, { useEffect, useRef } from 'react';
 
 const QrScanner = ({ onScan }) => {
+  const qrRef = useRef(null);
+
   useEffect(() => {
-    const html5QrCode = new window.Html5Qrcode("qr-reader");
+    let html5QrCode;
+
+    if (window.Html5Qrcode) {
+      html5QrCode = new window.Html5Qrcode("qr-reader");
+
+      const config = { fps: 10, qrbox: 250 };
+
+      const successCallback = (decodedText) => {
+        try {
+          const data = JSON.parse(decodedText);
+          if (data.username && data.password) {
+            onScan(data.username, data.password);
+          }
+        } catch (e) {
+          console.error("QR Code tidak valid");
+        }
+      };
+
+      html5QrCode.start({ facingMode: "environment" }, config, successCallback)
+        .catch(err => {
+          console.error("Gagal mulai scanner:", err);
+        });
+    }
 
     return () => {
-      html5QrCode.stop().catch(() => {});
-    };
-  }, []);
-
-  const startScan = () => {
-    const config = { fps: 10, qrbox: 250 };
-    const successCallback = (decodedText) => {
-      try {
-        const data = JSON.parse(decodedText);
-        if (data.username && data.password) {
-          onScan(data.username, data.password);
-        }
-      } catch (e) {
-        console.error("Invalid QR data");
+      if (html5QrCode) {
+        html5QrCode.stop().catch(() => {});
       }
     };
-
-    html5QrCode.start({ facingMode: "environment" }, config, successCallback);
-  };
+  }, [onScan]);
 
   return (
     <div>
-      <div id="qr-reader" style={{ width: "100%" }}></div>
-      <button onClick={startScan} style={{ display: 'block', margin: '10px auto' }}>
+      <div id="qr-reader" ref={qrRef} style={{ width: "100%" }}></div>
+      <button 
+        type="button" 
+        style={{ display: 'block', margin: '10px auto', padding: '10px', cursor: 'pointer' }}
+      >
         Mulai Scan
       </button>
     </div>
