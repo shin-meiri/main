@@ -1,32 +1,43 @@
-import React, { useEffect } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+// App.jsx
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 
-const App = () => {
-  useEffect(() => {
-    const user = localStorage.getItem('user');
-    const hash = window.location.hash;
-
-    if (user && (hash === '' || hash === 'd/login')) {
-      window.location.replace('d/');
-    }
-
-    if (!user && hash !== 'd/login') {
-      window.location.replace('d/login');
-    }
-  }, []);
-
-  return (
-    <HashRouter>
-      <main>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Dashboard />} />
-        </Routes>
-      </main>
-    </HashRouter>
-  );
+// Komponen untuk melindungi route
+const ProtectedRoute = ({ children }) => {
+  const { isLoggedIn } = useAuth();
+  if (!isLoggedIn) {
+    return <Navigate to="/login" />;
+  }
+  return children;
 };
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public Route: Login */}
+          <Route path="/login" element={<Login />} />
+
+          {/* Protected Route: Dashboard */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Redirect / ke / jika login, atau /login jika belum */}
+          <Route path="*" element={<Navigate to={localStorage.getItem('isLoggedIn') ? '/' : '/login'} />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
+}
 
 export default App;
