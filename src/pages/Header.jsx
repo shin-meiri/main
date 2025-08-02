@@ -14,56 +14,40 @@ const Header = () => {
     if (savedUser) setUser(savedUser);
   }, []);
 
-  const style = data.header || {};
+  const headerStyle = data.header || {};
   const menuStyle = data.menuStyle || {};
-  const hover = data.menuHover || {};
+  const menuItemStyle = data.menuItemStyle || {};
+  const menuHover = data.menuHover || {};
+  const profileStyle = data.profileContainer || {};
+  const profileTextStyle = data.profileText || {};
+  const logoutButtonStyle = data.logoutButton || {};
 
   const handleLogout = () => {
     if (window.confirm('Yakin ingin keluar?')) {
       localStorage.removeItem('user');
-      window.location.href = '#/login';
+      window.location.replace('#/login');
     }
   };
 
   return (
-    <header style={style}>
-      {/* Profil + Logout (kiri atas) */}
+    <header style={headerStyle}>
       {user && (
-        <div style={{ 
-          textAlign: 'left', 
-          padding: '0 20px', 
-          color: 'white', 
-          fontSize: '14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px'
-        }}>
-          🧑‍💼 <strong>{user}</strong>
-          <button
-            onClick={handleLogout}
-            style={{
-              background: 'rgba(255,255,255,0.2)',
-              color: 'white',
-              border: '1px solid rgba(255,255,255,0.3)',
-              borderRadius: '6px',
-              padding: '4px 10px',
-              cursor: 'pointer',
-              fontSize: '12px'
-            }}
-          >
+        <div style={profileStyle}>
+          <span style={profileTextStyle}>🧑‍💼 {user}</span>
+          <button onClick={handleLogout} style={logoutButtonStyle}>
             Logout
           </button>
         </div>
       )}
 
       <nav>
-        <ul style={{ ...menuStyle, margin: 0, padding: 0 }}>
+        <ul style={menuStyle}>
           {data.menu?.map((item, i) => (
             <li key={i}>
               <a
                 href={item.url}
-                style={{ color: 'inherit', textDecoration: 'none' }}
-                onMouseEnter={e => Object.assign(e.target.style, hover)}
+                style={menuItemStyle}
+                onMouseEnter={e => Object.assign(e.target.style, menuHover)}
                 onMouseLeave={e => Object.assign(e.target.style, { color: 'inherit' })}
               >
                 {item.label}
