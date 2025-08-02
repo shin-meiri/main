@@ -1,28 +1,19 @@
+// src/pages/Home.js
 import React from 'react';
 
-const Home = () => {
-  const user = JSON.parse(localStorage.getItem('user'));
-
+function Home() {
   return (
-    <div className="home-container">
-      <header className="header">
-        <h1>Selamat Datang, {user?.name || 'Pengguna'}!</h1>
-        <button
-          onClick={() => {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('user');
-            window.location.href = '/login';
-          }}
-          className="logout-btn"
-        >
-          Keluar
-        </button>
-      </header>
-      <main>
-        <p>Ini adalah halaman utama setelah login berhasil.</p>
-      </main>
+    <div className="container">
+      <h1>Selamat Datang di Dashboard!</h1>
+      <p>Anda telah berhasil login.</p>
+      <button onClick={() => {
+        sessionStorage.removeItem('isLoggedIn');
+        window.location.href = '/';
+      }}>
+        Logout
+      </button>
     </div>
   );
-};
+}
 
 export default Home;
