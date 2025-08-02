@@ -1,9 +1,10 @@
+// src/components/PrivateRoute.js
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 
-const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('authToken');
-  return token ? children : <Navigate to="/login" />;
-};
+function PrivateRoute({ children }) {
+  const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+  return isLoggedIn ? children : <Navigate to="/login" />;
+}
 
-export default ProtectedRoute;
+export default PrivateRoute;
