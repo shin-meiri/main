@@ -7,25 +7,27 @@ function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    const res = await axios.post('/api/login.php', { username, password });
-    if (res.data.success) {
-      onLogin();
-    } else {
-      setError(res.data.message);
+  const handleSubmit = async (e) => {
+    e.preventDefault(); // Cegah reload
+    setError(''); // Reset error
+
+    try {
+      const res = await axios.post('/api/login.php', { username, password });
+      if (res.data.success) {
+        onLogin();
+      } else {
+        setError(res.data.message || 'Login gagal');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Gagal terhubung ke server. Coba lagi.');
     }
-  } catch (err) {
-    console.error("Error login:", err.response?.data || err.message);
-    setError('Gagal terhubung ke server. Cek konsol.');
-  }
-};
+  };
 
   return (
     <div className="container">
       <h1>Login</h1>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={{ color: 'red', fontSize: '14px' }}>{error}</p>}
       <form onSubmit={handleSubmit}>
         <input
           type="text"
@@ -35,6 +37,20 @@ const handleSubmit = async (e) => {
           required
         />
         <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+        {/* 🔥 Pastikan type="submit" */}
+        <button type="submit">Login</button>
+      </form>
+    </div>
+  );
+}
+
+export default Login;        <input
           type="password"
           placeholder="Password"
           value={password}
