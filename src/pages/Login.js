@@ -7,19 +7,20 @@ function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await axios.post('/api/login.php', { username, password });
-      if (res.data.success) {
-        onLogin();
-      } else {
-        setError(res.data.message);
-      }
-    } catch (err) {
-      setError('Gagal terhubung ke server');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await axios.post('/api/login.php', { username, password });
+    if (res.data.success) {
+      onLogin();
+    } else {
+      setError(res.data.message);
     }
-  };
+  } catch (err) {
+    console.error("Error login:", err.response?.data || err.message);
+    setError('Gagal terhubung ke server. Cek konsol.');
+  }
+};
 
   return (
     <div className="container">
