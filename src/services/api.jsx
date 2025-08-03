@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = 'https://namakamu.000webhostapp.com/api'; // Ganti dengan domain InfinityFree kamu
+const API_BASE = 'https://bos.free.nf/api'; // Ganti dengan domain InfinityFree kamu
 
 const api = axios.create({
   baseURL: API_BASE,
