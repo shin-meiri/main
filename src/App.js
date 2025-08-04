@@ -10,7 +10,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('https://your-infinityfree-site.000webhostapp.com/login.php', {
+      const res = await axios.post('https://bos.free.nf/api/login.php', {
         username,
         password,
       });
